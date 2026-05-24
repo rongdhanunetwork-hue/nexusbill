@@ -7,6 +7,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "postinstall": "patch-package",
     "seed": "npx dotenv -e .env -- npx tsx seed.ts",
     "db:push": "drizzle-kit push"
   },
@@ -37,6 +38,7 @@
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.0",
+    "patch-package": "^8.0.1",
     "postcss": "8.5.8",
     "tailwindcss": "4.1.17",
     "tsx": "^4.22.3",
