@@ -14,6 +14,7 @@ export default function CustomerDashboardClient({
   dueAmount,
   noticeTitle,
   noticeMessage,
+  status,
 }: {
   customerName: string;
   packageName: string;
@@ -23,6 +24,7 @@ export default function CustomerDashboardClient({
   dueAmount: number;
   noticeTitle: string | null;
   noticeMessage: string | null;
+  status: string;
 }) {
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
@@ -44,7 +46,25 @@ export default function CustomerDashboardClient({
     <div className="space-y-8 max-w-6xl mx-auto">
       <motion.div initial={false} animate={{ opacity: 1 }} className="relative overflow-hidden rounded-3xl p-8 shadow-2xl">
         <div className="absolute inset-0 bg-gradient-to-r from-neon-green/20 via-teal-500/20 to-blue-500/20 backdrop-blur-3xl" />
-        <div className="relative z-10"><h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Welcome, <span className="bg-clip-text text-transparent bg-gradient-to-r from-neon-green to-teal-400">{customerName}</span></h2><p className="text-gray-300 text-lg">Your connection is <span className="text-neon-green font-semibold">Active</span></p></div>
+        <div className="relative z-10">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            Welcome, <span className="bg-clip-text text-transparent bg-gradient-to-r from-neon-green to-teal-400">{customerName}</span>
+          </h2>
+          <p className="text-gray-300 text-lg flex items-center gap-2 mt-2">
+            Your connection status: 
+            <span className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-widest border ${
+              status === "active" || status === "online" 
+                ? "bg-neon-green/20 text-neon-green border-neon-green/30" 
+                : status === "expired" 
+                  ? "bg-orange-500/20 text-orange-400 border-orange-500/30" 
+                  : status === "pending"
+                    ? "bg-neon-blue/20 text-neon-blue border-neon-blue/30"
+                    : "bg-red-500/20 text-red-400 border-red-500/30"
+            }`}>
+              {status}
+            </span>
+          </p>
+        </div>
       </motion.div>
 
       {daysRemaining !== null && daysRemaining <= 3 && (

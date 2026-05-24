@@ -39,6 +39,7 @@ export default async function CustomerDashboard() {
       dueAmount={dueResult?.sum || 0}
       noticeTitle={latestNotice?.title || null}
       noticeMessage={latestNotice?.message || null}
+      status={customer.status || "active"}
     />
   );
 }
