@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mikrotiks, olts } from "@/db/schema";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const routers = await db.query.mikrotiks.findMany();
   return NextResponse.json(routers);

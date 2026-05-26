@@ -6,13 +6,17 @@ const MIKROTIK_USER = process.env.MIKROTIK_USER || "admin";
 const MIKROTIK_PASS = process.env.MIKROTIK_PASS || "admin";
 
 function getClient() {
-  return new RouterOSAPI({
+  const client = new RouterOSAPI({
     host: MIKROTIK_HOST,
     port: parseInt(MIKROTIK_API_PORT),
     user: MIKROTIK_USER,
     password: MIKROTIK_PASS,
     timeout: 15,
   });
+  client.on("error", (err) => {
+    console.error("MikroTik socket error caught:", err);
+  });
+  return client;
 }
 
 // ───── Types ─────────────────────────────────────────────
@@ -169,6 +173,125 @@ export async function getPppoeActive(): Promise<PppoeActive[]> {
   try {
     const data = await client.write("/ppp/active/print");
     return data as unknown as PppoeActive[];
+  } finally {
+    try {
+      await client.close();
+    } catch {}
+  }
+}
+
+// ───── PPPoE Profiles ──────────────────────────────────────
+
+export interface PppoeProfile {
+  ".id": string;
+  name: string;
+  "local-address"?: string;
+  "remote-address"?: string;
+  "rate-limit"?: string;
+  "only-one"?: string;
+}
+
+export async function getPppoeProfiles(): Promise<PppoeProfile[]> {
+  const client = getClient();
+  await client.connect();
+  try {
+    const data = await client.write("/ppp/profile/print");
+    return data as unknown as PppoeProfile[];
+  } finally {
+    try {
+      await client.close();
+    } catch {}
+  }
+}
+
+export async function createPppoeProfile(data: {
+  name: string;
+  localAddress?: string;
+  remoteAddress?: string;
+  rateLimit?: string;
+}): Promise<PppoeProfile> {
+  const client = getClient();
+  await client.connect();
+  try {
+    const cmd = [
+      "/ppp/profile/add",
+      `=name=${data.name}`,
+    ];
+    if (data.localAddress) cmd.push(`=local-address=${data.localAddress}`);
+    if (data.remoteAddress) cmd.push(`=remote-address=${data.remoteAddress}`);
+    if (data.rateLimit) cmd.push(`=rate-limit=${data.rateLimit}`);
+    cmd.push("=only-one=yes");
+    const created = await client.write(cmd);
+    return created[0] as unknown as PppoeProfile;
+  } finally {
+    try {
+      await client.close();
+    } catch {}
+  }
+}
+
+export async function updatePppoeProfile(id: string, data: {
+  name?: string;
+  localAddress?: string;
+  remoteAddress?: string;
+  rateLimit?: string;
+}): Promise<void> {
+  const client = getClient();
+  await client.connect();
+  try {
+    const cmd = [
+      "/ppp/profile/set",
+      `=.id=${id}`,
+    ];
+    if (data.name) cmd.push(`=name=${data.name}`);
+    if (data.localAddress !== undefined) cmd.push(`=local-address=${data.localAddress}`);
+    if (data.remoteAddress !== undefined) cmd.push(`=remote-address=${data.remoteAddress}`);
+    if (data.rateLimit !== undefined) cmd.push(`=rate-limit=${data.rateLimit}`);
+    await client.write(cmd);
+  } finally {
+    try {
+      await client.close();
+    } catch {}
+  }
+}
+
+export async function deletePppoeProfile(id: string): Promise<void> {
+  const client = getClient();
+  await client.connect();
+  try {
+    await client.write([
+      "/ppp/profile/remove",
+      `=.id=${id}`,
+    ]);
+  } finally {
+    try {
+      await client.close();
+    } catch {}
+  }
+}
+
+export async function disconnectPppoeActive(id: string): Promise<void> {
+  const client = getClient();
+  await client.connect();
+  try {
+    await client.write([
+      "/ppp/active/remove",
+      `=.id=${id}`,
+    ]);
+  } finally {
+    try {
+      await client.close();
+    } catch {}
+  }
+}
+
+export async function rebootRouter(): Promise<void> {
+  const client = getClient();
+  await client.connect();
+  try {
+    await client.write("/system/reboot");
+  } catch {
+    // Connection closing is expected during reboot command
   } finally {
     try {
       await client.close();

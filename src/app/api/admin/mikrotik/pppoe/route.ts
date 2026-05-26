@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getPppoeSecrets, getPppoeActive, testConnection } from "@/lib/mikrotik";
+import { getPppoeSecrets, getPppoeActive, testConnection, getPppoeProfiles } from "@/lib/mikrotik";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await getSession();
@@ -9,16 +11,18 @@ export async function GET() {
   }
 
   try {
-    const [secrets, active, status] = await Promise.allSettled([
+    const [secrets, active, status, profiles] = await Promise.allSettled([
       getPppoeSecrets(),
       getPppoeActive(),
       testConnection(),
+      getPppoeProfiles(),
     ]);
 
     return NextResponse.json({
       secrets: secrets.status === "fulfilled" ? secrets.value : [],
       active: active.status === "fulfilled" ? active.value : [],
       routerStatus: status.status === "fulfilled" ? status.value : { ok: false, error: "Connection failed" },
+      profiles: profiles.status === "fulfilled" ? profiles.value : [],
       error: secrets.status === "rejected" ? String(secrets.reason) : null,
     });
   } catch (err) {

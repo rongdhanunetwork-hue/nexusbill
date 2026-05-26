@@ -4,16 +4,27 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Router, RadioTower, Activity, Wifi, WifiOff, Plus, Power,
-  RefreshCw, CheckCircle2, AlertTriangle, Loader2, Server, Trash, ShieldAlert
+  RefreshCw, CheckCircle2, AlertTriangle, Loader2, Server, Trash, ShieldAlert,
+  Edit, LogOut
 } from "lucide-react";
 
 interface PppoeSecret {
   ".id": string;
   name: string;
-  password: string;
+  password?: string;
   service: string;
   profile: string;
   disabled: string;
+  comment?: string;
+}
+
+interface PppoeProfile {
+  ".id": string;
+  name: string;
+  "local-address"?: string;
+  "remote-address"?: string;
+  "rate-limit"?: string;
+  "only-one"?: string;
 }
 
 interface PppoeActive {
@@ -33,6 +44,7 @@ interface RouterStatus {
 interface MikrotikData {
   secrets: PppoeSecret[];
   active: PppoeActive[];
+  profiles: PppoeProfile[];
   routerStatus: RouterStatus;
   error: string | null;
 }
@@ -54,12 +66,16 @@ interface OltDb {
 }
 
 export default function MikrotikPageClient() {
-  const [activeTab, setActiveTab] = useState<"live" | "routers" | "olts">("live");
+  const [activeTab, setActiveTab] = useState<"live" | "routers" | "olts" | "profiles">("live");
   
   // Live tab states
   const [liveData, setLiveData] = useState<MikrotikData | null>(null);
   const [liveLoading, setLiveLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Edit secret state
+  const [editingSecret, setEditingSecret] = useState<PppoeSecret | null>(null);
+  const [editSecretForm, setEditSecretForm] = useState({ password: "", profile: "" });
   
   // Routers tab states
   const [routers, setRouters] = useState<RouterDb[]>([]);
@@ -86,7 +102,7 @@ export default function MikrotikPageClient() {
       const d = await res.json();
       setLiveData(d);
     } catch {
-      setLiveData({ secrets: [], active: [], routerStatus: { ok: false, error: "Failed to fetch" }, error: "Network error" });
+      setLiveData({ secrets: [], active: [], profiles: [], routerStatus: { ok: false, error: "Failed to fetch" }, error: "Network error" });
     } finally {
       setLiveLoading(false);
     }
@@ -120,7 +136,7 @@ export default function MikrotikPageClient() {
 
   // Effect to load initial tab data
   useEffect(() => {
-    if (activeTab === "live") {
+    if (activeTab === "live" || activeTab === "profiles") {
       fetchLiveData();
     } else if (activeTab === "routers") {
       fetchRouters();
@@ -149,6 +165,171 @@ export default function MikrotikPageClient() {
         fetchLiveData();
       } else {
         showToast(d.error || "Action failed", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleRebootRouter() {
+    if (!confirm("Are you sure you want to reboot the MikroTik router? This will temporarily disconnect all PPPoE sessions.")) return;
+    try {
+      const res = await fetch("/api/admin/mikrotik/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reboot" }),
+      });
+      if (res.ok) {
+        showToast("Reboot command sent. Router is restarting...", true);
+        setTimeout(fetchLiveData, 15000);
+      } else {
+        showToast("Failed to reboot router", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    }
+  }
+
+  async function handleDisconnectActive(id: string, name: string) {
+    if (!confirm(`Are you sure you want to terminate active session for customer "${name}"? This will force them to reconnect.`)) return;
+    setActionLoading(id);
+    try {
+      const res = await fetch("/api/admin/mikrotik/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "disconnect", id, name }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        showToast(d.message || "Session disconnected", true);
+        fetchLiveData();
+      } else {
+        showToast(d.error || "Action failed", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  function startEditSecret(secret: PppoeSecret) {
+    setEditingSecret(secret);
+    setEditSecretForm({
+      password: secret.password || "",
+      profile: secret.profile || "default"
+    });
+  }
+
+  async function handleEditSecretSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingSecret) return;
+    setActionLoading(editingSecret[".id"]);
+    try {
+      const res = await fetch("/api/admin/mikrotik/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "edit",
+          id: editingSecret[".id"],
+          name: editingSecret.name,
+          password: editSecretForm.password,
+          profile: editSecretForm.profile,
+        }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        showToast("PPPoE user updated successfully!", true);
+        setEditingSecret(null);
+        fetchLiveData();
+      } else {
+        showToast(d.error || "Failed to update user", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleDeleteSecret(id: string, name: string) {
+    if (!confirm(`Are you sure you want to permanently delete PPPoE user "${name}" from the router? This action cannot be undone.`)) return;
+    setActionLoading(id);
+    try {
+      const res = await fetch("/api/admin/mikrotik/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", id, name }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        showToast(d.message || "User deleted from router", true);
+        fetchLiveData();
+      } else {
+        showToast(d.error || "Delete failed", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleAddProfile(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const body = {
+      action: "createProfile",
+      name: String(form.get("name") || "").trim(),
+      rateLimit: String(form.get("rateLimit") || "").trim(),
+      localAddress: String(form.get("localAddress") || "").trim(),
+      remoteAddress: String(form.get("remoteAddress") || "").trim(),
+    };
+
+    if (!body.name) {
+      showToast("Profile Name is required", false);
+      return;
+    }
+
+    setActionLoading("adding_profile");
+    try {
+      const res = await fetch("/api/admin/mikrotik/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        showToast(`Speed Profile "${body.name}" created successfully!`, true);
+        (e.target as HTMLFormElement).reset();
+        fetchLiveData();
+      } else {
+        showToast(d.error || "Failed to create profile", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleDeleteProfile(id: string, name: string) {
+    if (!confirm(`Are you sure you want to permanently delete speed profile "${name}"? PPPoE users using this profile might lose connectivity.`)) return;
+    setActionLoading(id);
+    try {
+      const res = await fetch("/api/admin/mikrotik/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "deleteProfile", id }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        showToast("Speed Profile deleted from router", true);
+        fetchLiveData();
+      } else {
+        showToast(d.error || "Failed to delete profile", false);
       }
     } catch {
       showToast("Network error", false);
@@ -298,6 +479,16 @@ export default function MikrotikPageClient() {
             Live Control
           </button>
           <button
+            onClick={() => setActiveTab("profiles")}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              activeTab === "profiles"
+                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            Speed Profiles
+          </button>
+          <button
             onClick={() => setActiveTab("routers")}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
               activeTab === "routers"
@@ -340,13 +531,23 @@ export default function MikrotikPageClient() {
                 </p>
               </div>
             </div>
-            <button
-              onClick={fetchLiveData}
-              disabled={liveLoading}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-colors text-sm disabled:opacity-50 animate-pulse"
-            >
-              <RefreshCw size={16} className={liveLoading ? "animate-spin" : ""} /> Refresh Live
-            </button>
+            <div className="flex items-center gap-2">
+              {liveData?.routerStatus.ok && (
+                <button
+                  onClick={handleRebootRouter}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 transition-all text-sm font-semibold"
+                >
+                  <Power size={16} /> Reboot Router
+                </button>
+              )}
+              <button
+                onClick={fetchLiveData}
+                disabled={liveLoading}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10 transition-colors text-sm disabled:opacity-50"
+              >
+                <RefreshCw size={16} className={liveLoading ? "animate-spin" : ""} /> Refresh Live
+              </button>
+            </div>
           </div>
 
           {/* Quick Counters */}
@@ -431,21 +632,39 @@ export default function MikrotikPageClient() {
                             </span>
                           </td>
                           <td className="p-4">
-                            <button
-                              onClick={() => toggleUser(secret)}
-                              disabled={isActioning}
-                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border transition-colors disabled:opacity-50 ${isDisabled
-                                ? "bg-neon-green/20 text-neon-green border-neon-green/30 hover:bg-neon-green/30"
-                                : "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
-                                }`}
-                            >
-                              {isActioning ? (
-                                <Loader2 size={14} className="animate-spin" />
-                              ) : (
-                                <Power size={14} />
-                              )}
-                              {isDisabled ? "Enable" : "Disable"}
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => toggleUser(secret)}
+                                disabled={isActioning}
+                                title={isDisabled ? "Enable" : "Disable"}
+                                className={`flex items-center justify-center p-2 rounded-lg border transition-colors disabled:opacity-50 ${isDisabled
+                                  ? "bg-neon-green/20 text-neon-green border-neon-green/30 hover:bg-neon-green/30"
+                                  : "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
+                                  }`}
+                              >
+                                {isActioning ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <Power size={14} />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => startEditSecret(secret)}
+                                disabled={isActioning}
+                                title="Edit User"
+                                className="flex items-center justify-center p-2 rounded-lg bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 transition-colors disabled:opacity-50"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSecret(secret[".id"], secret.name)}
+                                disabled={isActioning}
+                                title="Delete User from Router"
+                                className="flex items-center justify-center p-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/35 transition-colors disabled:opacity-50"
+                              >
+                                <Trash size={14} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -471,6 +690,7 @@ export default function MikrotikPageClient() {
                       <th className="p-4">IP Address</th>
                       <th className="p-4">Uptime</th>
                       <th className="p-4">Caller ID (MAC)</th>
+                      <th className="p-4 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -480,6 +700,21 @@ export default function MikrotikPageClient() {
                         <td className="p-4 text-neon-blue font-mono text-sm">{session.address}</td>
                         <td className="p-4 text-gray-300 text-sm">{session.uptime}</td>
                         <td className="p-4 text-gray-400 text-xs font-mono">{session["caller-id"]}</td>
+                        <td className="p-4 text-right">
+                          <button
+                            onClick={() => handleDisconnectActive(session[".id"], session.name)}
+                            disabled={actionLoading === session[".id"]}
+                            title="Disconnect Session (Force Reconnect)"
+                            className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors disabled:opacity-50 inline-flex items-center gap-1 text-xs font-semibold"
+                          >
+                            {actionLoading === session[".id"] ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <LogOut size={12} />
+                            )}
+                            Kick
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -489,7 +724,7 @@ export default function MikrotikPageClient() {
           )}
 
           {/* Create PPPoE user form */}
-          <AddPppoeForm onSuccess={fetchLiveData} onToast={showToast} />
+          <AddPppoeForm onSuccess={fetchLiveData} onToast={showToast} profiles={liveData?.profiles || []} />
         </div>
       )}
 
@@ -672,11 +907,172 @@ export default function MikrotikPageClient() {
           </div>
         </div>
       )}
+
+      {/* Tab: Speed Profiles */}
+      {activeTab === "profiles" && (
+        <div className="grid lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="glass-card overflow-hidden">
+              <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity size={18} className="text-neon-blue" />
+                  <h2 className="text-lg font-semibold text-white">PPPoE Speed Profiles (Packages)</h2>
+                </div>
+                {liveLoading && <Loader2 size={18} className="animate-spin text-gray-400" />}
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-white/10 text-xs text-gray-400 uppercase bg-white/5">
+                      <th className="p-4">Profile Name</th>
+                      <th className="p-4">Local IP Address</th>
+                      <th className="p-4">Remote IP Address (Pool)</th>
+                      <th className="p-4">Rate Limit (Speed)</th>
+                      <th className="p-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {liveLoading && (!liveData || liveData.profiles.length === 0) ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-gray-500">
+                          <Loader2 size={24} className="animate-spin mx-auto mb-2 text-neon-blue" /> Loading profiles...
+                        </td>
+                      </tr>
+                    ) : !liveData || liveData.profiles.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-gray-500">No profiles found on router.</td>
+                      </tr>
+                    ) : (
+                      liveData.profiles.map((prof) => (
+                        <tr key={prof[".id"]} className="hover:bg-white/5">
+                          <td className="p-4 text-white font-bold">{prof.name}</td>
+                          <td className="p-4 text-gray-300 font-mono text-sm">{prof["local-address"] || "—"}</td>
+                          <td className="p-4 text-gray-300 font-mono text-sm">{prof["remote-address"] || "—"}</td>
+                          <td className="p-4 text-neon-green font-semibold">{prof["rate-limit"] || "Unlimited"}</td>
+                          <td className="p-4 text-right">
+                            <button
+                              onClick={() => handleDeleteProfile(prof[".id"], prof.name)}
+                              disabled={actionLoading === prof[".id"]}
+                              className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors disabled:opacity-50"
+                            >
+                              {actionLoading === prof[".id"] ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Trash size={14} />
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <form onSubmit={handleAddProfile} className="glass-card p-6 space-y-4">
+              <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2">
+                <Plus size={18} className="text-neon-blue" /> Create Speed Profile
+              </h3>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">Profile Name</label>
+                <input name="name" required placeholder="e.g. 10Mbps_Package" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">Local IP Address</label>
+                <input name="localAddress" placeholder="e.g. 10.0.0.1" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">Remote Address / Pool</label>
+                <input name="remoteAddress" placeholder="e.g. pppoe-pool" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">Rate Limit (Rx/Tx)</label>
+                <input name="rateLimit" placeholder="e.g. 5M/10M" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                <span className="text-[10px] text-gray-400 mt-1 block">Format: [upload]/[download] (e.g. 5M/10M, 10M/10M)</span>
+              </div>
+              <button
+                type="submit"
+                disabled={actionLoading === "adding_profile"}
+                className="w-full py-3 bg-neon-blue/20 text-neon-blue border border-neon-blue/30 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-neon-blue/30 transition-colors disabled:opacity-50"
+              >
+                {actionLoading === "adding_profile" ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Create Profile
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Secret Modal */}
+      {editingSecret && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="w-full max-w-md glass-card p-6 space-y-4 border border-white/20"
+          >
+            <h3 className="text-lg font-bold text-white border-b border-white/10 pb-3 flex items-center gap-2">
+              <Edit size={18} className="text-neon-blue" /> Edit PPPoE User: {editingSecret.name}
+            </h3>
+            <form onSubmit={handleEditSecretSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">Password</label>
+                <input
+                  type="text"
+                  value={editSecretForm.password}
+                  onChange={(e) => setEditSecretForm({ ...editSecretForm, password: e.target.value })}
+                  placeholder="Enter new password"
+                  required
+                  className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">Profile</label>
+                <select
+                  value={editSecretForm.profile}
+                  onChange={(e) => setEditSecretForm({ ...editSecretForm, profile: e.target.value })}
+                  className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white"
+                >
+                  <option value="default" className="bg-slate-800">default</option>
+                  {(liveData?.profiles || []).map((p) => (
+                    <option key={p[".id"]} value={p.name} className="bg-slate-800">
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingSecret(null)}
+                  className="px-4 py-2 rounded-lg bg-white/10 text-gray-300 border border-white/10 hover:bg-white/20 text-sm font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading === editingSecret[".id"]}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 text-sm font-semibold transition-colors disabled:opacity-50"
+                >
+                  {actionLoading === editingSecret[".id"] ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
 
-function AddPppoeForm({ onSuccess, onToast }: { onSuccess: () => void; onToast: (msg: string, ok: boolean) => void }) {
+function AddPppoeForm({ onSuccess, onToast, profiles }: { onSuccess: () => void; onToast: (msg: string, ok: boolean) => void; profiles: PppoeProfile[] }) {
   const [adding, setAdding] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
@@ -749,7 +1145,14 @@ function AddPppoeForm({ onSuccess, onToast }: { onSuccess: () => void; onToast: 
           </div>
           <div>
             <label className="block text-sm text-gray-300 mb-1.5">Profile</label>
-            <input name="profile" placeholder="default" defaultValue="default" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+            <select name="profile" defaultValue="default" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white">
+              <option value="default" className="bg-slate-800">default</option>
+              {profiles.map((p) => (
+                <option key={p[".id"]} value={p.name} className="bg-slate-800">
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="sm:col-span-3">
             <button
