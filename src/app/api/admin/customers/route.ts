@@ -4,6 +4,7 @@ import { users, packages } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { syncCustomerToMikrotik } from "@/lib/sync";
 
 // GET /api/admin/customers — list all customers
 export async function GET() {
@@ -72,6 +73,11 @@ export async function POST(req: Request) {
       status: "active",
       expireDate,
     }).returning();
+
+    // Automatically sync customer PPPoE secret to MikroTik router
+    if (pppoeUsername?.trim()) {
+      await syncCustomerToMikrotik(pppoeUsername.trim(), password, packageId, "active");
+    }
 
     return NextResponse.json(customer, { status: 201 });
   } catch (err) {

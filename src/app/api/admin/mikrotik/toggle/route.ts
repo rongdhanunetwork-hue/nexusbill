@@ -10,7 +10,9 @@ import {
   rebootRouter,
   createPppoeProfile,
   updatePppoeProfile,
-  deletePppoeProfile
+  deletePppoeProfile,
+  getPppoeActive,
+  PppoeActive
 } from "@/lib/mikrotik";
 
 export async function POST(req: Request) {
@@ -59,10 +61,21 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true, message: `${name || id} deleted` });
 
       case "disconnect":
-        if (!id) {
-          return NextResponse.json({ error: "Active session ID required" }, { status: 400 });
+        if (!id && !name) {
+          return NextResponse.json({ error: "Active session ID or name required" }, { status: 400 });
         }
-        await disconnectPppoeActive(id);
+        let sessionToKick = id;
+        if (!sessionToKick && name) {
+          const activeSessions = await getPppoeActive();
+          const found = activeSessions.find((s: PppoeActive) => s.name.toLowerCase() === name.toLowerCase());
+          if (found) {
+            sessionToKick = found[".id"];
+          }
+        }
+        if (!sessionToKick) {
+          return NextResponse.json({ error: "No active session found for this customer" }, { status: 404 });
+        }
+        await disconnectPppoeActive(sessionToKick);
         return NextResponse.json({ success: true, message: `Active session for ${name || id} disconnected` });
 
       case "reboot":

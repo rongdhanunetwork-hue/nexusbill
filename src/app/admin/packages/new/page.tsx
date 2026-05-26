@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { db } from "@/db";
 import { packages } from "@/db/schema";
 import { redirect } from "next/navigation";
@@ -16,7 +18,12 @@ async function createPackage(formData: FormData) {
 export default function CreatePackagePage() {
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold text-white tracking-wide">Create Package</h1>
+      <div className="flex items-center gap-3">
+        <Link href="/admin/packages" className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-gray-400 hover:text-white transition-all">
+          <ArrowLeft size={20} />
+        </Link>
+        <h1 className="text-2xl font-bold text-white tracking-wide">Create Package</h1>
+      </div>
       <form action={createPackage} className="glass-card p-6 md:p-8 space-y-5">
         <div>
           <label className="block text-sm text-gray-300 mb-2">Package Name</label>

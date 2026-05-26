@@ -44,6 +44,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
 
+  // Global search states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<{ type: string; id: number; title: string; subtitle: string; url: string }[]>([]);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+
   useEffect(() => {
     fetch("/api/admin/notifications")
       .then((res) => res.json())
@@ -57,6 +63,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       })
       .catch(() => {});
   }, [pathname]);
+
+  // Global search effect with debounce
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    setSearchLoading(true);
+    const delayDebounceFn = setTimeout(() => {
+      fetch(`/api/admin/search?q=${encodeURIComponent(searchQuery)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setSearchResults(data);
+          }
+          setSearchLoading(false);
+        })
+        .catch(() => setSearchLoading(false));
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -157,11 +185,85 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <Menu size={24} />
           </button>
-          <div className="flex-1 flex justify-between items-center">
-            <h1 className="text-xl font-semibold text-white tracking-wide">{pageTitle}</h1>
+          <div className="flex-1 flex justify-between items-center gap-4">
+            <h1 className="text-xl font-semibold text-white tracking-wide hidden md:block shrink-0">{pageTitle}</h1>
+            
+            {/* Global Search Box */}
+            <div className="relative flex-1 max-w-md mx-auto z-50">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search customers, packages, routers..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearchDropdown(true);
+                  }}
+                  onFocus={() => setShowSearchDropdown(true)}
+                  className="w-full glass-input pl-10 pr-10 py-2 bg-white/5 border border-white/10 rounded-xl text-sm focus:bg-white/10 focus:border-neon-blue/50 transition-all text-white placeholder-gray-400 focus:outline-none"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  {searchLoading ? (
+                    <Loader2 size={16} className="animate-spin text-neon-blue" />
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  )}
+                </div>
+                {searchQuery && (
+                  <button 
+                    onClick={() => { setSearchQuery(""); setSearchResults([]); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xs font-semibold"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              
+              {/* Search Results Dropdown */}
+              <AnimatePresence>
+                {showSearchDropdown && (searchQuery.trim() !== "") && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                    className="absolute left-0 right-0 mt-2 bg-slate-950/95 border border-slate-700/80 backdrop-blur-md rounded-xl shadow-2xl overflow-hidden max-h-96 overflow-y-auto py-1"
+                  >
+                    {searchResults.length === 0 ? (
+                      <p className="p-4 text-sm text-gray-400 text-center">No results found for "{searchQuery}"</p>
+                    ) : (
+                      searchResults.map((res) => (
+                        <Link
+                          key={`${res.type}-${res.id}`}
+                          href={res.url}
+                          onClick={() => {
+                            setShowSearchDropdown(false);
+                            setSearchQuery("");
+                          }}
+                          className="block px-4 py-2.5 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0 text-left"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-white text-sm">{res.title}</span>
+                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-white/10 text-neon-blue">
+                              {res.type}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-0.5">{res.subtitle}</p>
+                        </Link>
+                      ))
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Click-away backdrop */}
+            {showSearchDropdown && searchQuery && (
+              <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setShowSearchDropdown(false)} />
+            )}
+
             <div className="flex items-center gap-4 relative">
               {/* Notification Bell */}
-              <div className="relative">
+              <div className="relative z-50">
                 <button
                   onClick={() => {
                     setShowNotif(!showNotif);

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Users, Wifi, WifiOff, Clock, DollarSign, Activity, AlertTriangle, Router, RadioTower, Download, Upload, CalendarCheck } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 function AnimatedCounter({ value, prefix = "" }: { value: number; prefix?: string }) {
   const [count, setCount] = useState(0);
@@ -58,20 +59,22 @@ export default function AdminDashboardClient(props: {
   dueAmount: number;
   routerCount: number;
   oltCount: number;
+  upcomingExpires: number;
 }) {
   const stats = [
-    { name: "Total Customer", value: props.totalCustomers, icon: Users, color: "text-blue-400", glow: "shadow-blue-500/40" },
-    { name: "Active Customer", value: props.activeCustomers, icon: Wifi, color: "text-neon-green", glow: "shadow-green-500/40" },
-    { name: "Online Customer", value: props.onlineCustomers, icon: Activity, color: "text-teal-300", glow: "shadow-teal-500/40" },
-    { name: "Offline Customer", value: props.offlineCustomers, icon: WifiOff, color: "text-neon-red", glow: "shadow-red-500/40" },
-    { name: "Expired Customer", value: props.expiredCustomers, icon: Clock, color: "text-orange-400", glow: "shadow-orange-500/40" },
-    { name: "1 Day Expired", value: props.expired1Day, icon: AlertTriangle, color: "text-red-300", glow: "shadow-red-400/40" },
-    { name: "2 Day Expired", value: props.expired2Day, icon: AlertTriangle, color: "text-red-400", glow: "shadow-red-500/40" },
-    { name: "3 Day Expired", value: props.expired3Day, icon: AlertTriangle, color: "text-red-500", glow: "shadow-red-600/40" },
-    { name: "4 Day Expired", value: props.expired4Day, icon: AlertTriangle, color: "text-red-600", glow: "shadow-red-700/40" },
-    { name: "Today Recharge", value: props.todayRecharge, icon: CalendarCheck, color: "text-neon-blue", glow: "shadow-cyan-500/40" },
-    { name: "Router Added", value: props.routerCount, icon: Router, color: "text-purple-300", glow: "shadow-purple-500/40" },
-    { name: "OLT Added", value: props.oltCount, icon: RadioTower, color: "text-pink-300", glow: "shadow-pink-500/40" },
+    { name: "Total Customer", value: props.totalCustomers, icon: Users, color: "text-blue-400", glow: "shadow-blue-500/40", href: "/admin/customers" },
+    { name: "Active Customer", value: props.activeCustomers, icon: Wifi, color: "text-neon-green", glow: "shadow-green-500/40", href: "/admin/customers?status=active" },
+    { name: "Online Customer", value: props.onlineCustomers, icon: Activity, color: "text-teal-300", glow: "shadow-teal-500/40", href: "/admin/customers?status=online" },
+    { name: "Offline Customer", value: props.offlineCustomers, icon: WifiOff, color: "text-neon-red", glow: "shadow-red-500/40", href: "/admin/customers?status=offline" },
+    { name: "Expired Customer", value: props.expiredCustomers, icon: Clock, color: "text-orange-400", glow: "shadow-orange-500/40", href: "/admin/customers?status=expired" },
+    { name: "1 Day Expired", value: props.expired1Day, icon: AlertTriangle, color: "text-red-300", glow: "shadow-red-400/40", href: "/admin/customers?status=expired" },
+    { name: "2 Day Expired", value: props.expired2Day, icon: AlertTriangle, color: "text-red-400", glow: "shadow-red-500/40", href: "/admin/customers?status=expired" },
+    { name: "3 Day Expired", value: props.expired3Day, icon: AlertTriangle, color: "text-red-500", glow: "shadow-red-600/40", href: "/admin/customers?status=expired" },
+    { name: "4 Day Expired", value: props.expired4Day, icon: AlertTriangle, color: "text-red-600", glow: "shadow-red-700/40", href: "/admin/customers?status=expired" },
+    { name: "Today Recharge", value: props.todayRecharge, icon: CalendarCheck, color: "text-neon-blue", glow: "shadow-cyan-500/40", href: "/admin/billing" },
+    { name: "Upcoming Expire", value: props.upcomingExpires, icon: Clock, color: "text-yellow-400", glow: "shadow-yellow-500/40", href: "/admin/customers?status=upcoming" },
+    { name: "Router Added", value: props.routerCount, icon: Router, color: "text-purple-300", glow: "shadow-purple-500/40", href: "/admin/mikrotik" },
+    { name: "OLT Added", value: props.oltCount, icon: RadioTower, color: "text-pink-300", glow: "shadow-pink-500/40", href: "/admin/mikrotik" },
   ];
 
   return (
@@ -102,15 +105,17 @@ export default function AdminDashboardClient(props: {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
-          <motion.div key={stat.name} initial={false} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }} className="glass-card p-5 flex items-center gap-4 hover:-translate-y-1">
-            <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center ${stat.color} shadow-lg ${stat.glow}`}>
-              <stat.icon size={24} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white"><AnimatedCounter value={stat.value} /></p>
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{stat.name}</p>
-            </div>
-          </motion.div>
+          <Link href={stat.href} key={stat.name} className="block">
+            <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }} className="glass-card p-5 flex items-center gap-4 hover:-translate-y-1 transition-all cursor-pointer select-none">
+              <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center ${stat.color} shadow-lg ${stat.glow}`}>
+                <stat.icon size={24} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white"><AnimatedCounter value={stat.value} /></p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{stat.name}</p>
+              </div>
+            </motion.div>
+          </Link>
         ))}
       </div>
 

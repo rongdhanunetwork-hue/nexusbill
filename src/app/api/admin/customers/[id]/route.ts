@@ -4,6 +4,7 @@ import { users, packages } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { syncCustomerToMikrotik, syncDeleteCustomerFromMikrotik } from "@/lib/sync";
 
 // PATCH /api/admin/customers/[id] — update customer
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -47,7 +48,32 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       updateData.password = await bcrypt.hash(body.password, 12);
     }
 
+    const oldCustomer = await db.query.users.findFirst({ where: eq(users.id, customerId) });
+    if (!oldCustomer) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+
     const [updated] = await db.update(users).set(updateData).where(eq(users.id, customerId)).returning();
+
+    // Automatically sync changes to MikroTik router
+    if (updated) {
+      const oldUsername = oldCustomer.pppoeUsername;
+      const newUsername = updated.pppoeUsername;
+
+      if (oldUsername && oldUsername !== newUsername) {
+        // Username changed or removed. Delete the old secret.
+        await syncDeleteCustomerFromMikrotik(oldUsername);
+      }
+
+      if (newUsername) {
+        // Sync the new/updated secret
+        await syncCustomerToMikrotik(
+          newUsername,
+          body.password || undefined,
+          updated.packageId,
+          updated.status
+        );
+      }
+    }
+
     return NextResponse.json(updated);
   } catch (err) {
     console.error("Update customer error:", err);
@@ -65,6 +91,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const { id } = await params;
   const customerId = Number(id);
   if (!customerId) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+
+  // Fetch customer to get pppoeUsername before deleting
+  const customer = await db.query.users.findFirst({ where: eq(users.id, customerId) });
+  if (customer && customer.pppoeUsername) {
+    // Delete secret from MikroTik
+    await syncDeleteCustomerFromMikrotik(customer.pppoeUsername);
+  }
 
   await db.delete(users).where(eq(users.id, customerId));
   return NextResponse.json({ success: true });
