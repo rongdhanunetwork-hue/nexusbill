@@ -4,7 +4,31 @@ import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { Banknote } from "lucide-react";
 export const dynamic = "force-dynamic";
-async function receiveBill(formData: FormData) { "use server"; const userId = Number(formData.get("userId")); const amount = String(formData.get("amount") || "0"); if (!userId) return; await db.insert(payments).values({ userId, amount, method: "employee_cash", trxId: `EMP-${Date.now()}`, status: "approved" }); await db.update(users).set({ status: "active", expireDate: new Date(Date.now() + 30*24*60*60*1000) }).where(eq(users.id, userId)); revalidatePath("/employee/collection"); }
+async function receiveBill(formData: FormData) { 
+  "use server"; 
+  const userId = Number(formData.get("userId")); 
+  const amount = String(formData.get("amount") || "0"); 
+  if (!userId) return; 
+
+  const customer = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+  });
+
+  await db.insert(payments).values({ userId, amount, method: "employee_cash", trxId: `EMP-${Date.now()}`, status: "approved" }); 
+  await db.update(users).set({ status: "active", expireDate: new Date(Date.now() + 30*24*60*60*1000) }).where(eq(users.id, userId)); 
+
+  if (customer && customer.pppoeUsername) {
+    const { syncCustomerToMikrotik } = await import("@/lib/sync");
+    await syncCustomerToMikrotik(
+      customer.pppoeUsername,
+      undefined, // password stays same
+      customer.packageId,
+      "active"
+    );
+  }
+
+  revalidatePath("/employee/collection"); 
+}
 export default async function EmployeeCollectionPage() {
   const customers = await db.query.users.findMany({ where: eq(users.role, "customer"), with: { package: true } });
   const recent = await db.query.payments.findMany({ orderBy: [desc(payments.createdAt)], limit: 10, with: { user: true } });

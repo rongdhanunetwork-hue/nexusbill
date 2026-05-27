@@ -14,9 +14,25 @@ async function rechargeCustomer(formData: FormData) {
   if (!reseller || !customerId || !amount) return;
   const balance = Number(reseller.walletBalance || 0);
   if (balance < amount) return;
+
+  const customer = await db.query.users.findFirst({
+    where: eq(users.id, customerId),
+  });
+
   await db.update(users).set({ walletBalance: String(balance - amount) }).where(eq(users.id, reseller.id));
   await db.update(users).set({ status: "active", expireDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }).where(eq(users.id, customerId));
   await db.insert(payments).values({ userId: customerId, amount: String(amount), method: "reseller_wallet", trxId: `RS-${Date.now()}`, status: "approved" });
+
+  if (customer && customer.pppoeUsername) {
+    const { syncCustomerToMikrotik } = await import("@/lib/sync");
+    await syncCustomerToMikrotik(
+      customer.pppoeUsername,
+      undefined, // password stays same
+      customer.packageId,
+      "active"
+    );
+  }
+
   revalidatePath("/reseller/recharge");
 }
 

@@ -276,6 +276,14 @@ export default function CustomerProfileClient({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }
 
+  function formatSpeed(rateInMbps: number) {
+    if (rateInMbps < 1) {
+      const kbps = Math.round(rateInMbps * 1000);
+      return `${kbps} Kbps`;
+    }
+    return `${rateInMbps.toFixed(2)} Mbps`;
+  }
+
   return (
     <div className="space-y-8 max-w-5xl print-container">
       {/* Print-only CSS */}
@@ -586,7 +594,7 @@ export default function CustomerProfileClient({
                 <div className="text-neon-green"><Download size={20} /></div>
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider">Download Speed</p>
-                  <p className="text-xl font-bold text-white font-mono">{liveDownloadRate.toFixed(2)} Mbps</p>
+                  <p className="text-xl font-bold text-white font-mono">{formatSpeed(liveDownloadRate)}</p>
                 </div>
               </div>
               <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-neon-blue/20 relative overflow-hidden">
@@ -597,7 +605,7 @@ export default function CustomerProfileClient({
                 <div className="text-neon-blue"><Upload size={20} /></div>
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider">Upload Speed</p>
-                  <p className="text-xl font-bold text-white font-mono">{liveUploadRate.toFixed(2)} Mbps</p>
+                  <p className="text-xl font-bold text-white font-mono">{formatSpeed(liveUploadRate)}</p>
                 </div>
               </div>
             </div>
@@ -641,11 +649,11 @@ export default function CustomerProfileClient({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full lg:w-auto">
             <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 text-center min-w-[130px]">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">RX (Upload Speed)</span>
-              <p className="text-base font-bold text-neon-blue font-mono mt-1">{liveUploadRate.toFixed(2)} Mbps</p>
+              <p className="text-base font-bold text-neon-blue font-mono mt-1">{formatSpeed(liveUploadRate)}</p>
             </div>
             <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 text-center min-w-[130px]">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">TX (Download Speed)</span>
-              <p className="text-base font-bold text-neon-green font-mono mt-1">{liveDownloadRate.toFixed(2)} Mbps</p>
+              <p className="text-base font-bold text-neon-green font-mono mt-1">{formatSpeed(liveDownloadRate)}</p>
             </div>
             <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 text-center min-w-[130px]">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">RX Total (Upload)</span>

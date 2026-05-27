@@ -13,9 +13,25 @@ async function approvePayment(formData: FormData) {
   const userId = Number(formData.get("userId"));
   const amount = String(formData.get("amount") || "0");
   if (!paymentId || !userId) return;
+
+  const customer = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+  });
+
   await db.update(payments).set({ status: "approved" }).where(eq(payments.id, paymentId));
   await db.update(users).set({ status: "active", expireDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }).where(eq(users.id, userId));
   await db.insert(invoices).values({ userId, amount, status: "paid", dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) });
+
+  if (customer && customer.pppoeUsername) {
+    const { syncCustomerToMikrotik } = await import("@/lib/sync");
+    await syncCustomerToMikrotik(
+      customer.pppoeUsername,
+      undefined, // password stays same
+      customer.packageId,
+      "active"
+    );
+  }
+
   revalidatePath("/admin/billing");
 }
 

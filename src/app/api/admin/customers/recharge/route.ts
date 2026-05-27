@@ -65,6 +65,17 @@ export async function POST(req: Request) {
       });
     });
 
+    // Sync status to MikroTik router
+    if (customer.pppoeUsername) {
+      const { syncCustomerToMikrotik } = await import("@/lib/sync");
+      await syncCustomerToMikrotik(
+        customer.pppoeUsername,
+        undefined, // password stays same
+        customer.packageId,
+        "active"
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: `Recharged customer "${customer.name}" for ${durationDays} days successfully.`,
