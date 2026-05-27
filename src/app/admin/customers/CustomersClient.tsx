@@ -53,27 +53,33 @@ export default function CustomersClient({
   }, [allCustomers]);
 
   useEffect(() => {
-    fetch("/api/admin/mikrotik/pppoe")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.active && Array.isArray(data.active)) {
-          setLiveActiveSessions(data.active);
-          setLiveActiveNames(data.active.map((s: any) => s.name));
-        }
+    const refreshData = () => {
+      fetch("/api/admin/mikrotik/pppoe")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.active && Array.isArray(data.active)) {
+            setLiveActiveSessions(data.active);
+            setLiveActiveNames(data.active.map((s: any) => s.name));
+          }
 
-        // Re-fetch updated customer list to automatically show imported router users
-        fetch("/api/admin/customers")
-          .then((res) => res.json())
-          .then((newCustomers) => {
-            if (Array.isArray(newCustomers)) {
-              setCustomersList(newCustomers);
-            }
-          })
-          .catch(() => {});
-      })
-      .catch((err) => {
-        console.error("Failed to fetch active sessions client-side:", err);
-      });
+          // Re-fetch updated customer list to automatically show imported router users
+          fetch("/api/admin/customers")
+            .then((res) => res.json())
+            .then((newCustomers) => {
+              if (Array.isArray(newCustomers)) {
+                setCustomersList(newCustomers);
+              }
+            })
+            .catch(() => {});
+        })
+        .catch((err) => {
+          console.error("Failed to fetch active sessions client-side:", err);
+        });
+    };
+
+    refreshData();
+    const interval = setInterval(refreshData, 20000); // Poll every 20s for real-time status & sync
+    return () => clearInterval(interval);
   }, []);
   
   // Modals state
@@ -109,15 +115,17 @@ export default function CustomersClient({
     return months;
   };
 
-  const formattedInitialStatus = initialStatus 
-    ? (initialStatus.charAt(0).toUpperCase() + initialStatus.slice(1).toLowerCase())
-    : "All Status";
+  const getInitialStatus = () => {
+    if (!initialStatus) return "All Status";
+    if (initialStatus === "new_month") return "New This Month";
+    const formatted = initialStatus.charAt(0).toUpperCase() + initialStatus.slice(1).toLowerCase();
+    if (["All Status", "Active", "Online", "Offline", "Expired", "Upcoming"].includes(formatted)) {
+      return formatted;
+    }
+    return "All Status";
+  };
 
-  const [statusFilter, setStatusFilter] = useState(
-    ["All Status", "Active", "Online", "Offline", "Expired", "Upcoming"].includes(formattedInitialStatus)
-      ? formattedInitialStatus
-      : "All Status"
-  );
+  const [statusFilter, setStatusFilter] = useState(getInitialStatus());
 
   // Calculate days remaining
   const getDaysLeft = (expireDate: string | Date | null) => {
@@ -144,13 +152,19 @@ export default function CustomersClient({
 
     const isUpcoming = customer.status === "active" && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
 
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const isNewThisMonth = customer.createdAt && new Date(customer.createdAt) >= startOfMonth;
+
     const matchesStatus =
       statusFilter === "All Status" ||
       (statusFilter === "Active" && customer.status === "active" && !isExpired) ||
       (statusFilter === "Online" && displayStatus === "online") ||
       (statusFilter === "Offline" && displayStatus === "offline") ||
       (statusFilter === "Expired" && displayStatus === "expired") ||
-      (statusFilter === "Upcoming" && isUpcoming);
+      (statusFilter === "Upcoming" && isUpcoming) ||
+      (statusFilter === "New This Month" && !!isNewThisMonth);
 
     return matchesSearch && matchesStatus;
   });
@@ -426,6 +440,7 @@ export default function CustomersClient({
             <option value="Offline" className="bg-slate-800">Offline</option>
             <option value="Expired" className="bg-slate-800">Expired</option>
             <option value="Upcoming" className="bg-slate-800">Upcoming Expire (7 Days)</option>
+            <option value="New This Month" className="bg-slate-800">New This Month</option>
           </select>
         </div>
       </div>

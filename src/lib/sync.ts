@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, mikrotiks, packages } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, lte } from "drizzle-orm";
 import { 
   getPppoeSecrets, 
   getPppoeActive, 
@@ -8,7 +8,8 @@ import {
   updatePppoeSecret, 
   deletePppoeSecret, 
   getPppoeProfiles,
-  PppoeSecret
+  PppoeSecret,
+  suspendUsers
 } from "./mikrotik";
 
 export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[]) {
@@ -149,4 +150,60 @@ export async function syncDeleteCustomerFromMikrotik(pppoeUsername: string) {
   } catch (err) {
     console.error(`Failed to delete MikroTik secret for "${pppoeUsername}":`, err);
   }
+}
+
+export async function checkAndSuspendExpiredUsers() {
+  try {
+    const now = new Date();
+    // Fetch all active customers whose expireDate <= now
+    const expiredUsers = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.role, "customer"),
+          eq(users.status, "active"),
+          lte(users.expireDate, now)
+        )
+      );
+
+    if (expiredUsers.length === 0) return;
+
+    console.log(`[Expiration Checker] Found ${expiredUsers.length} expired users to suspend.`);
+
+    // 1. Collect usernames to suspend on the router
+    const pppoeUsernames = expiredUsers
+      .map(u => u.pppoeUsername)
+      .filter((username): username is string => !!username);
+
+    // 2. Suspend them on the router in a single connection
+    if (pppoeUsernames.length > 0) {
+      await suspendUsers(pppoeUsernames);
+    }
+
+    // 3. Update database status to "expired" for these users
+    for (const user of expiredUsers) {
+      await db
+        .update(users)
+        .set({ status: "expired" })
+        .where(eq(users.id, user.id));
+      console.log(`[Expiration Checker] Suspended user: ${user.name} (PPPoE: ${user.pppoeUsername || "N/A"})`);
+    }
+  } catch (err) {
+    console.error("[Expiration Checker] Error checking expired users:", err);
+  }
+}
+
+export function startExpirationChecker() {
+  console.log("[Expiration Checker] Initializing background expiration checker (runs every 30s)...");
+  // Run immediately on boot
+  checkAndSuspendExpiredUsers().catch(err => {
+    console.error("[Expiration Checker] Initial run failed:", err);
+  });
+  // Setup interval
+  setInterval(() => {
+    checkAndSuspendExpiredUsers().catch(err => {
+      console.error("[Expiration Checker] Interval run failed:", err);
+    });
+  }, 30000); // 30 seconds
 }

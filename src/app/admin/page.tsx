@@ -32,7 +32,10 @@ export default async function AdminDashboard() {
     routerResult,
     oltResult
   ] = await Promise.all([
-    db.select({ id: users.id, status: users.status, pppoeUsername: users.pppoeUsername, expireDate: users.expireDate }).from(users).where(eq(users.role, "customer")),
+    db.query.users.findMany({
+      where: eq(users.role, "customer"),
+      with: { package: true }
+    }),
     countExpiredDays(1),
     countExpiredDays(2),
     countExpiredDays(3),
@@ -56,6 +59,26 @@ export default async function AdminDashboard() {
     return exp > now && exp <= nextWeek;
   }).length;
 
+  // Running Month New Users
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+  const newCustomersThisMonth = allDbCustomers.filter(c => {
+    if (!c.createdAt) return false;
+    return new Date(c.createdAt) >= startOfMonth;
+  });
+
+  // Today Expired (Expires Today)
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  const expiringToday = allDbCustomers.filter(c => {
+    if (!c.expireDate) return false;
+    const exp = new Date(c.expireDate);
+    return exp >= startOfToday && exp <= endOfToday;
+  });
+
   return (
     <AdminDashboardClient
       totalCustomers={totalCustomers}
@@ -73,6 +96,8 @@ export default async function AdminDashboard() {
       routerCount={routerResult[0]?.count || 0}
       oltCount={oltResult[0]?.count || 0}
       upcomingExpires={upcomingExpires}
+      newCustomersThisMonth={newCustomersThisMonth as any[]}
+      expiringToday={expiringToday as any[]}
     />
   );
 }

@@ -438,3 +438,46 @@ export async function getRouterDetails(): Promise<{
     } catch {}
   }
 }
+
+export async function suspendUsers(usernames: string[]): Promise<void> {
+  if (usernames.length === 0) return;
+  const client = getClient();
+  try {
+    await client.connect();
+    
+    // Fetch active and secrets
+    const secrets = await client.write("/ppp/secret/print") as any[];
+    const active = await client.write("/ppp/active/print") as any[];
+
+    const lowerUsernames = usernames.map(u => u.toLowerCase());
+
+    for (const username of lowerUsernames) {
+      // Find secret
+      const secret = secrets.find(s => s.name.toLowerCase() === username);
+      if (secret) {
+        // Disable secret
+        await client.write([
+          "/ppp/secret/set",
+          `=.id=${secret[".id"]}`,
+          "=disabled=yes",
+        ]);
+      }
+      
+      // Find active session
+      const session = active.find(s => s.name.toLowerCase() === username);
+      if (session) {
+        // Remove active session to kick them off
+        await client.write([
+          "/ppp/active/remove",
+          `=.id=${session[".id"]}`,
+        ]);
+      }
+    }
+  } catch (err) {
+    console.error("suspendUsers error:", err);
+  } finally {
+    try {
+      await client.close();
+    } catch {}
+  }
+}

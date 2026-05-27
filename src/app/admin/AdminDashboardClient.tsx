@@ -60,26 +60,58 @@ export default function AdminDashboardClient(props: {
   routerCount: number;
   oltCount: number;
   upcomingExpires: number;
+  newCustomersThisMonth: any[];
+  expiringToday: any[];
 }) {
   const [onlineCount, setOnlineCount] = useState<number | null>(null);
   const [offlineCount, setOfflineCount] = useState<number | null>(null);
+  const [activeModal, setActiveModal] = useState<"today_expire" | null>(null);
+
+  const downloadCSV = (title: string, data: any[]) => {
+    const headers = ["Name", "Phone", "PPPoE Username", "Package", "Created At", "Expire Date"];
+    const rows = data.map(u => [
+      u.name,
+      u.phone,
+      u.pppoeUsername || "N/A",
+      u.package?.name || "No Plan",
+      u.createdAt ? new Date(u.createdAt).toLocaleString() : "N/A",
+      u.expireDate ? new Date(u.expireDate).toLocaleString() : "N/A"
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+      + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${title.toLowerCase().replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   useEffect(() => {
-    fetch("/api/admin/dashboard/active-status")
-      .then((res) => res.json())
-      .then((data) => {
-        if (typeof data.onlineCustomers === "number") {
-          setOnlineCount(data.onlineCustomers);
-        }
-        if (typeof data.offlineCustomers === "number") {
-          setOfflineCount(data.offlineCustomers);
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to load active status client-side:", err);
-        setOnlineCount(0);
-        setOfflineCount(props.activeCustomers);
-      });
+    const fetchStatus = () => {
+      fetch("/api/admin/dashboard/active-status")
+        .then((res) => res.json())
+        .then((data) => {
+          if (typeof data.onlineCustomers === "number") {
+            setOnlineCount(data.onlineCustomers);
+          }
+          if (typeof data.offlineCustomers === "number") {
+            setOfflineCount(data.offlineCustomers);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load active status client-side:", err);
+          setOnlineCount((prev) => (prev !== null ? prev : 0));
+          setOfflineCount((prev) => (prev !== null ? prev : props.activeCustomers));
+        });
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 15000); // Poll every 15 seconds for real-time counts
+    return () => clearInterval(interval);
   }, [props.activeCustomers]);
 
   const stats = [
@@ -88,6 +120,11 @@ export default function AdminDashboardClient(props: {
     { name: "Online Customer", value: onlineCount !== null ? onlineCount : 0, icon: Activity, color: "text-teal-300", glow: "shadow-teal-500/40", href: "/admin/customers?status=online" },
     { name: "Offline Customer", value: offlineCount !== null ? offlineCount : props.activeCustomers, icon: WifiOff, color: "text-neon-red", glow: "shadow-red-500/40", href: "/admin/customers?status=offline" },
     { name: "Expired Customer", value: props.expiredCustomers, icon: Clock, color: "text-orange-400", glow: "shadow-orange-500/40", href: "/admin/customers?status=expired" },
+    
+    // New clickable card triggers
+    { name: "Running Month New User", value: props.newCustomersThisMonth?.length || 0, icon: Users, color: "text-indigo-400", glow: "shadow-indigo-500/40", href: "/admin/customers?status=new_month" },
+    { name: "Today Expire", value: props.expiringToday?.length || 0, icon: Clock, color: "text-pink-400", glow: "shadow-pink-500/40", onClick: () => setActiveModal("today_expire") },
+
     { name: "1 Day Expired", value: props.expired1Day, icon: AlertTriangle, color: "text-red-300", glow: "shadow-red-400/40", href: "/admin/customers?status=expired" },
     { name: "2 Day Expired", value: props.expired2Day, icon: AlertTriangle, color: "text-red-400", glow: "shadow-red-500/40", href: "/admin/customers?status=expired" },
     { name: "3 Day Expired", value: props.expired3Day, icon: AlertTriangle, color: "text-red-500", glow: "shadow-red-600/40", href: "/admin/customers?status=expired" },
@@ -125,9 +162,15 @@ export default function AdminDashboardClient(props: {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <Link href={stat.href} key={stat.name} className="block">
-            <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }} className="glass-card p-5 flex items-center gap-4 hover:-translate-y-1 transition-all cursor-pointer select-none">
+        {stats.map((stat, index) => {
+          const cardContent = (
+            <motion.div 
+              initial={false} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ delay: index * 0.03 }} 
+              className="glass-card p-5 flex items-center gap-4 hover:-translate-y-1 transition-all cursor-pointer select-none h-full"
+              onClick={stat.onClick}
+            >
               <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center ${stat.color} shadow-lg ${stat.glow}`}>
                 <stat.icon size={24} />
               </div>
@@ -136,8 +179,22 @@ export default function AdminDashboardClient(props: {
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{stat.name}</p>
               </div>
             </motion.div>
-          </Link>
-        ))}
+          );
+
+          if (stat.href) {
+            return (
+              <Link href={stat.href} key={stat.name} className="block">
+                {cardContent}
+              </Link>
+            );
+          }
+
+          return (
+            <div key={stat.name} className="block" onClick={stat.onClick}>
+              {cardContent}
+            </div>
+          );
+        })}
       </div>
 
       <div className="grid xl:grid-cols-2 gap-6">
@@ -171,6 +228,96 @@ export default function AdminDashboardClient(props: {
           </div>
         </div>
       </div>
+
+      {/* Clickable Card Modals */}
+      {activeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-card w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-white/10"
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+              <h3 className="text-xl font-bold text-white tracking-wide">
+                Today Expiring Users
+              </h3>
+              <button
+                onClick={() => setActiveModal(null)}
+                className="text-gray-400 hover:text-white px-3 py-1 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors font-bold text-sm"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 flex-1 overflow-y-auto space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
+                <span className="text-gray-300 font-medium">
+                  Total Users Found: <span className="text-neon-blue font-bold">{props.expiringToday?.length || 0}</span>
+                </span>
+                <button
+                  onClick={() => {
+                    downloadCSV("Today Expiring Users", props.expiringToday || []);
+                  }}
+                  className="bg-neon-blue/20 text-neon-blue border border-neon-blue/40 hover:bg-neon-blue/30 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Download size={14} /> Download CSV List
+                </button>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-white/5">
+                <table className="w-full border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-white/5 text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-wider">
+                      <th className="p-4">Customer</th>
+                      <th className="p-4">PPPoE / Plan</th>
+                      <th className="p-4">Created Date</th>
+                      <th className="p-4">Expire Date</th>
+                      <th className="p-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 text-gray-300">
+                    {(props.expiringToday || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-gray-500">No users found.</td>
+                      </tr>
+                    ) : (
+                      (props.expiringToday || []).map((user: any) => (
+                        <tr key={user.id} className="hover:bg-white/5 transition-colors text-xs sm:text-sm">
+                          <td className="p-4">
+                            <Link href={`/admin/customers/${user.id}`} className="font-bold text-white hover:text-neon-blue block">
+                              {user.name}
+                            </Link>
+                            <span className="text-gray-400 text-xs">{user.phone}</span>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-mono text-gray-300 block">{user.pppoeUsername || "N/A"}</span>
+                            <span className="text-neon-blue text-xs font-semibold">{user.package?.name || "No Plan"}</span>
+                          </td>
+                          <td className="p-4 text-gray-300 font-mono text-xs">
+                            {user.createdAt ? new Date(user.createdAt).toLocaleString() : "N/A"}
+                          </td>
+                          <td className="p-4 text-gray-300 font-mono text-xs">
+                            {user.expireDate ? new Date(user.expireDate).toLocaleString() : "N/A"}
+                          </td>
+                          <td className="p-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              user.status === "active" ? "bg-neon-green/10 text-neon-green" : "bg-red-500/10 text-red-400"
+                            }`}>
+                              {user.status || "offline"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
