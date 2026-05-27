@@ -35,6 +35,7 @@ export async function POST(req: Request) {
       name, phone, password, address,
       pppoeUsername, packageId, mikrotikId,
       photoUrl, nidUrl, macAddress,
+      nidNumber, createdAt, expireDate, dob
     } = body;
 
     if (!name || !phone || !password) {
@@ -48,13 +49,10 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Compute expiry: find package duration
-    let expireDate: Date | null = null;
-    if (packageId) {
-      const pkg = await db.query.packages.findFirst({ where: eq(packages.id, Number(packageId)) });
-      if (pkg) {
-        expireDate = new Date(Date.now() + (pkg.durationDays || 30) * 24 * 60 * 60 * 1000);
-      }
+    // Compute expiry: only set if custom expireDate is explicitly provided in the creation form
+    let calculatedExpireDate: Date | null = null;
+    if (expireDate) {
+      calculatedExpireDate = new Date(expireDate);
     }
 
     const [customer] = await db.insert(users).values({
@@ -67,11 +65,14 @@ export async function POST(req: Request) {
       mikrotikId: mikrotikId ? Number(mikrotikId) : null,
       photoUrl: photoUrl || null,
       nidUrl: nidUrl || null,
+      nidNumber: nidNumber?.trim() || null,
       macAddress: macAddress?.trim() || null,
       role: "customer",
       approvalStatus: "approved",
       status: "active",
-      expireDate,
+      expireDate: calculatedExpireDate,
+      dob: dob ? new Date(dob) : null,
+      createdAt: createdAt ? new Date(createdAt) : new Date(),
     }).returning();
 
     // Automatically sync customer PPPoE secret to MikroTik router

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getPppoeSecrets, getPppoeActive, testConnection, getPppoeProfiles } from "@/lib/mikrotik";
+import { getRouterDetails } from "@/lib/mikrotik";
+import { syncMikrotikSecrets } from "@/lib/sync";
 
 export const dynamic = "force-dynamic";
 
@@ -11,19 +12,26 @@ export async function GET() {
   }
 
   try {
-    const [secrets, active, status, profiles] = await Promise.allSettled([
-      getPppoeSecrets(),
-      getPppoeActive(),
-      testConnection(),
-      getPppoeProfiles(),
-    ]);
+    // Fetch all router details using a SINGLE connection sequentially
+    const details = await getRouterDetails();
+
+    // Automatically import any new router secrets into database using the fetched secrets (no extra connection)
+    if (details.secrets && details.secrets.length > 0) {
+      await syncMikrotikSecrets(details.secrets);
+    }
+
+    const errorMessage = details.status.ok ? null : (details.status.error || "Connection failed");
 
     return NextResponse.json({
-      secrets: secrets.status === "fulfilled" ? secrets.value : [],
-      active: active.status === "fulfilled" ? active.value : [],
-      routerStatus: status.status === "fulfilled" ? status.value : { ok: false, error: "Connection failed" },
-      profiles: profiles.status === "fulfilled" ? profiles.value : [],
-      error: secrets.status === "rejected" ? String(secrets.reason) : null,
+      secrets: details.secrets,
+      active: details.active,
+      routerStatus: {
+        ok: details.status.ok,
+        version: details.status.version || "Unknown",
+        error: errorMessage || undefined
+      },
+      profiles: details.profiles,
+      error: errorMessage,
     });
   } catch (err) {
     return NextResponse.json({

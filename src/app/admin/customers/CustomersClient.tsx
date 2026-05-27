@@ -32,15 +32,49 @@ export default function CustomersClient({
   allCustomers,
   deleteCustomerAction,
   activePppoeNames = [],
+  activeSessions = [],
   initialStatus = "All Status",
 }: {
   allCustomers: Customer[];
   deleteCustomerAction: (formData: FormData) => Promise<void>;
   activePppoeNames?: string[];
+  activeSessions?: any[];
   initialStatus?: string;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
+
+  const [liveActiveNames, setLiveActiveNames] = useState<string[]>(activePppoeNames || []);
+  const [liveActiveSessions, setLiveActiveSessions] = useState<any[]>(activeSessions || []);
+  const [customersList, setCustomersList] = useState<Customer[]>(allCustomers);
+
+  useEffect(() => {
+    setCustomersList(allCustomers);
+  }, [allCustomers]);
+
+  useEffect(() => {
+    fetch("/api/admin/mikrotik/pppoe")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.active && Array.isArray(data.active)) {
+          setLiveActiveSessions(data.active);
+          setLiveActiveNames(data.active.map((s: any) => s.name));
+        }
+
+        // Re-fetch updated customer list to automatically show imported router users
+        fetch("/api/admin/customers")
+          .then((res) => res.json())
+          .then((newCustomers) => {
+            if (Array.isArray(newCustomers)) {
+              setCustomersList(newCustomers);
+            }
+          })
+          .catch(() => {});
+      })
+      .catch((err) => {
+        console.error("Failed to fetch active sessions client-side:", err);
+      });
+  }, []);
   
   // Modals state
   const [rechargeCustomer, setRechargeCustomer] = useState<Customer | null>(null);
@@ -50,12 +84,18 @@ export default function CustomersClient({
   const [billType, setBillType] = useState<"bill" | "advance">("bill");
   const [billingType, setBillingType] = useState<"monthly" | "daily">("monthly");
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
-  const [discount, setDiscount] = useState<number>(0);
-  const [rechargeDays, setRechargeDays] = useState<number>(30);
+  const [discount, setDiscount] = useState<string>("0");
+  const [rechargeDays, setRechargeDays] = useState<string>("30");
   const [rechargeMethod, setRechargeMethod] = useState<string>("হ্যান্ড ক্যাশ");
   const [showNoteDate, setShowNoteDate] = useState(false);
+  const [renewBack, setRenewBack] = useState(true);
   const [rechargeNote, setRechargeNote] = useState("");
   const [rechargeLoading, setRechargeLoading] = useState(false);
+  const [rechargeSuccessMessage, setRechargeSuccessMessage] = useState<string | null>(null);
+
+  // Manual overrides for Recharge Modal fields
+  const [overrideCalculated, setOverrideCalculated] = useState<string>("");
+  const [overrideDue, setOverrideDue] = useState<string>("");
 
   // Month list generator (next 6 months)
   const getMonthsList = () => {
@@ -91,13 +131,13 @@ export default function CustomersClient({
   };
 
   // Filter logic
-  const filteredCustomers = allCustomers.filter((customer) => {
+  const filteredCustomers = customersList.filter((customer) => {
     const matchesSearch =
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.phone.includes(searchTerm) ||
       (customer.pppoeUsername || "").toLowerCase().includes(searchTerm.toLowerCase());
 
-    const isOnline = customer.status === "active" && customer.pppoeUsername && activePppoeNames.includes(customer.pppoeUsername);
+    const isOnline = customer.status === "active" && customer.pppoeUsername && liveActiveNames.includes(customer.pppoeUsername);
     const daysLeft = getDaysLeft(customer.expireDate);
     const isExpired = customer.status === "expired" || (daysLeft !== null && daysLeft < 0);
     const displayStatus = isExpired ? "expired" : (isOnline ? "online" : "offline");
@@ -124,12 +164,24 @@ export default function CustomersClient({
     durationVal = Math.max(1, selectedMonths.length);
     calculatedAmount = monthlyPrice * durationVal;
   } else {
-    durationVal = rechargeDays;
+    const daysVal = parseInt(rechargeDays) || 30;
+    durationVal = daysVal;
     const dailyRate = monthlyPrice / 30;
-    calculatedAmount = Math.round(dailyRate * rechargeDays);
+    calculatedAmount = Math.round(dailyRate * daysVal);
   }
 
-  const finalAmount = Math.max(0, calculatedAmount - discount);
+  const displayCalculated = overrideCalculated !== "" ? overrideCalculated : String(calculatedAmount);
+  const currentCalculatedVal = parseFloat(displayCalculated) || 0;
+  const currentDiscountVal = parseFloat(discount) || 0;
+  const finalAmount = Math.max(0, currentCalculatedVal - currentDiscountVal);
+
+  const displayDue = overrideDue !== "" ? overrideDue : String(finalAmount);
+
+  // Reset overrides when recharge configuration inputs change
+  useEffect(() => {
+    setOverrideCalculated("");
+    setOverrideDue("");
+  }, [rechargeCustomer, billingType, selectedMonths, rechargeDays, discount]);
 
   // Handle advanced recharge submit
   const handleRechargeSubmit = async (e: React.FormEvent) => {
@@ -143,20 +195,20 @@ export default function CustomersClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: rechargeCustomer.id,
-          amount: finalAmount,
+          amount: parseFloat(displayDue) || 0,
           billingType,
           duration: durationVal,
           method: rechargeMethod,
-          discount,
+          discount: parseFloat(discount) || 0,
           note: showNoteDate ? rechargeNote : "",
+          renewBack,
         }),
       });
 
       const data = await res.json();
       if (res.ok) {
-        alert(data.message || "Recharged successfully!");
+        setRechargeSuccessMessage(data.message || "Recharged successfully!");
         setRechargeCustomer(null);
-        window.location.reload();
       } else {
         alert(data.error || "Failed to recharge");
       }
@@ -223,7 +275,7 @@ export default function CustomersClient({
     const headers = ["Name", "Phone", "Address", "PPPoE Username", "Package", "Monthly Fee", "Balance", "Expire Date", "Days Left", "Status"];
     const rows = filteredCustomers.map(c => {
       const daysLeft = getDaysLeft(c.expireDate);
-      const isOnline = c.status === "active" && c.pppoeUsername && activePppoeNames.includes(c.pppoeUsername);
+      const isOnline = c.status === "active" && c.pppoeUsername && liveActiveNames.includes(c.pppoeUsername);
       const isExpired = c.status === "expired" || (daysLeft !== null && daysLeft < 0);
       const statusText = `${isExpired ? 'Expired' : 'Active'} (${isOnline ? 'Online' : 'Offline'})`;
 
@@ -279,7 +331,7 @@ export default function CustomersClient({
         button {
           display: none !important;
         }
-        body, html, main, .glass-card, table {
+        body, html, main, .glass-card, table, .min-h-screen, .flex-1, .flex, #__next, [class*="min-h-screen"], [class*="flex-1"] {
           background: white !important;
           color: black !important;
           width: 100% !important;
@@ -287,6 +339,10 @@ export default function CustomersClient({
           padding: 0 !important;
           box-shadow: none !important;
           border: none !important;
+          height: auto !important;
+          min-height: auto !important;
+          overflow: visible !important;
+          position: relative !important;
         }
         table {
           border-collapse: collapse !important;
@@ -403,7 +459,10 @@ export default function CustomersClient({
               ) : (
                 filteredCustomers.map((customer) => {
                   const daysLeft = getDaysLeft(customer.expireDate);
-                  const isOnline = customer.status === "active" && customer.pppoeUsername && activePppoeNames.includes(customer.pppoeUsername);
+                  const activeSession = customer.pppoeUsername
+                    ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
+                    : null;
+                  const isOnline = customer.status === "active" && !!activeSession;
                   const isExpired = customer.status === "expired" || (daysLeft !== null && daysLeft < 0);
 
                   return (
@@ -429,6 +488,13 @@ export default function CustomersClient({
                       <td className="p-5">
                         <div className="text-gray-300 font-mono font-medium">{customer.pppoeUsername || "N/A"}</div>
                         <div className="text-xs text-neon-blue mt-1 font-semibold">{customer.package?.name || "No Plan"}</div>
+                        {isOnline && activeSession && (
+                          <div className="text-[10px] text-teal-400 mt-1 font-mono leading-relaxed space-y-0.5 no-print-col">
+                            <div>IP: {activeSession.address}</div>
+                            <div>MAC: {activeSession["caller-id"] || "N/A"}</div>
+                            <div>ID: {activeSession[".id"]}</div>
+                          </div>
+                        )}
                       </td>
 
                       {/* 3. Bill / Balance */}
@@ -437,9 +503,10 @@ export default function CustomersClient({
                         <div className="text-xs text-neon-green mt-0.5">৳{customer.walletBalance || "0"}</div>
                       </td>
 
-                      {/* 4. Expire Date */}
                       <td className="p-5 text-gray-300 font-mono text-sm">
-                        {customer.expireDate ? new Date(customer.expireDate).toLocaleDateString() : "N/A"}
+                        {customer.expireDate 
+                          ? new Date(customer.expireDate).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) 
+                          : "N/A"}
                       </td>
 
                       {/* 5. Date Left (দিন বাকি) */}
@@ -669,7 +736,7 @@ export default function CustomersClient({
 
                 {/* Status Indicator */}
                 <div className="text-sm font-bold text-[#38bdf8] bg-[#0284c7]/10 border border-[#0284c7]/20 px-4 py-2.5 rounded-xl">
-                  {rechargeCustomer.pppoeUsername || "User"} মোট টাকা ৳{finalAmount}
+                  {rechargeCustomer.pppoeUsername || "User"} মোট টাকা ৳{displayDue}
                 </div>
 
                 {/* Input Fields */}
@@ -701,20 +768,20 @@ export default function CustomersClient({
                   <div>
                     <label className="block text-xs font-semibold text-gray-300 mb-1.5">বিল (Calculated Bill)</label>
                     <input 
-                      type="text" 
-                      value={calculatedAmount} 
-                      readOnly 
-                      className="w-full glass-input px-3 py-2 bg-slate-900/60 text-xs text-gray-400 select-none cursor-not-allowed" 
+                      type="text"
+                      value={displayCalculated} 
+                      onChange={(e) => setOverrideCalculated(e.target.value)}
+                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-gray-300 mb-1.5">বকেয়া (Due Amount)</label>
                     <input 
-                      type="text" 
-                      value={finalAmount} 
-                      readOnly 
-                      className="w-full glass-input px-3 py-2 bg-slate-900/60 text-xs text-gray-400 select-none cursor-not-allowed" 
+                      type="text"
+                      value={displayDue} 
+                      onChange={(e) => setOverrideDue(e.target.value)}
+                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
                     />
                   </div>
 
@@ -734,10 +801,9 @@ export default function CustomersClient({
                   <div>
                     <label className="block text-xs font-semibold text-gray-300 mb-1.5">ডিসকাউন্ট (Discount)</label>
                     <input 
-                      type="number" 
-                      min="0" 
+                      type="text" 
                       value={discount} 
-                      onChange={(e) => setDiscount(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(e) => setDiscount(e.target.value)}
                       className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
                     />
                   </div>
@@ -783,28 +849,41 @@ export default function CustomersClient({
                   <div>
                     <label className="block text-xs font-semibold text-gray-300 mb-1.5">দিন সংখ্যা (Number of Days)</label>
                     <input 
-                      type="number" 
-                      min="1" 
-                      max="365" 
+                      type="text" 
                       value={rechargeDays} 
-                      onChange={(e) => setRechargeDays(Math.max(1, parseInt(e.target.value) || 1))}
+                      onChange={(e) => setRechargeDays(e.target.value)}
                       className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
                     />
                   </div>
                 )}
 
-                {/* Note Checkbox */}
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="checkbox" 
-                    id="showNoteDate" 
-                    checked={showNoteDate} 
-                    onChange={(e) => setShowNoteDate(e.target.checked)}
-                    className="rounded bg-slate-800 border-white/10 text-neon-blue focus:ring-0" 
-                  />
-                  <label htmlFor="showNoteDate" className="text-xs font-semibold text-gray-300 cursor-pointer select-none">
-                    নোট এবং তারিখ (Note and Date)
-                  </label>
+                {/* Checkboxes */}
+                <div className="flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5">
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="renewBack" 
+                      checked={renewBack} 
+                      onChange={(e) => setRenewBack(e.target.checked)}
+                      className="rounded bg-slate-800 border-white/10 text-neon-blue focus:ring-0" 
+                    />
+                    <label htmlFor="renewBack" className="text-xs font-semibold text-gray-300 cursor-pointer select-none">
+                      মেয়াদ থেকে রিনিউ (Renew Back)
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="showNoteDate" 
+                      checked={showNoteDate} 
+                      onChange={(e) => setShowNoteDate(e.target.checked)}
+                      className="rounded bg-slate-800 border-white/10 text-neon-blue focus:ring-0" 
+                    />
+                    <label htmlFor="showNoteDate" className="text-xs font-semibold text-gray-300 cursor-pointer select-none">
+                      নোট এবং তারিখ (Note and Date)
+                    </label>
+                  </div>
                 </div>
 
                 {showNoteDate && (
@@ -841,6 +920,35 @@ export default function CustomersClient({
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Recharge Success Popup Modal */}
+      <AnimatePresence>
+        {rechargeSuccessMessage && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#1e293b] border border-[#22c55e]/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center space-y-4"
+            >
+              <div className="w-12 h-12 rounded-full bg-neon-green/20 text-neon-green flex items-center justify-center mx-auto shadow-[0_0_15px_rgba(57,255,20,0.4)]">
+                <CheckCircle2 size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-white">রিচার্জ সফল হয়েছে!</h3>
+              <p className="text-gray-300 text-xs">{rechargeSuccessMessage}</p>
+              <button
+                onClick={() => {
+                  setRechargeSuccessMessage(null);
+                  window.location.reload();
+                }}
+                className="w-full py-2 bg-neon-green/20 text-neon-green border border-neon-green/40 font-bold text-xs rounded-xl hover:bg-neon-green/30 transition-all"
+              >
+                ঠিক আছে (OK)
+              </button>
             </motion.div>
           </div>
         )}

@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { users, payments, invoices, dataUsage } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { getPppoeActive } from "@/lib/mikrotik";
+import { getPppoeActive, getPppoeSecrets } from "@/lib/mikrotik";
 import CustomerProfileClient from "./CustomerProfileClient";
 
 export const dynamic = "force-dynamic";
@@ -16,15 +16,31 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
   });
   if (!customer) notFound();
 
-  // Fetch active PPPoE usernames from MikroTik router
+  // Fetch active PPPoE session details and secrets from MikroTik router
   let isOnline = false;
+  let activeSession: any = null;
+  let plainTextPassword = "";
   try {
-    const activeSessions = await getPppoeActive();
+    const [activeSessions, secrets] = await Promise.all([
+      getPppoeActive(),
+      getPppoeSecrets().catch(() => [])
+    ]);
+
     if (customer.pppoeUsername) {
-      isOnline = activeSessions.some((s) => s.name === customer.pppoeUsername);
+      activeSession = activeSessions.find(
+        (s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase()
+      ) || null;
+      isOnline = !!activeSession;
+
+      const secretMatch = secrets.find(
+        (s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase()
+      );
+      if (secretMatch && secretMatch.password) {
+        plainTextPassword = secretMatch.password;
+      }
     }
   } catch (err) {
-    console.error("Failed to check active session for user in profile page:", err);
+    console.error("Failed to check active session and secrets for user in profile page:", err);
   }
 
   const customerPayments = await db.query.payments.findMany({ where: eq(payments.userId, customerId), orderBy: [desc(payments.createdAt)], limit: 8 });
@@ -62,6 +78,8 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
       invoices={customerInvoices as any}
       usageHistory={usage as any}
       isOnline={isOnline}
+      activeSession={activeSession}
+      plainTextPassword={plainTextPassword}
     />
   );
 }

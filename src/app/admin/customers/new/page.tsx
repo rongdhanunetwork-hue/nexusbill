@@ -50,7 +50,11 @@ export default function AddCustomerPage() {
       mikrotikId: form.get("mikrotikId") ? Number(form.get("mikrotikId")) : null,
       photoUrl: String(form.get("photoUrl") || "").trim(),
       nidUrl: String(form.get("nidUrl") || "").trim(),
+      nidNumber: String(form.get("nidNumber") || "").trim(),
       macAddress: String(form.get("macAddress") || "").trim(),
+      createdAt: form.get("createdAt") ? String(form.get("createdAt")) : null,
+      expireDate: form.get("expireDate") ? String(form.get("expireDate")) : null,
+      dob: form.get("dob") ? String(form.get("dob")) : null,
     };
 
     if (!body.password || body.password.length < 6) {
@@ -99,6 +103,8 @@ export default function AddCustomerPage() {
           <div className="grid md:grid-cols-2 gap-5">
             <Field label="Full Name *" name="name" required placeholder="Customer full name" />
             <Field label="Phone Number *" name="phone" required placeholder="01XXXXXXXXX" type="tel" />
+            <Field label="NID Number" name="nidNumber" placeholder="NID Number" />
+            <Field label="Date of Birth (জন্ম তারিখ)" name="dob" type="date" />
             <div className="md:col-span-2">
               <Field label="Address" name="address" placeholder="Full address" />
             </div>
@@ -135,6 +141,8 @@ export default function AddCustomerPage() {
                 ))}
               </select>
             </div>
+            <Field label="Profile Creation Date" name="createdAt" type="date" />
+            <Field label="Expiration Date & Time (Expiry)" name="expireDate" type="datetime-local" />
           </div>
         </section>
 

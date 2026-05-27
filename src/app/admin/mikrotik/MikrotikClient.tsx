@@ -67,7 +67,7 @@ interface OltDb {
 
 export default function MikrotikPageClient() {
   const [activeTab, setActiveTab] = useState<"live" | "routers" | "olts" | "profiles">("live");
-  
+
   // Live tab states
   const [liveData, setLiveData] = useState<MikrotikData | null>(null);
   const [liveLoading, setLiveLoading] = useState(true);
@@ -76,12 +76,12 @@ export default function MikrotikPageClient() {
   // Edit secret state
   const [editingSecret, setEditingSecret] = useState<PppoeSecret | null>(null);
   const [editSecretForm, setEditSecretForm] = useState({ password: "", profile: "" });
-  
+
   // Routers tab states
   const [routers, setRouters] = useState<RouterDb[]>([]);
   const [routersLoading, setRoutersLoading] = useState(false);
   const [addingRouter, setAddingRouter] = useState(false);
-  
+
   // OLTs tab states
   const [olts, setOlts] = useState<OltDb[]>([]);
   const [oltsLoading, setOltsLoading] = useState(false);
@@ -470,41 +470,37 @@ export default function MikrotikPageClient() {
         <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
           <button
             onClick={() => setActiveTab("live")}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              activeTab === "live"
-                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-                : "text-gray-400 hover:text-white"
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "live"
+              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+              : "text-gray-400 hover:text-white"
+              }`}
           >
             Live Control
           </button>
           <button
             onClick={() => setActiveTab("profiles")}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              activeTab === "profiles"
-                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-                : "text-gray-400 hover:text-white"
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "profiles"
+              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+              : "text-gray-400 hover:text-white"
+              }`}
           >
             Speed Profiles
           </button>
           <button
             onClick={() => setActiveTab("routers")}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              activeTab === "routers"
-                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-                : "text-gray-400 hover:text-white"
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "routers"
+              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+              : "text-gray-400 hover:text-white"
+              }`}
           >
             Routers List
           </button>
           <button
             onClick={() => setActiveTab("olts")}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              activeTab === "olts"
-                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-                : "text-gray-400 hover:text-white"
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "olts"
+              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+              : "text-gray-400 hover:text-white"
+              }`}
           >
             OLTs List
           </button>

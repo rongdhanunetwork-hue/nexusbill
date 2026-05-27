@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { userId, amount, billingType, duration, method, discount, note } = body;
+    const { userId, amount, billingType, duration, method, discount, note, renewBack } = body;
 
     if (!userId || amount === undefined) {
       return NextResponse.json({ error: "User ID and amount are required" }, { status: 400 });
@@ -28,9 +28,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Customer not found" }, { status: 404 });
     }
 
-    // Calculate new expiration date
+    // Calculate new expiration date: extend from current expiry only if renewBack is checked
     let baseDate = new Date();
-    if (customer.expireDate) {
+    if (renewBack && customer.expireDate) {
       const currentExpire = new Date(customer.expireDate);
       if (currentExpire > baseDate) {
         baseDate = currentExpire;

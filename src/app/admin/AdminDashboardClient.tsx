@@ -61,11 +61,32 @@ export default function AdminDashboardClient(props: {
   oltCount: number;
   upcomingExpires: number;
 }) {
+  const [onlineCount, setOnlineCount] = useState<number | null>(null);
+  const [offlineCount, setOfflineCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/dashboard/active-status")
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.onlineCustomers === "number") {
+          setOnlineCount(data.onlineCustomers);
+        }
+        if (typeof data.offlineCustomers === "number") {
+          setOfflineCount(data.offlineCustomers);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load active status client-side:", err);
+        setOnlineCount(0);
+        setOfflineCount(props.activeCustomers);
+      });
+  }, [props.activeCustomers]);
+
   const stats = [
     { name: "Total Customer", value: props.totalCustomers, icon: Users, color: "text-blue-400", glow: "shadow-blue-500/40", href: "/admin/customers" },
     { name: "Active Customer", value: props.activeCustomers, icon: Wifi, color: "text-neon-green", glow: "shadow-green-500/40", href: "/admin/customers?status=active" },
-    { name: "Online Customer", value: props.onlineCustomers, icon: Activity, color: "text-teal-300", glow: "shadow-teal-500/40", href: "/admin/customers?status=online" },
-    { name: "Offline Customer", value: props.offlineCustomers, icon: WifiOff, color: "text-neon-red", glow: "shadow-red-500/40", href: "/admin/customers?status=offline" },
+    { name: "Online Customer", value: onlineCount !== null ? onlineCount : 0, icon: Activity, color: "text-teal-300", glow: "shadow-teal-500/40", href: "/admin/customers?status=online" },
+    { name: "Offline Customer", value: offlineCount !== null ? offlineCount : props.activeCustomers, icon: WifiOff, color: "text-neon-red", glow: "shadow-red-500/40", href: "/admin/customers?status=offline" },
     { name: "Expired Customer", value: props.expiredCustomers, icon: Clock, color: "text-orange-400", glow: "shadow-orange-500/40", href: "/admin/customers?status=expired" },
     { name: "1 Day Expired", value: props.expired1Day, icon: AlertTriangle, color: "text-red-300", glow: "shadow-red-400/40", href: "/admin/customers?status=expired" },
     { name: "2 Day Expired", value: props.expired2Day, icon: AlertTriangle, color: "text-red-400", glow: "shadow-red-500/40", href: "/admin/customers?status=expired" },

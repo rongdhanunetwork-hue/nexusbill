@@ -28,6 +28,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.macAddress !== undefined) updateData.macAddress = body.macAddress?.trim() || null;
     if (body.photoUrl !== undefined) updateData.photoUrl = body.photoUrl || null;
     if (body.nidUrl !== undefined) updateData.nidUrl = body.nidUrl || null;
+    if (body.nidNumber !== undefined) updateData.nidNumber = body.nidNumber?.trim() || null;
+    if (body.createdAt !== undefined) updateData.createdAt = body.createdAt ? new Date(body.createdAt) : null;
+    if (body.expireDate !== undefined) updateData.expireDate = body.expireDate ? new Date(body.expireDate) : null;
+    if (body.dob !== undefined) updateData.dob = body.dob ? new Date(body.dob) : null;
     if (body.status) updateData.status = body.status;
     if (body.approvalStatus) updateData.approvalStatus = body.approvalStatus;
     if (body.mikrotikId !== undefined) updateData.mikrotikId = body.mikrotikId ? Number(body.mikrotikId) : null;

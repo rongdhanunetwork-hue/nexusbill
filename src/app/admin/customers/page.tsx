@@ -6,7 +6,6 @@ import { revalidatePath } from "next/cache";
 import { Plus } from "lucide-react";
 import CustomersClient from "./CustomersClient";
 
-import { getPppoeActive } from "@/lib/mikrotik";
 import { syncMikrotikSecrets } from "@/lib/sync";
 
 export const dynamic = "force-dynamic";
@@ -21,18 +20,12 @@ async function deleteCustomer(formData: FormData) {
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const { status } = await searchParams;
 
-  // Sync MikroTik secrets to DB first
-  await syncMikrotikSecrets();
+  // Sync MikroTik secrets to DB in the background
+  syncMikrotikSecrets().catch((err) => {
+    console.error("Background MikroTik sync error on customers page:", err);
+  });
 
-  // Fetch active PPPoE usernames from MikroTik router
-  let activePppoeNames: string[] = [];
-  try {
-    const activeSessions = await getPppoeActive();
-    activePppoeNames = activeSessions.map((s) => s.name);
-  } catch (err) {
-    console.error("Failed to fetch active sessions from MikroTik in customers page:", err);
-  }
-
+  // Fetch database customers only to load page instantly
   const allCustomers = await db.query.users.findMany({
     where: eq(users.role, "customer"),
     orderBy: [desc(users.createdAt)],
@@ -51,7 +44,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <CustomersClient 
         allCustomers={allCustomers as any} 
         deleteCustomerAction={deleteCustomer} 
-        activePppoeNames={activePppoeNames}
+        activePppoeNames={[]}
+        activeSessions={[]}
         initialStatus={status}
       />
     </div>

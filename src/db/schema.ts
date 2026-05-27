@@ -20,6 +20,7 @@ export const users = pgTable("users", {
   address: text("address"),
   photoUrl: text("photo_url"),
   nidUrl: text("nid_url"),
+  nidNumber: varchar("nid_number", { length: 50 }),
   pppoeUsername: varchar("pppoe_username", { length: 255 }),
   macAddress: varchar("mac_address", { length: 100 }),
   packageId: integer("package_id"),
@@ -30,6 +31,7 @@ export const users = pgTable("users", {
   status: varchar("status", { length: 50 }).default("active"), // active, offline, online, expired
   approvalStatus: varchar("approval_status", { length: 20 }).default("approved"), // pending, approved, rejected
   expireDate: timestamp("expire_date"),
+  dob: timestamp("dob"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

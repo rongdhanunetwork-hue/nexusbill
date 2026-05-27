@@ -11,7 +11,7 @@ function getClient() {
     port: parseInt(MIKROTIK_API_PORT),
     user: MIKROTIK_USER,
     password: MIKROTIK_PASS,
-    timeout: 15,
+    timeout: 3,
   });
   client.on("error", (err) => {
     console.error("MikroTik socket error caught:", err);
@@ -54,8 +54,8 @@ export interface SystemResource {
 
 export async function getPppoeSecrets(): Promise<PppoeSecret[]> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     const data = await client.write("/ppp/secret/print");
     return data as unknown as PppoeSecret[];
   } finally {
@@ -73,8 +73,8 @@ export async function createPppoeSecret(data: {
   comment?: string;
 }): Promise<PppoeSecret> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     const cmd = [
       "/ppp/secret/add",
       `=name=${data.name}`,
@@ -94,8 +94,8 @@ export async function createPppoeSecret(data: {
 
 export async function updatePppoeSecret(id: string, data: Partial<PppoeSecret>): Promise<void> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     const cmd = [
       "/ppp/secret/set",
       `=.id=${id}`,
@@ -120,8 +120,8 @@ export async function updatePppoeSecret(id: string, data: Partial<PppoeSecret>):
 
 export async function deletePppoeSecret(id: string): Promise<void> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     await client.write([
       "/ppp/secret/remove",
       `=.id=${id}`,
@@ -135,8 +135,8 @@ export async function deletePppoeSecret(id: string): Promise<void> {
 
 export async function enablePppoeSecret(id: string): Promise<void> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     await client.write([
       "/ppp/secret/set",
       `=.id=${id}`,
@@ -151,8 +151,8 @@ export async function enablePppoeSecret(id: string): Promise<void> {
 
 export async function disablePppoeSecret(id: string): Promise<void> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     await client.write([
       "/ppp/secret/set",
       `=.id=${id}`,
@@ -169,8 +169,8 @@ export async function disablePppoeSecret(id: string): Promise<void> {
 
 export async function getPppoeActive(): Promise<PppoeActive[]> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     const data = await client.write("/ppp/active/print");
     return data as unknown as PppoeActive[];
   } finally {
@@ -193,8 +193,8 @@ export interface PppoeProfile {
 
 export async function getPppoeProfiles(): Promise<PppoeProfile[]> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     const data = await client.write("/ppp/profile/print");
     return data as unknown as PppoeProfile[];
   } finally {
@@ -211,8 +211,8 @@ export async function createPppoeProfile(data: {
   rateLimit?: string;
 }): Promise<PppoeProfile> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     const cmd = [
       "/ppp/profile/add",
       `=name=${data.name}`,
@@ -237,8 +237,8 @@ export async function updatePppoeProfile(id: string, data: {
   rateLimit?: string;
 }): Promise<void> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     const cmd = [
       "/ppp/profile/set",
       `=.id=${id}`,
@@ -257,8 +257,8 @@ export async function updatePppoeProfile(id: string, data: {
 
 export async function deletePppoeProfile(id: string): Promise<void> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     await client.write([
       "/ppp/profile/remove",
       `=.id=${id}`,
@@ -272,8 +272,8 @@ export async function deletePppoeProfile(id: string): Promise<void> {
 
 export async function disconnectPppoeActive(id: string): Promise<void> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     await client.write([
       "/ppp/active/remove",
       `=.id=${id}`,
@@ -287,11 +287,74 @@ export async function disconnectPppoeActive(id: string): Promise<void> {
 
 export async function rebootRouter(): Promise<void> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     await client.write("/system/reboot");
   } catch {
     // Connection closing is expected during reboot command
+  } finally {
+    try {
+      await client.close();
+    } catch {}
+  }
+}
+
+export async function getPppoeTraffic(username: string): Promise<{ rxBps: number; txBps: number; bytesIn?: number; bytesOut?: number } | null> {
+  const client = getClient();
+  try {
+    await client.connect();
+    // 1. Fetch active sessions to find dynamic interface name and cumulative traffic
+    const actives = await client.write("/ppp/active/print");
+    const activeSession = (actives as any[]).find(
+      (s) => s.name.toLowerCase() === username.toLowerCase()
+    );
+    if (!activeSession) return null;
+
+    const bytesIn = parseInt(activeSession["bytes-in"] || "0");
+    const bytesOut = parseInt(activeSession["bytes-out"] || "0");
+
+    // Interface is dynamic, e.g. <pppoe-username>
+    const interfaceName = activeSession.interface || `<pppoe-${username}>`;
+
+    // 2. Monitor traffic on that interface once
+    const stats = await client.write([
+      "/interface/monitor-traffic",
+      `=interface=${interfaceName}`,
+      "=once=",
+    ]);
+    const s = stats[0] as any;
+    if (s) {
+      return {
+        rxBps: parseInt(s["rx-bits-per-second"] || "0"),
+        txBps: parseInt(s["tx-bits-per-second"] || "0"),
+        bytesIn,
+        bytesOut
+      };
+    }
+    return { rxBps: 0, txBps: 0, bytesIn, bytesOut };
+  } catch (err) {
+    console.error("getPppoeTraffic error:", err);
+    // Fallback directly to <pppoe-username>
+    try {
+      const client2 = getClient();
+      await client2.connect();
+      const stats = await client2.write([
+        "/interface/monitor-traffic",
+        `=interface=<pppoe-${username}>`,
+        "=once=",
+      ]);
+      await client2.close();
+      const s = stats[0] as any;
+      if (s) {
+        return {
+          rxBps: parseInt(s["rx-bits-per-second"] || "0"),
+          txBps: parseInt(s["tx-bits-per-second"] || "0"),
+        };
+      }
+    } catch (err2) {
+      console.error("getPppoeTraffic fallback error:", err2);
+    }
+    return null;
   } finally {
     try {
       await client.close();
@@ -303,8 +366,8 @@ export async function rebootRouter(): Promise<void> {
 
 export async function getSystemResource(): Promise<SystemResource> {
   const client = getClient();
-  await client.connect();
   try {
+    await client.connect();
     const data = await client.write("/system/resource/print");
     return data[0] as unknown as SystemResource;
   } finally {
@@ -327,5 +390,51 @@ export async function testConnection(): Promise<{ ok: boolean; version?: string;
     return { ok: true, version: (data[0] as any)?.version };
   } catch (err) {
     return { ok: false, error: String(err) };
+  }
+}
+
+// ───── Unified Router Details (Single Connection Fetch) ─────
+
+export interface PppoeProfile {
+  ".id": string;
+  name: string;
+  "local-address"?: string;
+  "remote-address"?: string;
+  "rate-limit"?: string;
+  "only-one"?: string;
+}
+
+export async function getRouterDetails(): Promise<{
+  secrets: PppoeSecret[];
+  active: PppoeActive[];
+  profiles: PppoeProfile[];
+  status: { ok: boolean; version?: string; error?: string };
+}> {
+  const client = getClient();
+  try {
+    await client.connect();
+    const secretsData = await client.write("/ppp/secret/print");
+    const activeData = await client.write("/ppp/active/print");
+    const profilesData = await client.write("/ppp/profile/print");
+    const resourceData = await client.write("/system/resource/print");
+
+    return {
+      secrets: secretsData as unknown as PppoeSecret[],
+      active: activeData as unknown as PppoeActive[],
+      profiles: profilesData as unknown as PppoeProfile[],
+      status: { ok: true, version: (resourceData[0] as any)?.version },
+    };
+  } catch (err) {
+    console.error("getRouterDetails error:", err);
+    return {
+      secrets: [],
+      active: [],
+      profiles: [],
+      status: { ok: false, error: String(err) },
+    };
+  } finally {
+    try {
+      await client.close();
+    } catch {}
   }
 }

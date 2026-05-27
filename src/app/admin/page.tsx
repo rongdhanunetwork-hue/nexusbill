@@ -2,7 +2,6 @@ import { db } from "@/db";
 import { users, payments, invoices, mikrotiks, olts } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import AdminDashboardClient from "./AdminDashboardClient";
-import { getPppoeActive } from "@/lib/mikrotik";
 import { syncMikrotikSecrets } from "@/lib/sync";
 
 export const dynamic = "force-dynamic";
@@ -16,17 +15,10 @@ async function countExpiredDays(days: number) {
 }
 
 export default async function AdminDashboard() {
-  // Sync MikroTik secrets to DB first
-  await syncMikrotikSecrets();
-
-  // Fetch active PPPoE usernames from MikroTik router
-  let activePppoeNames: string[] = [];
-  try {
-    const activeSessions = await getPppoeActive();
-    activePppoeNames = activeSessions.map((s) => s.name);
-  } catch (err) {
-    console.error("Failed to fetch active sessions from MikroTik:", err);
-  }
+  // Sync MikroTik secrets to DB in the background
+  syncMikrotikSecrets().catch((err) => {
+    console.error("Background MikroTik sync error:", err);
+  });
 
   const [
     allDbCustomers,
@@ -56,13 +48,6 @@ export default async function AdminDashboard() {
   const activeCustomers = allDbCustomers.filter(c => c.status === "active").length;
   const expiredCustomers = allDbCustomers.filter(c => c.status === "expired").length;
 
-  // Calculate online customers based on active secrets in MikroTik
-  const onlineCustomers = allDbCustomers.filter(c => {
-    return c.status === "active" && c.pppoeUsername && activePppoeNames.includes(c.pppoeUsername);
-  }).length;
-
-  const offlineCustomers = Math.max(0, activeCustomers - onlineCustomers);
-
   const now = new Date();
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   const upcomingExpires = allDbCustomers.filter(c => {
@@ -75,8 +60,8 @@ export default async function AdminDashboard() {
     <AdminDashboardClient
       totalCustomers={totalCustomers}
       activeCustomers={activeCustomers}
-      onlineCustomers={onlineCustomers}
-      offlineCustomers={offlineCustomers}
+      onlineCustomers={0}
+      offlineCustomers={activeCustomers}
       expiredCustomers={expiredCustomers}
       expired1Day={expired1Day}
       expired2Day={expired2Day}

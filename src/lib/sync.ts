@@ -7,13 +7,14 @@ import {
   createPppoeSecret, 
   updatePppoeSecret, 
   deletePppoeSecret, 
-  getPppoeProfiles 
+  getPppoeProfiles,
+  PppoeSecret
 } from "./mikrotik";
 
-export async function syncMikrotikSecrets() {
+export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[]) {
   try {
     // 1. Fetch secrets from MikroTik
-    const secrets = await getPppoeSecrets();
+    const secrets = passedSecrets || await getPppoeSecrets();
     
     // 2. Fetch customers from DB
     const dbCustomers = await db

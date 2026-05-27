@@ -21,10 +21,22 @@ interface Customer {
   pppoeUsername: string | null;
   photoUrl: string | null;
   nidUrl: string | null;
+  nidNumber: string | null;
   packageId: number | null;
   status: string | null;
   expireDate: string | null;
+  createdAt: string | null;
+  dob: string | null;
 }
+
+const toLocalDatetimeString = (dateInput: string | Date | null | undefined) => {
+  if (!dateInput) return "";
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return "";
+  const offset = d.getTimezoneOffset();
+  const localDate = new Date(d.getTime() - offset * 60 * 1000);
+  return localDate.toISOString().slice(0, 16);
+};
 
 export default function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -67,9 +79,12 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       pppoeUsername: String(form.get("pppoeUsername") || "").trim(),
       photoUrl: String(form.get("photoUrl") || "").trim(),
       nidUrl: String(form.get("nidUrl") || "").trim(),
+      nidNumber: String(form.get("nidNumber") || "").trim(),
       packageId: form.get("packageId") ? Number(form.get("packageId")) : null,
       status: String(form.get("status") || "active"),
+      createdAt: form.get("createdAt") ? new Date(String(form.get("createdAt"))).toISOString() : null,
       expireDate: form.get("expireDate") ? new Date(String(form.get("expireDate"))).toISOString() : null,
+      dob: form.get("dob") ? new Date(String(form.get("dob"))).toISOString() : null,
     };
 
     setSubmitting(true);
@@ -134,6 +149,16 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
           <Field label="Phone Number" name="phone" defaultValue={customer.phone} required />
           <Field label="Address" name="address" defaultValue={customer.address || ""} />
           <Field label="PPPoE Username" name="pppoeUsername" defaultValue={customer.pppoeUsername || ""} />
+          <Field label="NID Number" name="nidNumber" defaultValue={customer.nidNumber || ""} />
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">Date of Birth (জন্ম তারিখ)</label>
+            <input
+              type="date"
+              name="dob"
+              defaultValue={customer.dob ? customer.dob.slice(0, 10) : ""}
+              className="w-full glass-input px-4 py-3 bg-slate-800 text-white border border-white/10"
+            />
+          </div>
           <ImageUploadField label="Customer Photo" name="photoUrl" defaultValue={customer.photoUrl || ""} />
           <ImageUploadField label="NID Document Upload" name="nidUrl" defaultValue={customer.nidUrl || ""} />
           
@@ -160,11 +185,21 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
           </div>
 
           <div>
-            <label className="block text-sm text-gray-300 mb-2">Expire Date</label>
+            <label className="block text-sm text-gray-300 mb-2">Profile Creation Date</label>
             <input
               type="date"
+              name="createdAt"
+              defaultValue={customer.createdAt ? customer.createdAt.slice(0, 10) : ""}
+              className="w-full glass-input px-4 py-3 bg-slate-800 text-white border border-white/10"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">Expire Date & Time</label>
+            <input
+              type="datetime-local"
               name="expireDate"
-              defaultValue={customer.expireDate ? customer.expireDate.slice(0, 10) : ""}
+              defaultValue={customer.expireDate ? toLocalDatetimeString(customer.expireDate) : ""}
               className="w-full glass-input px-4 py-3 bg-slate-800 text-white border border-white/10"
             />
           </div>
