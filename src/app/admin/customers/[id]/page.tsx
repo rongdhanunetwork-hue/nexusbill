@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { users, payments, invoices, dataUsage } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { getPppoeActive, getPppoeSecrets } from "@/lib/mikrotik";
+import { getRouterDetails } from "@/lib/mikrotik";
 import CustomerProfileClient from "./CustomerProfileClient";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +21,9 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
   let activeSession: any = null;
   let plainTextPassword = "";
   try {
-    const [activeSessions, secrets] = await Promise.all([
-      getPppoeActive(),
-      getPppoeSecrets().catch(() => [])
-    ]);
+    const details = await getRouterDetails();
+    const activeSessions = details.active;
+    const secrets = details.secrets;
 
     if (customer.pppoeUsername) {
       activeSession = activeSessions.find(

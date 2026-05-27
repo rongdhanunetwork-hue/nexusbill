@@ -5,7 +5,7 @@ import Link from "next/link";
 import { 
   Edit, Phone, MapPin, Wifi, Package, CreditCard, Image, IdCard, 
   ArrowLeft, Download, Upload, Clock, FileText, CheckCircle2, 
-  Printer, Activity, Loader2
+  Printer, Activity, Loader2, Eye, EyeOff
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useState, useEffect } from "react";
@@ -97,6 +97,7 @@ export default function CustomerProfileClient({
   const [liveBytesOut, setLiveBytesOut] = useState<number>(0);
   const [accumulatedDownloadBytes, setAccumulatedDownloadBytes] = useState<number>(0);
   const [accumulatedUploadBytes, setAccumulatedUploadBytes] = useState<number>(0);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Dynamic customer fields states
   const [displayNidNumber, setDisplayNidNumber] = useState(customer.nidNumber || "");
@@ -452,7 +453,28 @@ export default function CustomerProfileClient({
               <Info icon={<Phone size={18} />} label="Phone Number" value={customer.phone} />
               <Info icon={<MapPin size={18} />} label="Address" value={customer.address || "Not set"} />
               <Info icon={<Wifi size={18} />} label="PPPoE Username" value={customer.pppoeUsername || "Not set"} />
-              <Info icon={<Wifi size={18} />} label="PPPoE Password" value={plainTextPassword || "••••••••"} />
+              {/* PPPoE Password Card with Show/Hide toggle */}
+              <div className="p-4 bg-white/5 rounded-xl flex items-start justify-between gap-3 border border-white/5">
+                <div className="flex items-start gap-3">
+                  <div className="text-neon-blue mt-1"><Wifi size={18} /></div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">PPPoE Password</p>
+                    <p className="text-white font-medium">
+                      {showPassword ? (plainTextPassword || "••••••••") : "••••••••"}
+                    </p>
+                  </div>
+                </div>
+                {plainTextPassword && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-white p-1 rounded hover:bg-white/10 transition-colors mt-0.5"
+                    title={showPassword ? "Hide Password" : "Show Password"}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                )}
+              </div>
               <Info icon={<Wifi size={18} />} label="MAC Address" value={customer.macAddress || "Not set"} />
               <Info icon={<IdCard size={18} />} label="NID Number" value={displayNidNumber || "Not set"} />
               <Info icon={<Clock size={18} />} label="Date of Birth (জন্ম তারিখ)" value={displayDob ? displayDob.toLocaleDateString() : "Not set"} />
