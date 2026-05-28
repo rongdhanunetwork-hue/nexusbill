@@ -1,9 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Package, CreditCard, Clock, AlertTriangle, ChevronRight, Megaphone } from "lucide-react";
+import { Package, CreditCard, Clock, AlertTriangle, ChevronRight, Megaphone, Download, Upload } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
+interface UsageDay {
+  day: string;
+  download: number;
+  upload: number;
+  hasReal: boolean;
+}
 
 export default function CustomerDashboardClient({
   customerName,
@@ -15,6 +22,7 @@ export default function CustomerDashboardClient({
   noticeTitle,
   noticeMessage,
   status,
+  usageData = [],
 }: {
   customerName: string;
   packageName: string;
@@ -25,6 +33,7 @@ export default function CustomerDashboardClient({
   noticeTitle: string | null;
   noticeMessage: string | null;
   status: string;
+  usageData?: UsageDay[];
 }) {
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
@@ -41,6 +50,11 @@ export default function CustomerDashboardClient({
     { label: "Due Amount", value: `৳${dueAmount}`, sub: "Clear dues to avoid disconnect", icon: AlertTriangle, color: dueAmount > 0 ? "text-red-400" : "text-neon-green" },
     { label: "Expire Date", value: daysRemaining !== null ? `${daysRemaining} days` : "N/A", sub: expireDate ? new Date(expireDate).toLocaleDateString() : "N/A", icon: Clock, color: "text-orange-400" },
   ];
+
+  const maxDownload = Math.max(...usageData.map(d => d.download), 0.1);
+  const maxUpload = Math.max(...usageData.map(d => d.upload), 0.1);
+  const maxVal = Math.max(maxDownload, maxUpload, 0.1);
+  const hasAnyRealData = usageData.some(d => d.hasReal);
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
@@ -71,9 +85,9 @@ export default function CustomerDashboardClient({
         <div className="glass-card p-5 border-orange-500/40 bg-orange-500/5 flex gap-3 items-center">
           <AlertTriangle className="text-orange-400 shrink-0 animate-bounce" size={24} />
           <div className="flex-1">
-            <h3 className="font-bold text-white">প্যাকেজ মেয়াদ শেষ হওয়ার সতর্কতা!</h3>
+            <h3 className="font-bold text-white">প্যাকেজ মেয়াদ শেষ হওয়ার সতর্কতা!</h3>
             <p className="text-gray-300 text-sm mt-0.5">
-              আপনার ইন্টারনেট কানেকশনের মেয়াদ আর মাত্র <span className="text-orange-400 font-bold">{daysRemaining} দিন</span> বাকি আছে। সচল রাখতে দ্রুত রিচার্জ করুন।
+              আপনার ইন্টারনেট কানেকশনের মেয়াদ আর মাত্র <span className="text-orange-400 font-bold">{daysRemaining} দিন</span> বাকি আছে। সচল রাখতে দ্রুত রিচার্জ করুন।
             </p>
           </div>
           <Link
@@ -91,17 +105,56 @@ export default function CustomerDashboardClient({
         {cards.map((card) => <motion.div key={card.label} initial={false} animate={{ opacity: 1 }} className="glass-card p-6 flex items-start gap-4"><div className={`w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center ${card.color} shadow-lg shrink-0`}><card.icon size={28} /></div><div><p className="text-gray-400 font-medium mb-1">{card.label}</p><h3 className="text-2xl font-bold text-white mb-1">{card.value}</h3><p className="text-sm text-gray-500">{card.sub}</p></div></motion.div>)}
       </div>
 
+      {/* Data Usage Chart */}
       <div className="glass-card p-6 md:p-8">
-        <h3 className="text-xl font-semibold text-white mb-6">Data Usage Statistics</h3>
-        <div className="grid grid-cols-7 gap-2 h-36 items-end mb-3">
-          {[45, 70, 55, 85, 62, 90, 78].map((height, index) => (
-            <div key={index} className="flex flex-col items-center gap-2">
-              <div className="w-full rounded-t-lg bg-gradient-to-t from-neon-green/30 to-neon-blue/80" style={{ height: `${height}%` }} />
-              <span className="text-xs text-gray-500">D{index + 1}</span>
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-semibold text-white">Data Usage - Last 7 Days</h3>
+          <div className="flex items-center gap-4 text-xs text-gray-400">
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-neon-blue/80 inline-block" /> Download</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-neon-green/80 inline-block" /> Upload</span>
+          </div>
         </div>
-        <p className="text-sm text-gray-400">Graphical download/upload usage overview from recent sessions.</p>
+
+        {hasAnyRealData ? (
+          <div>
+            <div className="grid grid-cols-7 gap-2 h-36 items-end mb-3">
+              {usageData.map((day, index) => (
+                <div key={index} className="flex flex-col items-center gap-1 h-full justify-end">
+                  <div className="w-full flex gap-0.5 items-end justify-center" style={{ height: "100%" }}>
+                    {/* Download bar */}
+                    <div
+                      className="flex-1 rounded-t-md bg-gradient-to-t from-neon-blue/40 to-neon-blue/80 transition-all duration-700"
+                      style={{ height: day.download > 0 ? `${Math.max(4, (day.download / maxVal) * 100)}%` : "2px" }}
+                      title={`Download: ${day.download.toFixed(2)} GB`}
+                    />
+                    {/* Upload bar */}
+                    <div
+                      className="flex-1 rounded-t-md bg-gradient-to-t from-neon-green/40 to-neon-green/80 transition-all duration-700"
+                      style={{ height: day.upload > 0 ? `${Math.max(4, (day.upload / maxVal) * 100)}%` : "2px" }}
+                      title={`Upload: ${day.upload.toFixed(2)} GB`}
+                    />
+                  </div>
+                  <span className="text-[10px] text-gray-500">{day.day}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between items-center mt-4 pt-4 border-t border-white/5">
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <Download size={14} className="text-neon-blue" />
+                Total: <span className="text-white font-semibold">{usageData.reduce((a, d) => a + d.download, 0).toFixed(2)} GB</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <Upload size={14} className="text-neon-green" />
+                Total: <span className="text-white font-semibold">{usageData.reduce((a, d) => a + d.upload, 0).toFixed(2)} GB</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="h-36 flex flex-col items-center justify-center text-gray-600 space-y-2">
+            <Download size={32} className="text-gray-700" />
+            <p className="text-sm">এখনও কোনো ডেটা ব্যবহারের রেকর্ড নেই।</p>
+          </div>
+        )}
       </div>
 
       <div className="glass-card p-6 md:p-8">

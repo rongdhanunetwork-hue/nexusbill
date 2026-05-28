@@ -16,11 +16,21 @@ async function approvePayment(formData: FormData) {
 
   const customer = await db.query.users.findFirst({
     where: eq(users.id, userId),
+    with: { package: true },
   });
 
+  const durationDays = (customer?.package as any)?.durationDays || 30;
+
+  // Extend from current expiry if not yet expired, otherwise start from now
+  let baseDate = new Date();
+  if (customer?.expireDate && new Date(customer.expireDate) > baseDate) {
+    baseDate = new Date(customer.expireDate);
+  }
+  const newExpireDate = new Date(baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
   await db.update(payments).set({ status: "approved" }).where(eq(payments.id, paymentId));
-  await db.update(users).set({ status: "active", expireDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }).where(eq(users.id, userId));
-  await db.insert(invoices).values({ userId, amount, status: "paid", dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) });
+  await db.update(users).set({ status: "active", expireDate: newExpireDate }).where(eq(users.id, userId));
+  await db.insert(invoices).values({ userId, amount, status: "paid", dueDate: newExpireDate });
 
   if (customer && customer.pppoeUsername) {
     const { syncCustomerToMikrotik } = await import("@/lib/sync");

@@ -6,14 +6,25 @@ import { revalidatePath } from "next/cache";
 import { Plus } from "lucide-react";
 import CustomersClient from "./CustomersClient";
 
-import { syncMikrotikSecrets } from "@/lib/sync";
+import { syncMikrotikSecrets, syncDeleteCustomerFromMikrotik } from "@/lib/sync";
 
 export const dynamic = "force-dynamic";
 
 async function deleteCustomer(formData: FormData) {
   "use server";
   const id = Number(formData.get("id"));
-  if (id) await db.delete(users).where(eq(users.id, id));
+  if (id) {
+    // Fetch customer first to get PPPoE username for MikroTik cleanup
+    const customer = await db.query.users.findFirst({ where: eq(users.id, id) });
+    if (customer?.pppoeUsername) {
+      try {
+        await syncDeleteCustomerFromMikrotik(customer.pppoeUsername);
+      } catch (err) {
+        console.error("Failed to remove customer from MikroTik on delete:", err);
+      }
+    }
+    await db.delete(users).where(eq(users.id, id));
+  }
   revalidatePath("/admin/customers");
 }
 

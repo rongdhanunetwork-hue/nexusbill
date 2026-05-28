@@ -178,9 +178,9 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
             <label className="block text-sm text-gray-300 mb-2">Status</label>
             <select name="status" defaultValue={customer.status || "active"} className="w-full glass-input px-4 py-3 bg-slate-800 text-white border border-white/10">
               <option className="bg-slate-800" value="active">Active</option>
-              <option className="bg-slate-800" value="online">Online</option>
-              <option className="bg-slate-800" value="offline">Offline</option>
               <option className="bg-slate-800" value="expired">Expired</option>
+              <option className="bg-slate-800" value="suspended">Suspended</option>
+              <option className="bg-slate-800" value="pending">Pending</option>
             </select>
           </div>
 

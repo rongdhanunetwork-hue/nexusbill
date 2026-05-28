@@ -330,13 +330,32 @@ export default function CustomerProfileClient({
             }`}>
               {customer.status || "active"}
             </span>
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase border ${
-              isOnline 
-                ? "bg-neon-green/20 text-neon-green border-neon-green/30" 
-                : "bg-red-500/20 text-red-400 border-red-500/30"
-            }`}>
-              {isOnline ? <><Activity size={10} /> Online</> : "Offline"}
-            </span>
+            {(() => {
+              const daysLeft = customer.expireDate ? Math.ceil((new Date(customer.expireDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
+              const isExpired = customer.status === "expired" || !customer.expireDate || (daysLeft !== null && daysLeft < 0);
+              
+              if (isOnline) {
+                if (isExpired) {
+                  return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase border bg-neon-blue/20 text-neon-blue border-neon-blue/30 animate-pulse">
+                      <Activity size={10} /> Active
+                    </span>
+                  );
+                } else {
+                  return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase border bg-neon-green/20 text-neon-green border-neon-green/30">
+                      <Activity size={10} /> Online
+                    </span>
+                  );
+                }
+              } else {
+                return (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase border bg-red-500/20 text-red-400 border-red-500/30">
+                    Offline
+                  </span>
+                );
+              }
+            })()}
           </div>
         </div>
 

@@ -40,51 +40,62 @@
   background-color: rgba(255, 255, 255, 0.2);
 }
 
+/* Print-only CSS Utilities */
+.print-only-layout {
+  display: none;
+}
+
 @media print {
-  /* HIDE SIDEBAR, TOP HEADER, BUTTONS, POPUPS & NAVIGATION ELEMENTS */
-  body header,
-  body nav,
-  body aside,
-  body button,
-  body .no-print,
-  body .glass-button,
-  body [role="navigation"],
-  body [role="dialog"] {
+  /* Force exact colors in print (background-colors, borders, badge backgrounds) */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Define page margins and layout */
+  @page {
+    size: A4 landscape; /* Spreadsheet is best formatted in landscape */
+    margin: 6mm 8mm 8mm 8mm;
+  }
+
+  /* Hide screen-only interactive and layout components */
+  nav,
+  aside,
+  header,
+  footer,
+  button,
+  .no-print,
+  .no-print-col,
+  .dropdown-container,
+  input,
+  select,
+  .glass-button,
+  .glass-card,
+  .overflow-x-auto,
+  .dropdown-container * {
     display: none !important;
   }
 
-  /* RESET LAYOUT CONTAINERS TO BLOCK / AUTO FOR PROPER PAGINATION */
+  /* Reset all screen-only dark-mode/glass layouts to white backgrounds with clean text */
   html, 
   body, 
+  #root,
   div.min-h-screen,
   main {
-    background: white !important;
-    background-color: white !important;
-    color: black !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
     display: block !important;
-    position: static !important;
-    height: auto !important;
-    min-height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
     width: 100% !important;
+    height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
     box-shadow: none !important;
     border: none !important;
   }
 
-  /* Target main page scroll wrapper */
-  main.flex-1.overflow-y-auto {
-    display: block !important;
-    position: static !important;
-    overflow: visible !important;
-    height: auto !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  /* Neutralize transform translations and transitions (fixes framer-motion empty page bug) */
+  /* Reset layout transformations (framer-motion and translation fixes) */
   *, *::before, *::after {
     transform: none !important;
     transition: none !important;
@@ -92,69 +103,112 @@
   }
 
   body {
-    font-family: sans-serif !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 10px !important;
+    line-height: 1.4 !important;
   }
 
-  /* CARD STYLING FOR PRINT */
-  .glass-card {
-    background: none !important;
-    background-color: transparent !important;
-    border: 1px solid #cbd5e1 !important;
-    box-shadow: none !important;
-    color: black !important;
-    overflow: visible !important;
-  }
-
-  .print-container {
+  .print-only-layout {
+    display: block !important;
     width: 100% !important;
+  }
+
+  /* Excel Spreadsheet Table Styles */
+  table.excel-table {
+    width: 100% !important;
+    min-width: 100% !important;
     max-width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    background: white !important;
-    color: black !important;
-  }
-
-  /* TEXT COLORS */
-  .text-white, h1, h2, h3, h4, span, p, td, th, div, label, a {
-    color: black !important;
-    text-shadow: none !important;
-  }
-
-  .text-gray-400, .text-gray-500, .text-slate-400, .text-gray-300 {
-    color: #4b5563 !important;
-  }
-
-  /* TABLE PRINT FIXES */
-  table {
     border-collapse: collapse !important;
-    width: 100% !important;
+    margin-top: 15px !important;
+    font-size: 9.5px !important;
   }
 
-  th, td {
-    border: 1px solid #ddd !important;
-    padding: 10px !important;
-    color: black !important;
+  thead {
+    display: table-header-group !important;
   }
 
-  th {
-    background-color: #f2f2f2 !important;
-  }
-
-  a {
-    text-decoration: none !important;
-  }
-
-  /* Badges print fix */
-  span.inline-flex, span.inline-block {
-    background: transparent !important;
-    color: black !important;
-    border: 1px solid #cbd5e1 !important;
-    padding: 2px 6px !important;
-  }
-
-  /* PAGE BREAKS MANAGEMENT */
-  .glass-card, tr, pre, blockquote, .grid > div {
+  tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+
+  th.excel-th {
+    background-color: #f1f5f9 !important; /* Excel light gray header */
+    color: #0f172a !important;
+    font-weight: bold !important;
+    border: 1px solid #94a3b8 !important; /* Thick grey excel column borders */
+    padding: 6px 8px !important;
+    text-align: left !important;
+    font-size: 9.5px !important;
+    vertical-align: middle !important;
+  }
+
+  th.excel-th.text-center {
+    text-align: center !important;
+  }
+
+  th.excel-th.text-right {
+    text-align: right !important;
+  }
+
+  td.excel-td {
+    border: 1px solid #cbd5e1 !important; /* Spreadsheet grid lines */
+    padding: 5px 8px !important;
+    color: #334155 !important;
+    vertical-align: middle !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+  }
+
+  td.excel-td.text-center {
+    text-align: center !important;
+  }
+
+  td.excel-td.text-right {
+    text-align: right !important;
+  }
+
+  /* Status text values in Excel style (colored pill tags) */
+  .excel-text-status {
+    font-weight: bold !important;
+    font-size: 8.5px !important;
+    padding: 2px 6px !important;
+    border-radius: 3px !important;
+    text-transform: uppercase !important;
+    display: inline-block !important;
+  }
+
+  .excel-paid {
+    background-color: #dcfce7 !important;
+    color: #166534 !important;
+    border: 1px solid #bbf7d0 !important;
+  }
+
+  .excel-unpaid {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fecaca !important;
+  }
+
+  .excel-online {
+    background-color: #dcfce7 !important;
+    color: #166534 !important;
+    border: 1px solid #bbf7d0 !important;
+  }
+
+  .excel-active {
+    background-color: #e0f2fe !important;
+    color: #075985 !important;
+    border: 1px solid #bae6fd !important;
+  }
+
+  .excel-offline {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  .text-red-655 {
+    color: #b91c1c !important;
   }
 }

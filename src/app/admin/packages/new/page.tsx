@@ -6,9 +6,14 @@ import { redirect } from "next/navigation";
 
 async function createPackage(formData: FormData) {
   "use server";
+  const selectedSpeed = String(formData.get("speed_preset") || "");
+  const customSpeed = String(formData.get("speed_custom") || "").trim();
+  // If user entered a custom speed, use it; otherwise use the preset
+  const finalSpeed = customSpeed.length > 0 ? customSpeed : (selectedSpeed || "10 Mbps");
+
   await db.insert(packages).values({
     name: String(formData.get("name") || ""),
-    speed: String(formData.get("speed") || "10 Mbps"),
+    speed: finalSpeed,
     price: String(formData.get("price") || "0"),
     durationDays: Number(formData.get("durationDays")) || 30,
   });
@@ -30,17 +35,31 @@ export default function CreatePackagePage() {
           <input name="name" required placeholder="Basic / Pro / Premium" className="w-full glass-input px-4 py-3 bg-slate-800" />
         </div>
         <div>
-          <label className="block text-sm text-gray-300 mb-2">Speed</label>
-          <select name="speed" className="w-full glass-input px-4 py-3 bg-slate-800">
-            <option className="bg-slate-800">10 Mbps</option>
-            <option className="bg-slate-800">20 Mbps</option>
-            <option className="bg-slate-800">30 Mbps</option>
-            <option className="bg-slate-800">50 Mbps</option>
-            <option className="bg-slate-800">100 Mbps</option>
+          <label className="block text-sm text-gray-300 mb-2">Speed (Preset)</label>
+          <select name="speed_preset" className="w-full glass-input px-4 py-3 bg-slate-800">
+            <option className="bg-slate-800" value="5 Mbps">5 Mbps</option>
+            <option className="bg-slate-800" value="10 Mbps">10 Mbps</option>
+            <option className="bg-slate-800" value="15 Mbps">15 Mbps</option>
+            <option className="bg-slate-800" value="20 Mbps">20 Mbps</option>
+            <option className="bg-slate-800" value="30 Mbps">30 Mbps</option>
+            <option className="bg-slate-800" value="50 Mbps">50 Mbps</option>
+            <option className="bg-slate-800" value="75 Mbps">75 Mbps</option>
+            <option className="bg-slate-800" value="100 Mbps">100 Mbps</option>
+            <option className="bg-slate-800" value="150 Mbps">150 Mbps</option>
+            <option className="bg-slate-800" value="200 Mbps">200 Mbps</option>
           </select>
+          <p className="text-xs text-gray-500 mt-1">অথবা নিচে কাস্টম স্পিড লিখুন (লিখলে উপরেরটা উপেক্ষিত হবে)</p>
         </div>
         <div>
-          <label className="block text-sm text-gray-300 mb-2">Price</label>
+          <label className="block text-sm text-gray-300 mb-2">Custom Speed (optional — e.g. 512Kbps, 2 Mbps, 500 Mbps)</label>
+          <input
+            name="speed_custom"
+            placeholder="Leave blank to use preset above"
+            className="w-full glass-input px-4 py-3 bg-slate-800"
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-gray-300 mb-2">Price (৳)</label>
           <input name="price" type="number" required placeholder="500" className="w-full glass-input px-4 py-3 bg-slate-800" />
         </div>
         <div>

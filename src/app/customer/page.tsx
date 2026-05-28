@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { users, invoices, notices } from "@/db/schema";
+import { users, invoices, notices, dataUsage } from "@/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -27,7 +27,51 @@ export default async function CustomerDashboard() {
     .from(invoices)
     .where(sql`${invoices.userId} = ${customer.id} and ${invoices.status} in ('unpaid','due')`);
 
+  // Count total invoices to detect customers who have never been recharged
+  const [invoiceCountResult] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(invoices)
+    .where(sql`${invoices.userId} = ${customer.id}`);
+
+  const totalInvoiceCount = invoiceCountResult?.count || 0;
+  const dueAmount = dueResult?.sum || 0;
+
+  // Show "Unpaid" if:
+  // 1. They have outstanding due amounts, OR
+  // 2. They have never been recharged (no invoices) AND no expiry date (account never activated)
+  const neverRecharged = totalInvoiceCount === 0 && !customer.expireDate;
+  const billStatus = (dueAmount > 0 || neverRecharged) ? "Unpaid" : "Paid";
+
   const latestNotice = await db.query.notices.findFirst({ orderBy: [desc(notices.createdAt)] });
+
+  // Fetch real daily data usage (last 7 days) for the customer
+  const rawUsage = await db.query.dataUsage.findMany({
+    where: eq(dataUsage.userId, customer.id),
+    orderBy: [desc(dataUsage.recordedAt)],
+    limit: 7,
+  });
+
+  // Build 7-day chart data regardless of how many usage records exist
+  const last7DaysUsage = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const label = d.toLocaleString("default", { weekday: "short" });
+    const yyyymmdd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+    const match = rawUsage.find((u) => {
+      if (!u.recordedAt) return false;
+      const rd = new Date(u.recordedAt);
+      const rdStr = `${rd.getFullYear()}-${String(rd.getMonth() + 1).padStart(2, "0")}-${String(rd.getDate()).padStart(2, "0")}`;
+      return rdStr === yyyymmdd;
+    });
+
+    return {
+      day: label,
+      download: match ? parseFloat(String(match.downloadGb || 0)) : 0,
+      upload: match ? parseFloat(String(match.uploadGb || 0)) : 0,
+      hasReal: !!match,
+    };
+  });
 
   return (
     <CustomerDashboardClient
@@ -35,11 +79,12 @@ export default async function CustomerDashboard() {
       packageName={customer.package?.name || "No Package"}
       packageSpeed={customer.package?.speed || "N/A"}
       expireDate={customer.expireDate?.toISOString() || null}
-      billStatus={(dueResult?.sum || 0) > 0 ? "Unpaid" : "Paid"}
-      dueAmount={dueResult?.sum || 0}
+      billStatus={billStatus}
+      dueAmount={dueAmount}
       noticeTitle={latestNotice?.title || null}
       noticeMessage={latestNotice?.message || null}
       status={customer.status || "active"}
+      usageData={last7DaysUsage}
     />
   );
 }

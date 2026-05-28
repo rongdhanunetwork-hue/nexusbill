@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { users, payments } from "@/db/schema";
+import { users, payments, invoices } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { Wallet, Zap } from "lucide-react";
@@ -17,11 +17,23 @@ async function rechargeCustomer(formData: FormData) {
 
   const customer = await db.query.users.findFirst({
     where: eq(users.id, customerId),
+    with: { package: true },
   });
+  if (!customer) return;
+
+  // Use package durationDays, extend from current expiry if not yet expired
+  const durationDays = (customer.package as any)?.durationDays || 30;
+  let baseDate = new Date();
+  if (customer.expireDate && new Date(customer.expireDate) > baseDate) {
+    baseDate = new Date(customer.expireDate);
+  }
+  const newExpireDate = new Date(baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
   await db.update(users).set({ walletBalance: String(balance - amount) }).where(eq(users.id, reseller.id));
-  await db.update(users).set({ status: "active", expireDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }).where(eq(users.id, customerId));
+  await db.update(users).set({ status: "active", expireDate: newExpireDate }).where(eq(users.id, customerId));
   await db.insert(payments).values({ userId: customerId, amount: String(amount), method: "reseller_wallet", trxId: `RS-${Date.now()}`, status: "approved" });
+  // Insert paid invoice for billing history
+  await db.insert(invoices).values({ userId: customerId, amount: String(amount), status: "paid", dueDate: newExpireDate });
 
   if (customer && customer.pppoeUsername) {
     const { syncCustomerToMikrotik } = await import("@/lib/sync");

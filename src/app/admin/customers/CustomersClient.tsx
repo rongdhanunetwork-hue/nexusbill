@@ -25,7 +25,7 @@ interface Customer {
   expireDate: string | Date | null;
   lastSeen: string | Date | null;
   createdAt: string | Date | null;
-  package?: { name: string; price: string } | null;
+  package?: { name: string; price: string; speed: string } | null;
   walletBalance?: string | null;
 }
 
@@ -45,31 +45,34 @@ export default function CustomersClient({
   const [searchTerm, setSearchTerm] = useState("");
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
 
-  const formatOfflineDuration = (lastSeen: string | Date | null, createdAt: string | Date | null) => {
-    if (!lastSeen) return "";
+  const formatOfflineDuration = (lastSeen: string | Date | null, createdAt: string | Date | null): { label: string; level: "fresh" | "hours" | "days" | "none" } => {
+    if (!lastSeen) return { label: "", level: "none" };
     const ls = new Date(lastSeen);
-    if (isNaN(ls.getTime())) return "";
+    if (isNaN(ls.getTime())) return { label: "", level: "none" };
     
-    // Hide duration offset for accounts that have never connected
+    // Hide duration offset for accounts that have never connected (lastSeen set at creation)
     if (createdAt) {
       const ca = new Date(createdAt);
       if (!isNaN(ca.getTime()) && Math.abs(ls.getTime() - ca.getTime()) < 10000) {
-        return "";
+        return { label: "", level: "none" };
       }
     }
     
     const now = new Date();
     const diffMs = now.getTime() - ls.getTime();
-    if (diffMs <= 0) return "";
+    if (diffMs <= 0) return { label: "", level: "none" };
     
     const diffMins = Math.floor(diffMs / (1000 * 60));
-    if (diffMins < 60) return `(${diffMins}m ago)`;
+    if (diffMins < 5) return { label: "just now", level: "fresh" };
+    if (diffMins < 60) return { label: `${diffMins}m ago`, level: "fresh" };
     
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `(${diffHours}h ago)`;
+    if (diffHours < 24) return { label: `${diffHours}h ago`, level: "hours" };
     
     const diffDays = Math.floor(diffHours / 24);
-    return `(${diffDays}d ago)`;
+    const remHours = diffHours % 24;
+    const label = remHours > 0 ? `${diffDays}d ${remHours}h ago` : `${diffDays}d ago`;
+    return { label, level: "days" };
   };
 
   const [liveActiveNames, setLiveActiveNames] = useState<string[]>(activePppoeNames || []);
@@ -193,10 +196,18 @@ export default function CustomersClient({
       customer.phone.includes(searchTerm) ||
       (customer.pppoeUsername || "").toLowerCase().includes(searchTerm.toLowerCase());
 
-    const isOnline = customer.status === "active" && customer.pppoeUsername && liveActiveNames.includes(customer.pppoeUsername);
+    const activeSession = customer.pppoeUsername
+      ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
+      : null;
     const daysLeft = getDaysLeft(customer.expireDate);
-    const isExpired = customer.status === "expired" || (daysLeft !== null && daysLeft < 0);
-    const displayStatus = isExpired ? "expired" : (isOnline ? "online" : "offline");
+    const isExpired = customer.status === "expired" || !customer.expireDate || (daysLeft !== null && daysLeft < 0);
+
+    let displayStatus: "online" | "active" | "offline" = "offline";
+    if (activeSession) {
+      displayStatus = isExpired ? "active" : "online";
+    } else {
+      displayStatus = "offline";
+    }
 
     const isUpcoming = customer.status === "active" && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
 
@@ -210,7 +221,7 @@ export default function CustomersClient({
       (statusFilter === "Active" && customer.status === "active" && !isExpired) ||
       (statusFilter === "Online" && displayStatus === "online") ||
       (statusFilter === "Offline" && displayStatus === "offline") ||
-      (statusFilter === "Expired" && displayStatus === "expired") ||
+      (statusFilter === "Expired" && isExpired) ||
       (statusFilter === "Upcoming" && isUpcoming) ||
       (statusFilter === "New This Month" && !!isNewThisMonth);
 
@@ -337,9 +348,17 @@ export default function CustomersClient({
     const headers = ["Name", "Phone", "Address", "PPPoE Username", "Package", "Monthly Fee", "Balance", "Expire Date", "Days Left", "Status"];
     const rows = filteredCustomers.map(c => {
       const daysLeft = getDaysLeft(c.expireDate);
-      const isOnline = c.status === "active" && c.pppoeUsername && liveActiveNames.includes(c.pppoeUsername);
-      const isExpired = c.status === "expired" || (daysLeft !== null && daysLeft < 0);
-      const statusText = `${isExpired ? 'Expired' : 'Active'} (${isOnline ? 'Online' : 'Offline'})`;
+      const activeSession = c.pppoeUsername
+        ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === c.pppoeUsername!.toLowerCase())
+        : null;
+      const isExpired = c.status === "expired" || !c.expireDate || (daysLeft !== null && daysLeft < 0);
+      
+      let statusText = "Offline";
+      if (activeSession) {
+        statusText = isExpired ? "Active (Unpaid)" : "Online";
+      } else {
+        statusText = isExpired ? "Offline (Unpaid)" : "Offline";
+      }
 
       return [
         c.name,
@@ -371,16 +390,30 @@ export default function CustomersClient({
     document.body.removeChild(link);
   };
 
-  // Custom styling block for pulsing blink animation
+  // Custom CSS animations for online/offline status dots
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
-      @keyframes glowing-blink {
-        0%, 100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 2px rgba(57,255,20,0.8)); }
-        50% { transform: scale(1.2); opacity: 0.4; filter: drop-shadow(0 0 6px rgba(57,255,20,0.2)); }
+      @keyframes online-glow-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 4px 1px rgba(57,255,20,0.9); }
+        50% { transform: scale(1.35); opacity: 0.5; box-shadow: 0 0 8px 3px rgba(57,255,20,0.3); }
+      }
+      @keyframes offline-red-blink {
+        0%, 100% { opacity: 1; box-shadow: 0 0 5px 2px rgba(239,68,68,0.9); }
+        50% { opacity: 0.25; box-shadow: 0 0 2px 0px rgba(239,68,68,0.2); }
+      }
+      @keyframes offline-badge-pulse {
+        0%, 100% { border-color: rgba(239,68,68,0.5); background-color: rgba(239,68,68,0.15); }
+        50% { border-color: rgba(239,68,68,0.9); background-color: rgba(239,68,68,0.28); }
       }
       .online-pulsing-dot {
-        animation: glowing-blink 1.2s infinite ease-in-out;
+        animation: online-glow-pulse 1.2s infinite ease-in-out;
+      }
+      .offline-blink-dot {
+        animation: offline-red-blink 1s infinite ease-in-out;
+      }
+      .offline-badge-blink {
+        animation: offline-badge-pulse 1s infinite ease-in-out;
       }
     `;
     document.head.appendChild(style);
@@ -390,7 +423,9 @@ export default function CustomersClient({
   }, []);
 
   return (
-    <div className="glass-card overflow-visible">
+    <>
+      {/* Screen Interface (Hides entirely in print mode) */}
+      <div className="glass-card overflow-visible no-print">
 
       {/* Control Panel (Hides in Print) */}
       <div className="p-5 border-b border-white/10 bg-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
@@ -472,7 +507,7 @@ export default function CustomersClient({
                     ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
                     : null;
                   const isOnline = customer.status === "active" && !!activeSession;
-                  const isExpired = customer.status === "expired" || (daysLeft !== null && daysLeft < 0);
+                  const isExpired = customer.status === "expired" || !customer.expireDate || (daysLeft !== null && daysLeft < 0);
 
                   return (
                     <motion.tr
@@ -551,21 +586,40 @@ export default function CustomersClient({
                           )}
 
                           {/* Connection Badge */}
-                          {isExpired ? (
-                            <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/30">
-                              expired
-                            </span>
-                          ) : isOnline ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-neon-green/20 text-neon-green border border-neon-green/30 relative">
-                              <span className="w-1.5 h-1.5 rounded-full bg-neon-green online-pulsing-dot mr-1" />
-                              online
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-500/25 text-gray-400 border border-gray-500/35">
-                              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-1" />
-                              offline {formatOfflineDuration(customer.lastSeen, customer.createdAt)}
-                            </span>
-                          )}
+                          {activeSession ? (
+                            isExpired ? (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-neon-blue/20 text-neon-blue border border-neon-blue/30 animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-neon-blue online-pulsing-dot shrink-0" />
+                                active
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-neon-green/20 text-neon-green border border-neon-green/30">
+                                <span className="w-1.5 h-1.5 rounded-full bg-neon-green online-pulsing-dot shrink-0" />
+                                online
+                              </span>
+                            )
+                          ) : (() => {
+                            const offlineDur = formatOfflineDuration(customer.lastSeen, customer.createdAt);
+                            return (
+                              <span className="inline-flex flex-col gap-0.5">
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-red-400 border offline-badge-blink">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 offline-blink-dot shrink-0" />
+                                  offline
+                                </span>
+                                {offlineDur.label && (
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                                    offlineDur.level === "days" 
+                                      ? "text-red-400 bg-red-500/10" 
+                                      : offlineDur.level === "hours" 
+                                        ? "text-orange-400 bg-orange-500/10" 
+                                        : "text-yellow-400 bg-yellow-500/10"
+                                  }`}>
+                                    {offlineDur.label}
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </td>
 
@@ -1012,5 +1066,92 @@ export default function CustomersClient({
         )}
       </AnimatePresence>
     </div>
+
+    {/* Excel Spreadsheet Print-only Report Layout (Visible ONLY during print mode) */}
+    <div className="print-only-layout print-container">
+      {/* Company Header */}
+      <div className="text-center mb-6 pb-4 border-b border-slate-300">
+        <h1 className="text-2xl font-bold text-slate-800 tracking-tight m-0">Rongdhunu DOT Net</h1>
+        <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-1">Customer Database & Subscription Spreadsheet</p>
+        <div className="flex justify-between items-center text-[10px] text-slate-500 mt-4 px-2">
+          <div><strong>Filter:</strong> {statusFilter}</div>
+          <div><strong>Printed On:</strong> {new Date().toLocaleDateString(undefined, { dateStyle: 'long' })}</div>
+          <div><strong>Total Records:</strong> {filteredCustomers.length}</div>
+        </div>
+      </div>
+
+      {/* Spreadsheet Table */}
+      <table className="excel-table w-full">
+        <thead>
+          <tr>
+            <th className="excel-th text-center">SL</th>
+            <th className="excel-th text-center">Cust ID</th>
+            <th className="excel-th">Customer Name</th>
+            <th className="excel-th">Phone</th>
+            <th className="excel-th">Address</th>
+            <th className="excel-th">PPPoE User</th>
+            <th className="excel-th">Package</th>
+            <th className="excel-th text-right">Price</th>
+            <th className="excel-th text-right">Balance</th>
+            <th className="excel-th text-center">Expire Date</th>
+            <th className="excel-th text-center">Days Left</th>
+            <th className="excel-th text-center">Payment</th>
+            <th className="excel-th text-center">Connection</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredCustomers.map((customer, index) => {
+            const daysLeft = getDaysLeft(customer.expireDate);
+            const activeSession = customer.pppoeUsername
+              ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
+              : null;
+            const isOnline = customer.status === "active" && !!activeSession;
+            const isExpired = customer.status === "expired" || !customer.expireDate || (daysLeft !== null && daysLeft < 0);
+
+            let connStatus = "Offline";
+            if (activeSession) {
+              connStatus = isExpired ? "Active" : "Online";
+            }
+
+            return (
+              <tr key={customer.id}>
+                <td className="excel-td text-center font-mono">{index + 1}</td>
+                <td className="excel-td text-center font-mono font-bold">RDN-{customer.id}</td>
+                <td className="excel-td font-bold">{customer.name}</td>
+                <td className="excel-td font-mono">{customer.phone}</td>
+                <td className="excel-td text-xs">{customer.address || "N/A"}</td>
+                <td className="excel-td font-mono">{customer.pppoeUsername || "N/A"}</td>
+                <td className="excel-td">{customer.package?.name || "No Plan"}</td>
+                <td className="excel-td text-right font-mono">৳{customer.package?.price || "0"}</td>
+                <td className="excel-td text-right font-mono">৳{customer.walletBalance || "0"}</td>
+                <td className="excel-td text-center font-mono">{customer.expireDate ? new Date(customer.expireDate).toLocaleDateString() : "N/A"}</td>
+                <td className={`excel-td text-center font-mono font-bold ${daysLeft !== null && daysLeft < 0 ? 'text-red-650' : 'text-slate-700'}`}>
+                  {daysLeft !== null ? daysLeft : "N/A"}
+                </td>
+                <td className="excel-td text-center">
+                  <span className={`excel-text-status ${isExpired ? 'excel-unpaid' : 'excel-paid'}`}>
+                    {isExpired ? 'Unpaid' : 'Paid'}
+                  </span>
+                </td>
+                <td className="excel-td text-center">
+                  <span className={`excel-text-status ${
+                    connStatus === "Online" ? 'excel-online' : connStatus === "Active" ? 'excel-active' : 'excel-offline'
+                  }`}>
+                    {connStatus}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {/* Spreadsheet Footer */}
+      <div className="flex justify-between items-center border-t border-slate-300 pt-4 mt-6 text-[10px] text-slate-400 font-mono">
+        <div>System Report Generated by Rongdhunu DOT Net Billing Engine</div>
+        <div>Page 1 of 1</div>
+      </div>
+    </div>
+  </>
   );
 }
