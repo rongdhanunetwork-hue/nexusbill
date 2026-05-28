@@ -74,7 +74,14 @@ async function rollbackPayment(formData: FormData) {
         where: eq(packages.id, customer.packageId)
       });
       if (pkg && pkg.durationDays) {
-        durationDays = pkg.durationDays;
+        const pkgPrice = Number(pkg.price || 0);
+        const paymentAmount = Number(payment.amount || 0);
+        if (pkgPrice > 0 && paymentAmount > 0) {
+          const ratio = paymentAmount / pkgPrice;
+          durationDays = Math.round(pkg.durationDays * ratio);
+        } else {
+          durationDays = pkg.durationDays;
+        }
       }
     }
 
