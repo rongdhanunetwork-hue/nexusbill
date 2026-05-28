@@ -98,6 +98,20 @@ async function rollbackPayment(formData: FormData) {
       .set({ status: "rolled_back" })
       .where(eq(payments.id, paymentId));
 
+    // Refund reseller wallet if payment method was reseller_wallet
+    if (payment.method === "reseller_wallet" && customer.resellerId) {
+      const reseller = await db.query.users.findFirst({
+        where: eq(users.id, customer.resellerId)
+      });
+      if (reseller) {
+        const currentWallet = Number(reseller.walletBalance || 0);
+        const refundAmount = Number(payment.amount);
+        await db.update(users)
+          .set({ walletBalance: String(currentWallet + refundAmount) })
+          .where(eq(users.id, reseller.id));
+      }
+    }
+
     // Delete matching invoice if one exists
     const matchInvoice = await db.query.invoices.findFirst({
       where: and(

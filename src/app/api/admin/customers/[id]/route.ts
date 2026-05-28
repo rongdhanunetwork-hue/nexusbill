@@ -36,15 +36,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.approvalStatus) updateData.approvalStatus = body.approvalStatus;
     if (body.mikrotikId !== undefined) updateData.mikrotikId = body.mikrotikId ? Number(body.mikrotikId) : null;
 
-    // Package change — recompute expire date
+    // Package change
     if (body.packageId !== undefined) {
       updateData.packageId = body.packageId ? Number(body.packageId) : null;
-      if (body.packageId) {
-        const pkg = await db.query.packages.findFirst({ where: eq(packages.id, Number(body.packageId)) });
-        if (pkg) {
-          updateData.expireDate = new Date(Date.now() + (pkg.durationDays || 30) * 24 * 60 * 60 * 1000);
-        }
-      }
     }
 
     // Password change
