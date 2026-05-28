@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { Plus } from "lucide-react";
@@ -28,7 +28,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   // Fetch database customers only to load page instantly
   const allCustomers = await db.query.users.findMany({
     where: eq(users.role, "customer"),
-    orderBy: [desc(users.createdAt)],
+    orderBy: [asc(users.name)],
     with: { package: true, mikrotik: true }
   });
 

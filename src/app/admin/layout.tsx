@@ -96,7 +96,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pageTitle = navigation.find((n) => n.href === pathname)?.name || "Admin";
 
   return (
-    <div className="min-h-screen flex text-slate-100">
+    <div className="min-h-screen flex text-slate-100 w-full max-w-full overflow-x-hidden">
       {/* Mobile sidebar backdrop */}
       <AnimatePresence>
         {sidebarOpen && (
@@ -113,7 +113,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <div
         className={clsx(
-          "fixed inset-y-0 left-0 z-30 w-64 glass-panel transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col border-r border-white/10",
+          "fixed inset-y-0 left-0 z-30 w-64 glass-panel transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col border-r border-white/10 print:hidden",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -176,9 +176,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10 w-full max-w-full">
         {/* Top Header */}
-        <header className="glass-panel border-b border-white/10 h-16 flex items-center px-4 sm:px-6 lg:px-8 shrink-0 sticky top-0 z-10">
+        <header className="glass-panel border-b border-white/10 h-16 flex items-center px-4 sm:px-6 lg:px-8 shrink-0 sticky top-0 z-10 print:hidden">
           <button
             className="lg:hidden p-2 -ml-2 mr-2 text-gray-400 hover:bg-white/10 rounded-lg"
             onClick={() => setSidebarOpen(true)}
@@ -315,7 +315,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 custom-scrollbar w-full max-w-full">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, packages } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { syncCustomerToMikrotik } from "@/lib/sync";
@@ -15,7 +15,7 @@ export async function GET() {
 
   const customers = await db.query.users.findMany({
     where: eq(users.role, "customer"),
-    orderBy: [desc(users.createdAt)],
+    orderBy: [asc(users.name)],
     with: { package: true },
   });
 

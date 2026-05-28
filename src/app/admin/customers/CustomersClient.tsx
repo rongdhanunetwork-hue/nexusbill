@@ -23,6 +23,7 @@ interface Customer {
   status: string | null;
   approvalStatus: string | null;
   expireDate: string | Date | null;
+  lastSeen: string | Date | null;
   createdAt: string | Date | null;
   package?: { name: string; price: string } | null;
   walletBalance?: string | null;
@@ -43,6 +44,33 @@ export default function CustomersClient({
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
+
+  const formatOfflineDuration = (lastSeen: string | Date | null, createdAt: string | Date | null) => {
+    if (!lastSeen) return "";
+    const ls = new Date(lastSeen);
+    if (isNaN(ls.getTime())) return "";
+    
+    // Hide duration offset for accounts that have never connected
+    if (createdAt) {
+      const ca = new Date(createdAt);
+      if (!isNaN(ca.getTime()) && Math.abs(ls.getTime() - ca.getTime()) < 10000) {
+        return "";
+      }
+    }
+    
+    const now = new Date();
+    const diffMs = now.getTime() - ls.getTime();
+    if (diffMs <= 0) return "";
+    
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    if (diffMins < 60) return `(${diffMins}m ago)`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `(${diffHours}h ago)`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    return `(${diffDays}d ago)`;
+  };
 
   const [liveActiveNames, setLiveActiveNames] = useState<string[]>(activePppoeNames || []);
   const [liveActiveSessions, setLiveActiveSessions] = useState<any[]>(activeSessions || []);
@@ -81,6 +109,26 @@ export default function CustomersClient({
     const interval = setInterval(refreshData, 20000); // Poll every 20s for real-time status & sync
     return () => clearInterval(interval);
   }, []);
+
+  // Click-away listener to close action dropdowns safely on mobile/desktop without blocking touch events
+  useEffect(() => {
+    if (activeDropdownId === null) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest(".dropdown-container")) {
+        return;
+      }
+      setActiveDropdownId(null);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [activeDropdownId]);
   
   // Modals state
   const [rechargeCustomer, setRechargeCustomer] = useState<Customer | null>(null);
@@ -323,7 +371,7 @@ export default function CustomersClient({
     document.body.removeChild(link);
   };
 
-  // Custom styling block for pulsing blink animation and print styles
+  // Custom styling block for pulsing blink animation
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
@@ -334,53 +382,6 @@ export default function CustomersClient({
       .online-pulsing-dot {
         animation: glowing-blink 1.2s infinite ease-in-out;
       }
-      @media print {
-        header, 
-        aside, 
-        .glass-panel, 
-        .no-print, 
-        .no-print-col,
-        td.no-print-col,
-        th.no-print-col,
-        button {
-          display: none !important;
-        }
-        body, html, main, .glass-card, table, .min-h-screen, .flex-1, .flex, #__next, [class*="min-h-screen"], [class*="flex-1"] {
-          background: white !important;
-          color: black !important;
-          width: 100% !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          box-shadow: none !important;
-          border: none !important;
-          height: auto !important;
-          min-height: auto !important;
-          overflow: visible !important;
-          position: relative !important;
-        }
-        table {
-          border-collapse: collapse !important;
-          width: 100% !important;
-        }
-        th, td {
-          border: 1px solid #ddd !important;
-          padding: 10px !important;
-          color: black !important;
-        }
-        th {
-          background-color: #f2f2f2 !important;
-        }
-        a {
-          color: black !important;
-          text-decoration: none !important;
-        }
-        span {
-          background: transparent !important;
-          color: black !important;
-          border: none !important;
-          padding: 0 !important;
-        }
-      }
     `;
     document.head.appendChild(style);
     return () => {
@@ -390,13 +391,6 @@ export default function CustomersClient({
 
   return (
     <div className="glass-card overflow-visible">
-      {/* Dropdown Backdrop */}
-      {activeDropdownId && (
-        <div 
-          className="fixed inset-0 z-40 bg-transparent" 
-          onClick={() => setActiveDropdownId(null)}
-        />
-      )}
 
       {/* Control Panel (Hides in Print) */}
       <div className="p-5 border-b border-white/10 bg-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
@@ -411,7 +405,7 @@ export default function CustomersClient({
           />
         </div>
 
-        <div className="flex flex-row items-center gap-3 w-full sm:w-auto justify-end">
+        <div className="flex flex-row flex-wrap items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
           <div className="flex gap-2">
             <button
               onClick={downloadPDF}
@@ -492,9 +486,12 @@ export default function CustomersClient({
                     >
                       {/* 1. Customer Info */}
                       <td className="p-5">
-                        <Link href={`/admin/customers/${customer.id}`} className="font-bold text-white hover:text-neon-blue text-base transition-colors">
-                          {customer.name}
-                        </Link>
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <Link href={`/admin/customers/${customer.id}`} className="font-bold text-white hover:text-neon-blue text-base transition-colors">
+                            {customer.name}
+                          </Link>
+                          <span className="text-[10px] font-bold text-neon-blue bg-neon-blue/10 border border-neon-blue/25 px-2 py-0.5 rounded-md font-mono">RDN-{customer.id}</span>
+                        </div>
                         <div className="text-sm text-gray-400">{customer.phone}</div>
                         <div className="text-xs text-gray-500 max-w-48 truncate">{customer.address || "No address"}</div>
                       </td>
@@ -558,12 +555,15 @@ export default function CustomersClient({
                             <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/30">
                               expired
                             </span>
+                          ) : isOnline ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-neon-green/20 text-neon-green border border-neon-green/30 relative">
+                              <span className="w-1.5 h-1.5 rounded-full bg-neon-green online-pulsing-dot mr-1" />
+                              online
+                            </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-neon-blue/20 text-neon-blue border border-neon-blue/30 relative">
-                              {isOnline && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-neon-green online-pulsing-dot mr-1" />
-                              )}
-                              active
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-500/25 text-gray-400 border border-gray-500/35">
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-1" />
+                              offline {formatOfflineDuration(customer.lastSeen, customer.createdAt)}
                             </span>
                           )}
                         </div>
@@ -571,7 +571,7 @@ export default function CustomersClient({
 
                       {/* 7. Action Dropdown */}
                       <td className="p-5 text-right relative overflow-visible no-print-col">
-                        <div className="flex items-center justify-end">
+                        <div className="flex items-center justify-end dropdown-container">
                           <button
                             onClick={() => setActiveDropdownId(activeDropdownId === customer.id ? null : customer.id)}
                             className="p-2 text-gray-400 hover:text-white rounded-lg transition-all hover:bg-white/5"

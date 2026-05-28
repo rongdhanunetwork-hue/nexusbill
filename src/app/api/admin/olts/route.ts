@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { name, ipAddress, portCount } = body;
+    const { name, ipAddress, portCount, connectionPort } = body;
 
     if (!name || !ipAddress) {
       return NextResponse.json({ error: "Name and IP Address required" }, { status: 400 });
@@ -32,6 +32,7 @@ export async function POST(req: Request) {
       name: name.trim(),
       ipAddress: ipAddress.trim(),
       portCount: Number(portCount) || 8,
+      connectionPort: Number(connectionPort) || 23,
       status: true,
     }).returning();
 

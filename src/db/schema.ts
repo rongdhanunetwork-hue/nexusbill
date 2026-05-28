@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   approvalStatus: varchar("approval_status", { length: 20 }).default("approved"), // pending, approved, rejected
   expireDate: timestamp("expire_date"),
   dob: timestamp("dob"),
+  lastSeen: timestamp("last_seen").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -59,6 +60,7 @@ export const olts = pgTable("olts", {
   name: varchar("name", { length: 255 }).notNull(),
   ipAddress: varchar("ip_address", { length: 50 }).notNull(),
   portCount: integer("port_count").default(8),
+  connectionPort: integer("connection_port").default(23),
   status: boolean("status").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });

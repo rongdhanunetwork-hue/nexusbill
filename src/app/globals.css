@@ -39,3 +39,122 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
+
+@media print {
+  /* HIDE SIDEBAR, TOP HEADER, BUTTONS, POPUPS & NAVIGATION ELEMENTS */
+  body header,
+  body nav,
+  body aside,
+  body button,
+  body .no-print,
+  body .glass-button,
+  body [role="navigation"],
+  body [role="dialog"] {
+    display: none !important;
+  }
+
+  /* RESET LAYOUT CONTAINERS TO BLOCK / AUTO FOR PROPER PAGINATION */
+  html, 
+  body, 
+  div.min-h-screen,
+  main {
+    background: white !important;
+    background-color: white !important;
+    color: black !important;
+    display: block !important;
+    position: static !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Target main page scroll wrapper */
+  main.flex-1.overflow-y-auto {
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Neutralize transform translations and transitions (fixes framer-motion empty page bug) */
+  *, *::before, *::after {
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  body {
+    font-family: sans-serif !important;
+  }
+
+  /* CARD STYLING FOR PRINT */
+  .glass-card {
+    background: none !important;
+    background-color: transparent !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    color: black !important;
+    overflow: visible !important;
+  }
+
+  .print-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* TEXT COLORS */
+  .text-white, h1, h2, h3, h4, span, p, td, th, div, label, a {
+    color: black !important;
+    text-shadow: none !important;
+  }
+
+  .text-gray-400, .text-gray-500, .text-slate-400, .text-gray-300 {
+    color: #4b5563 !important;
+  }
+
+  /* TABLE PRINT FIXES */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th, td {
+    border: 1px solid #ddd !important;
+    padding: 10px !important;
+    color: black !important;
+  }
+
+  th {
+    background-color: #f2f2f2 !important;
+  }
+
+  a {
+    text-decoration: none !important;
+  }
+
+  /* Badges print fix */
+  span.inline-flex, span.inline-block {
+    background: transparent !important;
+    color: black !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 2px 6px !important;
+  }
+
+  /* PAGE BREAKS MANAGEMENT */
+  .glass-card, tr, pre, blockquote, .grid > div {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}

@@ -276,66 +276,19 @@ export default function CustomerProfileClient({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }
 
-  function formatSpeed(rateInMbps: number) {
+  function formatSpeed(val: any) {
+    const rateInMbps = parseFloat(val);
+    if (isNaN(rateInMbps)) return "0 Kbps";
+    if (rateInMbps < 0.001) return "0 Kbps";
     if (rateInMbps < 1) {
       const kbps = Math.round(rateInMbps * 1000);
       return `${kbps} Kbps`;
     }
-    return `${rateInMbps.toFixed(2)} Mbps`;
+    return `${rateInMbps.toFixed(1)} Mbps`;
   }
 
   return (
     <div className="space-y-8 max-w-5xl print-container">
-      {/* Print-only CSS */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          /* Hide sidebar, top header, page margins and buttons */
-          header, nav, aside, button, .glass-button, .sidebar, .no-print, [role="navigation"] {
-            display: none !important;
-          }
-          /* Force all containers to be fully visible and auto-height to prevent truncation on mobile */
-          html, body, main, div, section, article, .min-h-screen, .flex-1, .flex, #__next, [class*="min-h-screen"], [class*="flex-1"] {
-            height: auto !important;
-            min-height: auto !important;
-            overflow: visible !important;
-            position: relative !important;
-            background: white !important;
-            color: black !important;
-          }
-          body {
-            font-family: sans-serif !important;
-          }
-          .print-container {
-            width: 100% !important;
-            max-width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            background: white !important;
-            color: black !important;
-          }
-          .glass-card {
-            background: none !important;
-            border: 1px solid #e5e7eb !important;
-            box-shadow: none !important;
-            color: black !important;
-          }
-          .text-white, h1, h2, h3, h4, span, p {
-            color: black !important;
-          }
-          .text-gray-400, .text-gray-500 {
-            color: #4b5563 !important;
-          }
-          .bg-white\\/5 {
-            background-color: #f3f4f6 !important;
-            border: 1px solid #e5e7eb !important;
-          }
-          /* Grid systems print fix */
-          .grid {
-            display: grid !important;
-          }
-        }
-      `}} />
-
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
         <div className="flex items-center gap-3">
@@ -507,12 +460,12 @@ export default function CustomerProfileClient({
       </div>
 
       {/* Usage Cards & Graph */}
-      <div className="glass-card p-6">
+      <div className="glass-card p-4 sm:p-6">
         <h3 className="text-lg font-semibold text-white mb-5 border-b border-white/10 pb-2 flex items-center justify-between flex-wrap gap-2">
           <span>{chartMode === "live" ? "Real-time Traffic Monitor" : "Data Usage History"}</span>
           <div className="flex items-center gap-4">
             <span className="text-xs text-gray-400 no-print">
-              {chartMode === "live" ? "Live Speed (Megabits per Second)" : `Cumulative: Down ${totalDownload} GB / Up ${totalUpload} GB`}
+              {chartMode === "live" ? "Live Traffic Speed" : `Cumulative: Down ${totalDownload} GB / Up ${totalUpload} GB`}
             </span>
             <div className="flex gap-1.5 bg-white/5 p-1 rounded-xl no-print border border-white/10">
               <button
@@ -536,7 +489,7 @@ export default function CustomerProfileClient({
                 }`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full bg-neon-green ${chartMode === "live" ? "animate-pulse" : ""}`} />
-                Live Rate (Mbps)
+                Live Rate
               </button>
             </div>
           </div>
@@ -544,7 +497,7 @@ export default function CustomerProfileClient({
 
         {chartMode === "history" ? (
           <>
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3">
                 <div className="text-neon-green"><Download size={20} /></div>
                 <div>
@@ -585,7 +538,7 @@ export default function CustomerProfileClient({
           </>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-neon-green/20 relative overflow-hidden">
                 <div className="absolute top-2 right-2 flex items-center gap-1.5 text-[9px] uppercase font-bold text-neon-green bg-neon-green/10 px-2 py-0.5 rounded-full">
                   <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-ping" />
@@ -614,20 +567,23 @@ export default function CustomerProfileClient({
                 <AreaChart data={liveData}>
                   <defs>
                     <linearGradient id="liveDownGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#39ff14" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#39ff14" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="liveUpGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00f3ff" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#00f3ff" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
                   <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} />
-                  <YAxis stroke="#9ca3af" fontSize={11} unit=" Mbps" />
-                  <Tooltip contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} />
-                  <Area type="monotone" dataKey="download" stroke="#39ff14" strokeWidth={2} fillOpacity={1} fill="url(#liveDownGrad)" name="Download (Mbps)" />
-                  <Area type="monotone" dataKey="upload" stroke="#00f3ff" strokeWidth={2} fillOpacity={1} fill="url(#liveUpGrad)" name="Upload (Mbps)" />
+                  <YAxis stroke="#9ca3af" fontSize={11} domain={[0, "auto"]} tickFormatter={formatSpeed} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }}
+                    formatter={(value: any, name: any) => [formatSpeed(Number(value)), name === "download" ? "Download" : "Upload"]}
+                  />
+                  <Area type="monotone" dataKey="download" stroke="#10b981" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} fillOpacity={1} fill="url(#liveDownGrad)" name="download" />
+                  <Area type="monotone" dataKey="upload" stroke="#06b6d4" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} fillOpacity={1} fill="url(#liveUpGrad)" name="upload" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -657,11 +613,11 @@ export default function CustomerProfileClient({
             </div>
             <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 text-center min-w-[130px]">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">RX Total (Upload)</span>
-              <p className="text-base font-bold text-teal-300 font-mono mt-1">{formatBytes(liveBytesIn)}</p>
+              <p className="text-base font-bold text-teal-300 font-mono mt-1">{formatBytes((dbTotalUpload * 1024 * 1024 * 1024) + liveBytesIn)}</p>
             </div>
             <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 text-center min-w-[130px]">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">TX Total (Download)</span>
-              <p className="text-base font-bold text-teal-300 font-mono mt-1">{formatBytes(liveBytesOut)}</p>
+              <p className="text-base font-bold text-teal-300 font-mono mt-1">{formatBytes((dbTotalDownload * 1024 * 1024 * 1024) + liveBytesOut)}</p>
             </div>
           </div>
         </div>

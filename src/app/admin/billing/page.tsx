@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { payments, users, invoices } from "@/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { payments, users, invoices, packages } from "@/db/schema";
+import { eq, desc, sql, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { CheckCircle, Clock, DollarSign, FileText, AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
@@ -39,6 +39,83 @@ async function rejectPayment(formData: FormData) {
   "use server";
   const paymentId = Number(formData.get("paymentId"));
   if (paymentId) await db.update(payments).set({ status: "rejected" }).where(eq(payments.id, paymentId));
+  revalidatePath("/admin/billing");
+}
+
+async function rollbackPayment(formData: FormData) {
+  "use server";
+  const paymentId = Number(formData.get("paymentId"));
+  if (!paymentId) return;
+
+  try {
+    const payment = await db.query.payments.findFirst({
+      where: eq(payments.id, paymentId),
+    });
+    if (!payment || payment.status !== "approved") return;
+
+    const customer = await db.query.users.findFirst({
+      where: eq(users.id, payment.userId),
+    });
+    if (!customer) return;
+
+    let durationDays = 30;
+    if (customer.packageId) {
+      const pkg = await db.query.packages.findFirst({
+        where: eq(packages.id, customer.packageId)
+      });
+      if (pkg && pkg.durationDays) {
+        durationDays = pkg.durationDays;
+      }
+    }
+
+    const currentExpire = customer.expireDate ? new Date(customer.expireDate) : new Date();
+    const newExpire = new Date(currentExpire.getTime() - durationDays * 24 * 60 * 60 * 1000);
+    
+    const now = new Date();
+    const isExpired = newExpire <= now;
+    const newStatus = isExpired ? "expired" : "active";
+
+    // Revert user expiry and status in DB
+    await db.update(users)
+      .set({
+        expireDate: newExpire,
+        status: newStatus
+      })
+      .where(eq(users.id, customer.id));
+
+    // Mark payment rolled_back
+    await db.update(payments)
+      .set({ status: "rolled_back" })
+      .where(eq(payments.id, paymentId));
+
+    // Delete matching invoice if one exists
+    const matchInvoice = await db.query.invoices.findFirst({
+      where: and(
+        eq(invoices.userId, customer.id),
+        eq(invoices.amount, payment.amount),
+        eq(invoices.status, "paid")
+      ),
+      orderBy: [desc(invoices.createdAt)],
+    });
+
+    if (matchInvoice) {
+      await db.delete(invoices).where(eq(invoices.id, matchInvoice.id));
+    }
+
+    // Sync to MikroTik router
+    if (customer.pppoeUsername) {
+      const { syncCustomerToMikrotik } = await import("@/lib/sync");
+      await syncCustomerToMikrotik(
+        customer.pppoeUsername,
+        undefined,
+        customer.packageId,
+        newStatus
+      );
+    }
+  } catch (err) {
+    console.error("Rollback payment error:", err);
+  }
+
   revalidatePath("/admin/billing");
 }
 
@@ -95,9 +172,41 @@ export default async function BillingPage() {
         ))}
       </Table>
 
-      <Table title="Payment History / Invoice" headers={["Customer", "Amount", "Method", "Trx ID", "Status", "Date"]}>
-        {paymentHistory.length === 0 ? <Empty colSpan={6} text="No payments yet." /> : paymentHistory.map(payment => (
-          <tr key={payment.id} className="hover:bg-white/5"><td className="p-4 text-white">{payment.user?.name}</td><td className="p-4 text-white font-bold">৳{payment.amount}</td><td className="p-4 text-gray-300 capitalize">{payment.method}</td><td className="p-4 text-gray-300 font-mono">{payment.trxId}</td><td className="p-4 capitalize"><span className={payment.status === "approved" ? "text-neon-green" : payment.status === "rejected" ? "text-red-400" : "text-yellow-400"}>{payment.status}</span></td><td className="p-4 text-gray-400">{payment.createdAt?.toLocaleDateString()}</td></tr>
+      <Table title="Payment History / Invoice" headers={["Customer", "Amount", "Method", "Trx ID", "Status", "Date", "Action"]}>
+        {paymentHistory.length === 0 ? <Empty colSpan={7} text="No payments yet." /> : paymentHistory.map(payment => (
+          <tr key={payment.id} className="hover:bg-white/5">
+            <td className="p-4 text-white">{payment.user?.name}</td>
+            <td className="p-4 text-white font-bold">৳{payment.amount}</td>
+            <td className="p-4 text-gray-300 capitalize">{payment.method}</td>
+            <td className="p-4 text-gray-300 font-mono">{payment.trxId}</td>
+            <td className="p-4 capitalize">
+              <span className={
+                payment.status === "approved" 
+                  ? "text-neon-green font-semibold" 
+                  : payment.status === "rejected" 
+                    ? "text-red-400" 
+                    : payment.status === "rolled_back" 
+                      ? "text-gray-400 italic font-medium" 
+                      : "text-yellow-400"
+              }>
+                {payment.status === "rolled_back" ? "Rolled Back" : payment.status}
+              </span>
+            </td>
+            <td className="p-4 text-gray-400">{payment.createdAt?.toLocaleDateString()}</td>
+            <td className="p-4">
+              {payment.status === "approved" && (
+                <form action={rollbackPayment}>
+                  <input type="hidden" name="paymentId" value={payment.id} />
+                  <button 
+                    type="submit" 
+                    className="px-2.5 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition-all"
+                  >
+                    Rollback
+                  </button>
+                </form>
+              )}
+            </td>
+          </tr>
         ))}
       </Table>
     </div>

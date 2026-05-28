@@ -62,6 +62,8 @@ export default function AdminDashboardClient(props: {
   upcomingExpires: number;
   newCustomersThisMonth: any[];
   expiringToday: any[];
+  monthlyIncomeData?: { name: string; income: number }[];
+  dailyUsageData?: { name: string; download: number; upload: number }[];
 }) {
   const [onlineCount, setOnlineCount] = useState<number | null>(null);
   const [offlineCount, setOfflineCount] = useState<number | null>(null);
@@ -202,11 +204,15 @@ export default function AdminDashboardClient(props: {
           <h3 className="text-xl font-semibold text-white mb-6">Monthly Income Graph</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={incomeData}>
+              <AreaChart data={props.monthlyIncomeData || []}>
                 <defs><linearGradient id="income" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#00f3ff" stopOpacity={0.35}/><stop offset="95%" stopColor="#00f3ff" stopOpacity={0}/></linearGradient></defs>
-                <XAxis dataKey="name" stroke="#9ca3af" /><YAxis stroke="#9ca3af" />
+                <XAxis dataKey="name" stroke="#9ca3af" />
+                <YAxis stroke="#9ca3af" tickFormatter={(v) => `৳${v.toLocaleString()}`} />
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <Tooltip contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} 
+                  formatter={(value: any) => [`৳${Number(value).toLocaleString()}`, "Income"]}
+                />
                 <Area type="monotone" dataKey="income" stroke="#00f3ff" strokeWidth={3} fill="url(#income)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -217,12 +223,16 @@ export default function AdminDashboardClient(props: {
           <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2"><Download size={18} className="text-neon-green" /> Customer Download / <Upload size={18} className="text-neon-blue" /> Upload Graph</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={usageData}>
-                <XAxis dataKey="name" stroke="#9ca3af" /><YAxis stroke="#9ca3af" />
+              <LineChart data={props.dailyUsageData || []}>
+                <XAxis dataKey="name" stroke="#9ca3af" />
+                <YAxis stroke="#9ca3af" tickFormatter={(v) => `${v} GB`} />
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <Tooltip contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} />
-                <Line type="monotone" dataKey="download" stroke="#39ff14" strokeWidth={3} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="upload" stroke="#00f3ff" strokeWidth={3} dot={{ r: 4 }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} 
+                  formatter={(value: any, name: any) => [`${value} GB`, name === "download" ? "Download" : "Upload"]}
+                />
+                <Line type="monotone" dataKey="download" stroke="#39ff14" strokeWidth={3} dot={{ r: 4 }} name="download" />
+                <Line type="monotone" dataKey="upload" stroke="#00f3ff" strokeWidth={3} dot={{ r: 4 }} name="upload" />
               </LineChart>
             </ResponsiveContainer>
           </div>

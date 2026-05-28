@@ -62,6 +62,7 @@ interface OltDb {
   name: string;
   ipAddress: string;
   portCount: number;
+  connectionPort: number;
   status: boolean;
 }
 
@@ -76,6 +77,11 @@ export default function MikrotikPageClient() {
   // Edit secret state
   const [editingSecret, setEditingSecret] = useState<PppoeSecret | null>(null);
   const [editSecretForm, setEditSecretForm] = useState({ password: "", profile: "" });
+
+  // OLT ONU Details modal states
+  const [viewingOltOnus, setViewingOltOnus] = useState<OltDb | null>(null);
+  const [onusData, setOnusData] = useState<any>(null);
+  const [onusLoading, setOnusLoading] = useState(false);
 
   // Routers tab states
   const [routers, setRouters] = useState<RouterDb[]>([]);
@@ -398,6 +404,7 @@ export default function MikrotikPageClient() {
       name: String(form.get("name") || "").trim(),
       ipAddress: String(form.get("ipAddress") || "").trim(),
       portCount: Number(form.get("portCount")) || 8,
+      connectionPort: Number(form.get("connectionPort")) || 23,
     };
 
     if (!body.name || !body.ipAddress) {
@@ -439,6 +446,25 @@ export default function MikrotikPageClient() {
       }
     } catch {
       showToast("Network error", false);
+    }
+  }
+
+  async function handleViewOnuDetails(olt: OltDb) {
+    setViewingOltOnus(olt);
+    setOnusLoading(true);
+    setOnusData(null);
+    try {
+      const res = await fetch(`/api/admin/olts/${olt.id}/onus`);
+      const d = await res.json();
+      if (res.ok) {
+        setOnusData(d);
+      } else {
+        showToast(d.error || "Failed to fetch ONU details", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    } finally {
+      setOnusLoading(false);
     }
   }
 
@@ -830,7 +856,7 @@ export default function MikrotikPageClient() {
                   <thead>
                     <tr className="border-b border-white/10 text-xs text-gray-400 uppercase bg-white/5">
                       <th className="p-4">OLT Device Name</th>
-                      <th className="p-4">IP Address</th>
+                      <th className="p-4">IP Address:Port</th>
                       <th className="p-4">Ports</th>
                       <th className="p-4">Status</th>
                       <th className="p-4 text-right">Action</th>
@@ -849,14 +875,20 @@ export default function MikrotikPageClient() {
                       olts.map((olt) => (
                         <tr key={olt.id} className="hover:bg-white/5">
                           <td className="p-4 text-white font-bold flex items-center gap-2"><RadioTower size={16} className="text-teal-400" />{olt.name}</td>
-                          <td className="p-4 text-gray-300 font-mono">{olt.ipAddress}</td>
+                          <td className="p-4 text-gray-300 font-mono">{olt.ipAddress}:{olt.connectionPort || 23}</td>
                           <td className="p-4 text-gray-300 font-semibold">{olt.portCount} Ports</td>
                           <td className="p-4">
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${olt.status ? "bg-neon-green/20 text-neon-green border border-neon-green/20" : "bg-red-500/20 text-red-400 border border-red-500/20"}`}>
                               {olt.status ? "Online" : "Offline"}
                             </span>
                           </td>
-                          <td className="p-4 text-right">
+                          <td className="p-4 text-right flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleViewOnuDetails(olt)}
+                              className="px-2.5 py-1 bg-teal-500/25 text-teal-300 border border-teal-500/35 hover:bg-teal-500/35 rounded-lg text-xs font-bold transition-all"
+                            >
+                              ONU Details
+                            </button>
                             <button
                               onClick={() => handleDeleteOlt(olt.id)}
                               className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors"
@@ -872,7 +904,7 @@ export default function MikrotikPageClient() {
               </div>
             </div>
           </div>
-
+ 
           <div className="space-y-6">
             <form onSubmit={handleAddOlt} className="glass-card p-6 space-y-4">
               <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2"><Plus size={18} className="text-teal-400" /> Add OLT Device</h3>
@@ -883,6 +915,10 @@ export default function MikrotikPageClient() {
               <div>
                 <label className="block text-sm text-gray-300 mb-1.5">IP Address</label>
                 <input name="ipAddress" required placeholder="e.g. 192.168.10.25" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">Connection Port (Telnet/API)</label>
+                <input name="connectionPort" type="number" defaultValue="23" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
               </div>
               <div>
                 <label className="block text-sm text-gray-300 mb-1.5">OLT Port Count</label>
@@ -1061,6 +1097,128 @@ export default function MikrotikPageClient() {
                 </button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* OLT ONU Details Modal */}
+      {viewingOltOnus && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="w-full max-w-4xl glass-card p-6 space-y-4 border border-white/20 my-8 max-h-[90vh] flex flex-col"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <RadioTower size={20} className="text-teal-400" />
+                OLT Device ONU Details: {viewingOltOnus.name} ({viewingOltOnus.ipAddress}:{viewingOltOnus.connectionPort || 23})
+              </h3>
+              <button
+                type="button"
+                onClick={() => setViewingOltOnus(null)}
+                className="px-3 py-1.5 rounded-lg bg-white/10 text-gray-300 border border-white/10 hover:bg-white/20 text-xs font-semibold transition-colors"
+              >
+                Close
+              </button>
+            </div>
+
+            {onusLoading ? (
+              <div className="py-12 text-center text-gray-400 flex flex-col items-center justify-center gap-3">
+                <Loader2 size={36} className="animate-spin text-teal-400" />
+                <p className="text-sm">Querying OLT ports for active ONUs & laser signals...</p>
+              </div>
+            ) : onusData ? (
+              <div className="flex-1 flex flex-col min-h-0 space-y-4">
+                {/* Stats Summary */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="bg-slate-900/50 p-3 rounded-xl border border-white/5 text-center">
+                    <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Total ONUs</span>
+                    <p className="text-lg font-bold text-white mt-0.5">{onusData.onus?.length || 0}</p>
+                  </div>
+                  <div className="bg-slate-900/50 p-3 rounded-xl border border-white/5 text-center">
+                    <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Online ONUs</span>
+                    <p className="text-lg font-bold text-neon-green mt-0.5">
+                      {onusData.onus?.filter((o: any) => o.status === "online").length || 0}
+                    </p>
+                  </div>
+                  <div className="bg-slate-900/50 p-3 rounded-xl border border-white/5 text-center">
+                    <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Offline ONUs</span>
+                    <p className="text-lg font-bold text-red-400 mt-0.5">
+                      {onusData.onus?.filter((o: any) => o.status === "offline").length || 0}
+                    </p>
+                  </div>
+                  <div className="bg-slate-900/50 p-3 rounded-xl border border-white/5 text-center">
+                    <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">OLT Ports</span>
+                    <p className="text-lg font-bold text-teal-300 mt-0.5">{onusData.portCount || 8} Ports</p>
+                  </div>
+                </div>
+
+                {/* Table container */}
+                <div className="flex-1 overflow-y-auto border border-white/10 rounded-xl bg-slate-950/40">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 z-10 bg-slate-900 border-b border-white/10">
+                      <tr className="text-xs text-gray-400 uppercase">
+                        <th className="p-3">Port</th>
+                        <th className="p-3">MAC Address</th>
+                        <th className="p-3">Assigned User</th>
+                        <th className="p-3">Rx Optical Power</th>
+                        <th className="p-3">Laser Temp</th>
+                        <th className="p-3">Distance</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3">Uptime</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 text-xs text-gray-300">
+                      {onusData.onus?.map((onu: any) => {
+                        const isOffline = onu.status === "offline";
+                        const powerNum = parseFloat(onu.rxPower);
+                        
+                        let rxColor = "text-neon-green bg-neon-green/10 border-neon-green/20";
+                        if (isOffline) {
+                          rxColor = "text-red-500 bg-red-500/10 border-red-500/20";
+                        } else if (powerNum <= -27) {
+                          rxColor = "text-red-400 bg-red-500/10 border-red-500/20";
+                        } else if (powerNum <= -25) {
+                          rxColor = "text-orange-400 bg-orange-500/10 border-orange-500/20";
+                        }
+
+                        return (
+                          <tr key={onu.id} className="hover:bg-white/5">
+                            <td className="p-3 font-semibold text-white">{onu.port}</td>
+                            <td className="p-3 font-mono">{onu.macAddress}</td>
+                            <td className="p-3">
+                              <span className="font-semibold text-white block">{onu.customerName}</span>
+                              <span className="text-[10px] text-gray-400">{onu.username}</span>
+                            </td>
+                            <td className="p-3">
+                              <span className={`inline-block px-2 py-0.5 rounded border text-[11px] font-bold ${rxColor}`}>
+                                {isOffline ? "LOS (Offline)" : `${onu.rxPower} dBm`}
+                              </span>
+                            </td>
+                            <td className="p-3">{onu.temperature}</td>
+                            <td className="p-3">{onu.distance}</td>
+                            <td className="p-3">
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                !isOffline 
+                                  ? "bg-neon-green/20 text-neon-green border border-neon-green/20" 
+                                  : "bg-red-500/20 text-red-400 border border-red-500/20"
+                              }`}>
+                                {!isOffline ? "Online" : "Offline"}
+                              </span>
+                            </td>
+                            <td className="p-3 font-mono">{onu.uptime}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="py-8 text-center text-gray-500">Failed to load details.</div>
+            )}
           </motion.div>
         </div>
       )}

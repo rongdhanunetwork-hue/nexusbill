@@ -84,12 +84,20 @@ export default function PayBillClient({ bkashNumber, nagadNumber, rocketNumber }
             <p className="text-gray-400 mb-8 relative z-10">
               আপনার payment এখন Pending tab-এ আছে। Admin Transaction ID verify করে approve করলে bill Paid হবে।
             </p>
-            <button
-              onClick={() => setSubmitted(false)}
-              className="glass-button px-6 py-3 font-medium text-white relative z-10"
-            >
-              Submit Another Payment
-            </button>
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 relative z-10">
+              <button
+                onClick={() => setSubmitted(false)}
+                className="glass-button w-full sm:w-auto px-6 py-3 font-medium text-white"
+              >
+                Submit Another Payment
+              </button>
+              <a
+                href="/customer/history"
+                className="bg-gradient-to-r from-neon-blue to-teal-400 text-slate-900 w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-center hover:shadow-[0_0_20px_rgba(0,243,255,0.4)] hover:scale-105 active:scale-95 transition-all"
+              >
+                View History (হিস্ট্রি দেখুন)
+              </a>
+            </div>
           </motion.div>
         ) : (
           <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -97,8 +105,30 @@ export default function PayBillClient({ bkashNumber, nagadNumber, rocketNumber }
             <div className="glass-card overflow-hidden">
               <div className="p-6 border-b border-white/10 bg-white/5">
                 <h2 className="text-lg font-semibold text-white">Payment Instructions</h2>
-                <p className="text-sm text-gray-400 mt-2">নিচের নম্বরে Send Money করে Transaction details submit করুন।</p>
+                <p className="text-sm text-gray-400 mt-2">নিচের নম্বরে Send Money করে অথবা সরাসরি অনলাইন লিংকের মাধ্যমে বিল পে করে Transaction ID ও Amount সাবমিট করুন।</p>
               </div>
+
+              {/* Online bKash Payment Link Banner */}
+              <div className="mx-6 mt-6 p-5 rounded-2xl bg-gradient-to-r from-[#E2136E]/25 via-[#E2136E]/5 to-transparent border border-[#E2136E]/30 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="space-y-1.5 relative z-10">
+                  <h3 className="text-[#FF4C9C] font-bold text-base flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#E2136E] animate-ping" />
+                    bKash Online Pay (বিকাশ অনলাইন পেমেন্ট)
+                  </h3>
+                  <p className="text-xs text-gray-300">
+                    সেন্ড মানি করার প্রয়োজন নেই; সরাসরি বিকাশ অনলাইন পেমেন্ট লিংকের মাধ্যমে বিল পে করতে ডানপাশের বাটনে ক্লিক করুন।
+                  </p>
+                </div>
+                <a
+                  href="https://shop.bkash.com/rdn-internet-service-provider0/paymentlink/default-payment"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-[#E2136E] hover:bg-[#b00f55] text-white font-bold text-sm px-6 py-3 rounded-xl shadow-lg hover:shadow-[#E2136E]/30 hover:scale-105 active:scale-95 transition-all shrink-0 z-10 text-center w-full md:w-auto"
+                >
+                  অনলাইন পেমেন্ট করুন
+                </a>
+              </div>
+
               <div className="p-6 grid sm:grid-cols-3 gap-4">
                 {paymentMethods.map((m) => (
                   <div

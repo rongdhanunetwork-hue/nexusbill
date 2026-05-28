@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getRouterDetails } from "@/lib/mikrotik";
 import { syncMikrotikSecrets } from "@/lib/sync";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { inArray, eq, and } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +21,27 @@ export async function GET() {
     // Automatically import any new router secrets into database using the fetched secrets (no extra connection)
     if (details.secrets && details.secrets.length > 0) {
       await syncMikrotikSecrets(details.secrets);
+    }
+
+    // Update lastSeen for online users in DB
+    if (details.active && details.active.length > 0) {
+      const activeNames = details.active.map((a: any) => a.name).filter(Boolean);
+      const allSearchNames = [...new Set([...activeNames, ...activeNames.map((n: string) => n.toLowerCase())])];
+      if (allSearchNames.length > 0) {
+        try {
+          await db
+            .update(users)
+            .set({ lastSeen: new Date() })
+            .where(
+              and(
+                eq(users.role, "customer"),
+                inArray(users.pppoeUsername, allSearchNames)
+              )
+            );
+        } catch (dbErr) {
+          console.error("Batch update lastSeen failed:", dbErr);
+        }
+      }
     }
 
     const errorMessage = details.status.ok ? null : (details.status.error || "Connection failed");

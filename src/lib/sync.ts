@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { users, mikrotiks, packages } from "@/db/schema";
-import { eq, and, lte } from "drizzle-orm";
+import { users, mikrotiks, packages, dataUsage } from "@/db/schema";
+import { eq, and, lte, gte } from "drizzle-orm";
 import { 
   getPppoeSecrets, 
   getPppoeActive, 
@@ -194,16 +194,149 @@ export async function checkAndSuspendExpiredUsers() {
   }
 }
 
+const lastSessionTraffic = new Map<string, { bytesIn: number; bytesOut: number; uptime: string }>();
+
+function parseUptimeToSeconds(uptime: string): number {
+  if (!uptime) return 0;
+  let days = 0;
+  let timePart = uptime;
+  if (uptime.includes("d")) {
+    const parts = uptime.split("d");
+    days = parseInt(parts[0]) || 0;
+    timePart = parts[1] || "";
+  }
+  const hms = timePart.split(":");
+  let hours = 0;
+  let minutes = 0;
+  let seconds = 0;
+  if (hms.length === 3) {
+    hours = parseInt(hms[0]) || 0;
+    minutes = parseInt(hms[1]) || 0;
+    seconds = parseInt(hms[2]) || 0;
+  } else if (hms.length === 2) {
+    minutes = parseInt(hms[0]) || 0;
+    seconds = parseInt(hms[1]) || 0;
+  } else if (hms.length === 1) {
+    seconds = parseInt(hms[0]) || 0;
+  }
+  return days * 86400 + hours * 3600 + minutes * 60 + seconds;
+}
+
+export async function trackCustomerDataUsage() {
+  try {
+    // 1. Fetch active sessions from MikroTik
+    const activeSessions = await getPppoeActive();
+    if (!activeSessions || activeSessions.length === 0) return;
+
+    // 2. Fetch all customers from DB to map pppoeUsername to userId
+    const dbCustomers = await db
+      .select({ id: users.id, pppoeUsername: users.pppoeUsername })
+      .from(users)
+      .where(eq(users.role, "customer"));
+
+    const usernameToUserId = new Map<string, number>();
+    for (const c of dbCustomers) {
+      if (c.pppoeUsername) {
+        usernameToUserId.set(c.pppoeUsername.toLowerCase(), c.id);
+      }
+    }
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    for (const session of activeSessions) {
+      const username = session.name;
+      if (!username) continue;
+      const userId = usernameToUserId.get(username.toLowerCase());
+      if (!userId) continue;
+
+      const currentBytesIn = parseInt((session as any)["bytes-in"] || "0");
+      const currentBytesOut = parseInt((session as any)["bytes-out"] || "0");
+      const currentUptime = session.uptime || "";
+
+      const prev = lastSessionTraffic.get(username.toLowerCase());
+      let deltaIn = 0;
+      let deltaOut = 0;
+
+      if (prev) {
+        const currentUptimeSecs = parseUptimeToSeconds(currentUptime);
+        const prevUptimeSecs = parseUptimeToSeconds(prev.uptime);
+        const isReset = currentBytesIn < prev.bytesIn || currentBytesOut < prev.bytesOut || currentUptimeSecs < prevUptimeSecs;
+
+        if (isReset) {
+          deltaIn = currentBytesIn;
+          deltaOut = currentBytesOut;
+        } else {
+          deltaIn = currentBytesIn - prev.bytesIn;
+          deltaOut = currentBytesOut - prev.bytesOut;
+        }
+      } else {
+        deltaIn = 0;
+        deltaOut = 0;
+      }
+
+      lastSessionTraffic.set(username.toLowerCase(), {
+        bytesIn: currentBytesIn,
+        bytesOut: currentBytesOut,
+        uptime: currentUptime,
+      });
+
+      if (deltaIn > 0 || deltaOut > 0) {
+        const deltaDlGb = deltaOut / (1024 * 1024 * 1024);
+        const deltaUlGb = deltaIn / (1024 * 1024 * 1024);
+
+        const existing = await db.query.dataUsage.findFirst({
+          where: and(
+            eq(dataUsage.userId, userId),
+            gte(dataUsage.recordedAt, todayStart),
+            lte(dataUsage.recordedAt, todayEnd)
+          ),
+        });
+
+        if (existing) {
+          const prevDlGb = parseFloat(String(existing.downloadGb || 0));
+          const prevUlGb = parseFloat(String(existing.uploadGb || 0));
+          await db
+            .update(dataUsage)
+            .set({
+              downloadGb: (prevDlGb + deltaDlGb).toFixed(4),
+              uploadGb: (prevUlGb + deltaUlGb).toFixed(4),
+            })
+            .where(eq(dataUsage.id, existing.id));
+        } else {
+          await db.insert(dataUsage).values({
+            userId,
+            downloadGb: deltaDlGb.toFixed(4),
+            uploadGb: deltaUlGb.toFixed(4),
+            recordedAt: new Date(),
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("trackCustomerDataUsage error:", err);
+  }
+}
+
 export function startExpirationChecker() {
-  console.log("[Expiration Checker] Initializing background expiration checker (runs every 30s)...");
+  console.log("[Expiration Checker] Initializing background tasks (runs every 30s)...");
   // Run immediately on boot
   checkAndSuspendExpiredUsers().catch(err => {
     console.error("[Expiration Checker] Initial run failed:", err);
   });
+  trackCustomerDataUsage().catch(err => {
+    console.error("[Data Usage Accumulator] Initial run failed:", err);
+  });
+
   // Setup interval
   setInterval(() => {
     checkAndSuspendExpiredUsers().catch(err => {
       console.error("[Expiration Checker] Interval run failed:", err);
+    });
+    trackCustomerDataUsage().catch(err => {
+      console.error("[Data Usage Accumulator] Interval run failed:", err);
     });
   }, 30000); // 30 seconds
 }
