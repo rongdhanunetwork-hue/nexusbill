@@ -9,7 +9,8 @@ import {
   deletePppoeSecret, 
   getPppoeProfiles,
   PppoeSecret,
-  suspendUsers
+  suspendUsers,
+  disconnectPppoeActive
 } from "./mikrotik";
 
 export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[]) {
@@ -129,6 +130,20 @@ export async function syncCustomerToMikrotik(
         comment: "Created from Billing Software",
       });
       console.log(`Successfully created MikroTik secret for "${pppoeUsername}"`);
+    }
+
+    // Force disconnect active session to apply changes (status / speed profile) instantly
+    try {
+      const activeSessions = await getPppoeActive();
+      const session = activeSessions.find(
+        (s) => s.name.toLowerCase() === pppoeUsername.toLowerCase()
+      );
+      if (session) {
+        await disconnectPppoeActive(session[".id"]);
+        console.log(`Kicked active session for "${pppoeUsername}" to apply changes instantly.`);
+      }
+    } catch (err) {
+      console.error(`Failed to disconnect active session for "${pppoeUsername}":`, err);
     }
   } catch (err) {
     console.error(`Failed to sync customer "${pppoeUsername}" to MikroTik:`, err);
