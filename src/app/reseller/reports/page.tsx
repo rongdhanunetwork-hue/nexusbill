@@ -3,6 +3,7 @@ import { payments, users, packages, invoices } from "@/db/schema";
 import { desc, eq, sql, inArray, and } from "drizzle-orm";
 import { FileText, RotateCcw } from "lucide-react";
 import { revalidatePath } from "next/cache";
+import RollbackButton from "../../admin/billing/RollbackButton";
 
 export const dynamic = "force-dynamic";
 
@@ -164,16 +165,14 @@ export default async function ResellerReportsPage() {
                     <td className="p-4 text-gray-450">{p.createdAt?.toLocaleDateString()}</td>
                     <td className="p-4 text-right">
                       {p.status === "approved" && p.method === "reseller_wallet" && (
-                        <form action={rollbackResellerRecharge}>
-                          <input type="hidden" name="paymentId" value={p.id} />
-                          <button 
-                            type="submit" 
-                            className="px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold hover:bg-red-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 ml-auto"
-                          >
-                            <RotateCcw size={12} />
-                            Recharge Back
-                          </button>
-                        </form>
+                        <div className="flex justify-end">
+                          <RollbackButton 
+                            action={rollbackResellerRecharge} 
+                            paymentId={p.id} 
+                            label="Recharge Back" 
+                            className="px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold hover:bg-red-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+                          />
+                        </div>
                       )}
                     </td>
                   </tr>

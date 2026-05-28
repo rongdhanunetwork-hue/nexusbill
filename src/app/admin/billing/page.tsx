@@ -4,6 +4,7 @@ import { eq, desc, sql, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { CheckCircle, Clock, DollarSign, FileText, AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
+import RollbackButton from "./RollbackButton";
 
 export const dynamic = "force-dynamic";
 
@@ -226,15 +227,12 @@ export default async function BillingPage() {
             <td className="p-4 text-gray-400">{payment.createdAt?.toLocaleDateString()}</td>
             <td className="p-4">
               {payment.status === "approved" && (
-                <form action={rollbackPayment}>
-                  <input type="hidden" name="paymentId" value={payment.id} />
-                  <button 
-                    type="submit" 
-                    className="px-2.5 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition-all"
-                  >
-                    Rollback
-                  </button>
-                </form>
+                <RollbackButton 
+                  action={rollbackPayment} 
+                  paymentId={payment.id} 
+                  label="Rollback" 
+                  className="px-2.5 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition-all flex items-center gap-1.5"
+                />
               )}
             </td>
           </tr>
