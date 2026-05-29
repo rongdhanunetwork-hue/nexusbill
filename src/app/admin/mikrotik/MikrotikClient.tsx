@@ -492,45 +492,49 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
 
       {/* Title */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold text-white tracking-wide">MikroTik Router & OLT Devices</h1>
-        <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
-          <button
-            onClick={() => setActiveTab("live")}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "live"
-              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-              : "text-gray-400 hover:text-white"
-              }`}
-          >
-            Live Control
-          </button>
-          <button
-            onClick={() => setActiveTab("profiles")}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "profiles"
-              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-              : "text-gray-400 hover:text-white"
-              }`}
-          >
-            Speed Profiles
-          </button>
-          <button
-            onClick={() => setActiveTab("routers")}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "routers"
-              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-              : "text-gray-400 hover:text-white"
-              }`}
-          >
-            Routers List
-          </button>
-          <button
-            onClick={() => setActiveTab("olts")}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "olts"
-              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-              : "text-gray-400 hover:text-white"
-              }`}
-          >
-            OLTs List
-          </button>
-        </div>
+        <h1 className="text-2xl font-bold text-white tracking-wide">
+          {role === "reseller" ? "MikroTik Router Status" : "MikroTik Router & OLT Devices"}
+        </h1>
+        {role !== "reseller" && (
+          <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
+            <button
+              onClick={() => setActiveTab("live")}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "live"
+                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+                : "text-gray-400 hover:text-white"
+                }`}
+            >
+              Live Control
+            </button>
+            <button
+              onClick={() => setActiveTab("profiles")}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "profiles"
+                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+                : "text-gray-400 hover:text-white"
+                }`}
+            >
+              Speed Profiles
+            </button>
+            <button
+              onClick={() => setActiveTab("routers")}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "routers"
+                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+                : "text-gray-400 hover:text-white"
+                }`}
+            >
+              Routers List
+            </button>
+            <button
+              onClick={() => setActiveTab("olts")}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "olts"
+                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+                : "text-gray-400 hover:text-white"
+                }`}
+            >
+              OLTs List
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tab: Live Router Control */}

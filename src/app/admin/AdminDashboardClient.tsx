@@ -165,8 +165,10 @@ export default function AdminDashboardClient({
     { name: "4 Day Expired", value: props.expired4Day, icon: AlertTriangle, color: "text-red-600", glow: "shadow-red-700/40", href: `${basePath}/customers?status=expired` },
     { name: "Today Recharge", value: props.todayRecharge, icon: CalendarCheck, color: "text-neon-blue", glow: "shadow-cyan-500/40", href: `${basePath}/billing` },
     { name: "Upcoming Expire", value: props.upcomingExpires, icon: Clock, color: "text-yellow-400", glow: "shadow-yellow-500/40", href: `${basePath}/customers?status=upcoming` },
-    { name: "Router Added", value: props.routerCount, icon: Router, color: "text-purple-300", glow: "shadow-purple-500/40", href: `${basePath}/mikrotik` },
-    { name: "OLT Added", value: props.oltCount, icon: RadioTower, color: "text-pink-300", glow: "shadow-pink-500/40", href: `${basePath}/mikrotik` },
+    ...(role !== "reseller" ? [
+      { name: "Router Added", value: props.routerCount, icon: Router, color: "text-purple-300", glow: "shadow-purple-500/40", href: `${basePath}/mikrotik` },
+      { name: "OLT Added", value: props.oltCount, icon: RadioTower, color: "text-pink-300", glow: "shadow-pink-500/40", href: `${basePath}/mikrotik` },
+    ] : []),
   ];
 
   return (

@@ -45,8 +45,10 @@ export default function ResellerLayout({ children }: { children: React.ReactNode
   const [notifications, setNotifications] = useState<{ id: string; text: string; link: string }[]>([]);
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
+  const [resellerProfile, setResellerProfile] = useState<{ name: string; walletBalance: string } | null>(null);
 
   useEffect(() => {
+    // Fetch notifications
     fetch("/api/reseller/notifications")
       .then((res) => res.json())
       .then((data) => {
@@ -55,6 +57,16 @@ export default function ResellerLayout({ children }: { children: React.ReactNode
           if (data.length > 0) {
             setHasUnread(true);
           }
+        }
+      })
+      .catch(() => {});
+
+    // Fetch reseller profile info
+    fetch("/api/reseller/profile")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && !data.error) {
+          setResellerProfile(data);
         }
       })
       .catch(() => {});
@@ -94,6 +106,17 @@ export default function ResellerLayout({ children }: { children: React.ReactNode
           <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setOpen(false)}>
             <X size={24} />
           </button>
+        </div>
+
+        {/* Reseller Wallet Credit Box */}
+        <div className="mx-4 my-3 p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 to-indigo-500/5 border border-purple-500/20 shadow-[inset_0_0_20px_rgba(168,85,247,0.05)]">
+          <div className="text-xs text-gray-400 font-medium">Your Credit</div>
+          <div className="text-2xl font-bold text-neon-green font-mono mt-1">
+            ৳{resellerProfile ? Number(resellerProfile.walletBalance || 0).toFixed(2) : "0.00"}
+          </div>
+          <div className="text-xs text-purple-300 font-medium truncate mt-1">
+            {resellerProfile?.name || "Loading..."}
+          </div>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
@@ -147,6 +170,14 @@ export default function ResellerLayout({ children }: { children: React.ReactNode
               <span className="text-xs px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30 hidden sm:block">
                 Wallet Based
               </span>
+
+              {/* Header Credit/Balance */}
+              <div className="flex items-center gap-2 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/30 px-3.5 py-1.5 rounded-xl">
+                <span className="text-xs text-gray-400 font-medium hidden sm:inline">Credit:</span>
+                <span className="text-sm font-bold text-purple-300 font-mono">
+                  ৳{resellerProfile ? Number(resellerProfile.walletBalance || 0).toFixed(2) : "0.00"}
+                </span>
+              </div>
 
               {/* Notification Bell */}
               <div className="relative">
