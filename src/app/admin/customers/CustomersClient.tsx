@@ -964,7 +964,7 @@ export default function CustomersClient({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">বকেয়া (Due Amount)</label>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">পরিশোধিত টাকা (Paid Amount)</label>
                     <input 
                       type="text"
                       value={displayDue} 
