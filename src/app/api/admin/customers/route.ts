@@ -51,12 +51,8 @@ export async function POST(req: Request) {
 
     // Compute expiry: only set if custom expireDate is explicitly provided in the creation form
     let calculatedExpireDate: Date | null = null;
-    let initialStatus = "expired";
     if (expireDate) {
       calculatedExpireDate = new Date(expireDate);
-      if (calculatedExpireDate > new Date()) {
-        initialStatus = "active";
-      }
     }
 
     const [customer] = await db.insert(users).values({
@@ -73,7 +69,7 @@ export async function POST(req: Request) {
       macAddress: macAddress?.trim() || null,
       role: "customer",
       approvalStatus: "approved",
-      status: initialStatus,
+      status: "active",
       expireDate: calculatedExpireDate,
       dob: dob ? new Date(dob) : null,
       createdAt: createdAt ? new Date(createdAt) : new Date(),
@@ -81,7 +77,7 @@ export async function POST(req: Request) {
 
     // Automatically sync customer PPPoE secret to MikroTik router
     if (pppoeUsername?.trim()) {
-      await syncCustomerToMikrotik(pppoeUsername.trim(), password, packageId, initialStatus);
+      await syncCustomerToMikrotik(pppoeUsername.trim(), password, packageId, "active");
     }
 
     return NextResponse.json(customer, { status: 201 });

@@ -4,7 +4,6 @@ import { eq, desc, sql, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { CheckCircle, Clock, DollarSign, FileText, AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
-import RollbackButton from "./RollbackButton";
 
 export const dynamic = "force-dynamic";
 
@@ -75,14 +74,7 @@ async function rollbackPayment(formData: FormData) {
         where: eq(packages.id, customer.packageId)
       });
       if (pkg && pkg.durationDays) {
-        const pkgPrice = Number(pkg.price || 0);
-        const paymentAmount = Number(payment.amount || 0);
-        if (pkgPrice > 0 && paymentAmount > 0) {
-          const ratio = paymentAmount / pkgPrice;
-          durationDays = Math.round(pkg.durationDays * ratio);
-        } else {
-          durationDays = pkg.durationDays;
-        }
+        durationDays = pkg.durationDays;
       }
     }
 
@@ -105,20 +97,6 @@ async function rollbackPayment(formData: FormData) {
     await db.update(payments)
       .set({ status: "rolled_back" })
       .where(eq(payments.id, paymentId));
-
-    // Refund reseller wallet if payment method was reseller_wallet
-    if (payment.method === "reseller_wallet" && customer.resellerId) {
-      const reseller = await db.query.users.findFirst({
-        where: eq(users.id, customer.resellerId)
-      });
-      if (reseller) {
-        const currentWallet = Number(reseller.walletBalance || 0);
-        const refundAmount = Number(payment.amount);
-        await db.update(users)
-          .set({ walletBalance: String(currentWallet + refundAmount) })
-          .where(eq(users.id, reseller.id));
-      }
-    }
 
     // Delete matching invoice if one exists
     const matchInvoice = await db.query.invoices.findFirst({
@@ -227,12 +205,15 @@ export default async function BillingPage() {
             <td className="p-4 text-gray-400">{payment.createdAt?.toLocaleDateString()}</td>
             <td className="p-4">
               {payment.status === "approved" && (
-                <RollbackButton 
-                  action={rollbackPayment} 
-                  paymentId={payment.id} 
-                  label="Rollback" 
-                  className="px-2.5 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition-all flex items-center gap-1.5"
-                />
+                <form action={rollbackPayment}>
+                  <input type="hidden" name="paymentId" value={payment.id} />
+                  <button 
+                    type="submit" 
+                    className="px-2.5 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition-all"
+                  >
+                    Rollback
+                  </button>
+                </form>
               )}
             </td>
           </tr>

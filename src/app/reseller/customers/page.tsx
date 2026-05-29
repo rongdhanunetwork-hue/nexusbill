@@ -9,28 +9,7 @@ export const dynamic = "force-dynamic";
 async function addCustomer(formData: FormData) {
   "use server";
   const reseller = await db.query.users.findFirst({ where: eq(users.role, "reseller") });
-  const pppoeUsername = String(formData.get("pppoeUsername") || "").trim();
-  const packageId = Number(formData.get("packageId")) || null;
-
-  await db.insert(users).values({
-    role: "customer",
-    name: String(formData.get("name") || ""),
-    phone: String(formData.get("phone") || ""),
-    password: "123456",
-    address: String(formData.get("address") || ""),
-    pppoeUsername: pppoeUsername || null,
-    macAddress: String(formData.get("macAddress") || ""),
-    packageId,
-    resellerId: reseller?.id || null,
-    status: "expired",
-    expireDate: null
-  });
-
-  if (pppoeUsername) {
-    const { syncCustomerToMikrotik } = await import("@/lib/sync");
-    await syncCustomerToMikrotik(pppoeUsername, "123456", packageId, "expired");
-  }
-
+  await db.insert(users).values({ role: "customer", name: String(formData.get("name") || ""), phone: String(formData.get("phone") || ""), password: "123456", address: String(formData.get("address") || ""), pppoeUsername: String(formData.get("pppoeUsername") || ""), macAddress: String(formData.get("macAddress") || ""), packageId: Number(formData.get("packageId")) || null, resellerId: reseller?.id || null, status: "offline", expireDate: new Date(Date.now() + 24*60*60*1000) });
   revalidatePath("/reseller/customers");
 }
 

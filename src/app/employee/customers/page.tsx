@@ -4,28 +4,7 @@ import { eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { UserPlus, Wifi } from "lucide-react";
 export const dynamic = "force-dynamic";
-async function addConnection(formData: FormData) {
-  "use server";
-  const pppoeUsername = String(formData.get("pppoeUsername") || "").trim();
-  await db.insert(users).values({
-    role: "customer",
-    name: String(formData.get("name") || ""),
-    phone: String(formData.get("phone") || ""),
-    password: "123456",
-    address: String(formData.get("address") || ""),
-    pppoeUsername: pppoeUsername || null,
-    macAddress: String(formData.get("macAddress") || ""),
-    status: "expired",
-    expireDate: null
-  });
-
-  if (pppoeUsername) {
-    const { syncCustomerToMikrotik } = await import("@/lib/sync");
-    await syncCustomerToMikrotik(pppoeUsername, "123456", null, "expired");
-  }
-
-  revalidatePath("/employee/customers");
-}
+async function addConnection(formData: FormData) { "use server"; await db.insert(users).values({ role: "customer", name: String(formData.get("name") || ""), phone: String(formData.get("phone") || ""), password: "123456", address: String(formData.get("address") || ""), pppoeUsername: String(formData.get("pppoeUsername") || ""), macAddress: String(formData.get("macAddress") || ""), status: "offline" }); revalidatePath("/employee/customers"); }
 async function updateMac(formData: FormData) { "use server"; const id = Number(formData.get("id")); if (id) await db.update(users).set({ macAddress: String(formData.get("macAddress") || "") }).where(eq(users.id, id)); revalidatePath("/employee/customers"); }
 export default async function EmployeeCustomersPage() {
   const customers = await db.query.users.findMany({ where: eq(users.role, "customer"), orderBy: [desc(users.createdAt)], limit: 40, with: { package: true } });
