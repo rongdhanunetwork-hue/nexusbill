@@ -982,21 +982,14 @@ export default function CustomersClient({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">পরিশোধিত টাকা (Paid Amount)</label>
-                    <input 
-                      type="text"
-                      value={displayPaid} 
-                      onChange={(e) => setOverridePaid(e.target.value)}
-                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">বকেয়া (Due Amount)</label>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">বকেয়া (Due Amount)</label>
                     <input 
                       type="text"
                       value={displayDue} 
-                      onChange={(e) => setOverrideDue(e.target.value)}
+                      onChange={(e) => {
+                        setOverrideDue(e.target.value);
+                        setOverridePaid("");
+                      }}
                       className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
                       placeholder="0"
                     />
@@ -1015,6 +1008,7 @@ export default function CustomersClient({
                     </select>
                   </div>
                 </div>
+
 
                 {/* Conditional Fields based on Billing Type */}
                 {billingType === "monthly" ? (
@@ -1063,6 +1057,18 @@ export default function CustomersClient({
                     />
                   </div>
                 )}
+
+                {/* Total Bill Summary Line */}
+                <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-neon-blue/5 border border-neon-blue/20 text-xs font-semibold">
+                  <span className="text-gray-400">বিল: <span className="text-white font-bold">৳{displayCalculated}</span></span>
+                  {parseFloat(discount) > 0 && (
+                    <span className="text-gray-400">ছাড়: <span className="text-amber-400 font-bold">-৳{discount}</span></span>
+                  )}
+                  {parseFloat(displayDue) > 0 && (
+                    <span className="text-gray-400">বকেয়া: <span className="text-rose-400 font-bold">৳{displayDue}</span></span>
+                  )}
+                  <span className="text-gray-300">পরিশোধিত: <span className="text-neon-green font-bold text-sm">৳{displayPaid}</span></span>
+                </div>
 
                 {/* Checkboxes */}
                 <div className="flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5">
