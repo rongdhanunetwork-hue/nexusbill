@@ -38,6 +38,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    // IP Binding Check for Customers
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                     req.headers.get("x-real-ip")?.trim() || 
+                     "127.0.0.1";
+    if (user.role === "customer" && user.ipAddress) {
+      const boundIp = user.ipAddress.trim();
+      if (boundIp && boundIp !== clientIp && clientIp !== "127.0.0.1" && clientIp !== "::1") {
+        return NextResponse.json({ error: `IP Binding error: Access locked to IP ${boundIp}` }, { status: 403 });
+      }
+    }
+
     await createSession({
       userId: user.id,
       role: user.role,

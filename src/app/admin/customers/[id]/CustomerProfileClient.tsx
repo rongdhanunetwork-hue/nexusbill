@@ -27,6 +27,12 @@ interface Customer {
   createdAt?: string | Date | null;
   expireDate?: string | Date | null;
   dob?: string | Date | null;
+  areaId?: number | null;
+  customerType?: string | null;
+  connectionFee?: string | null;
+  promiseDate?: string | Date | null;
+  note?: string | null;
+  balance?: string | null;
 }
 
 const toLocalDatetimeString = (dateInput: string | Date | null | undefined) => {
@@ -66,7 +72,8 @@ export default function CustomerProfileClient({
   usageHistory,
   isOnline,
   activeSession,
-  plainTextPassword
+  plainTextPassword,
+  role = "admin"
 }: {
   customer: Customer;
   payments: Payment[];
@@ -75,7 +82,9 @@ export default function CustomerProfileClient({
   isOnline: boolean;
   activeSession?: any;
   plainTextPassword?: string;
+  role?: "admin" | "reseller" | "employee";
 }) {
+  const basePath = role === "reseller" ? "/reseller" : role === "employee" ? "/employee" : "/admin";
 
   // Print PDF function
   function handleDownloadPDF() {
@@ -110,6 +119,14 @@ export default function CustomerProfileClient({
   const [displayDob, setDisplayDob] = useState<Date | null>(
     customer.dob ? new Date(customer.dob) : null
   );
+  const [areas, setAreas] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/areas")
+      .then(r => r.json())
+      .then(setAreas)
+      .catch(() => {});
+  }, []);
 
   // Edit fields states
   const [editNidNumber, setEditNidNumber] = useState(customer.nidNumber || "");
@@ -179,7 +196,11 @@ export default function CustomerProfileClient({
   useEffect(() => {
     // Run the interval continuously if the customer is active to track live bandwidth
     // and accumulate bytes in the background.
-    if (customer.status !== "active") return;
+    if (customer.status !== "active") {
+      setLiveDownloadRate(0);
+      setLiveUploadRate(0);
+      return;
+    }
     
     let active = true;
     const interval = setInterval(async () => {
@@ -197,16 +218,14 @@ export default function CustomerProfileClient({
           bIn = data.bytesIn || 0;
           bOut = data.bytesOut || 0;
         } else {
-          // Simulation backup if customer is active but router stats empty/timeout
-          const baseSpeed = parseFloat(customer.package?.speed.replace(/[^0-9.]/g, "") || "5");
-          dl = parseFloat((Math.random() * (baseSpeed * 0.8) + (baseSpeed * 0.1)).toFixed(2));
-          ul = parseFloat((Math.random() * (baseSpeed * 0.3) + 0.2).toFixed(2));
+          // No simulation if user is offline or not found
+          dl = 0;
+          ul = 0;
         }
       } catch (e) {
         console.error("Live traffic speed check failed:", e);
-        const baseSpeed = parseFloat(customer.package?.speed.replace(/[^0-9.]/g, "") || "5");
-        dl = parseFloat((Math.random() * (baseSpeed * 0.8) + (baseSpeed * 0.1)).toFixed(2));
-        ul = parseFloat((Math.random() * (baseSpeed * 0.3) + 0.2).toFixed(2));
+        dl = 0;
+        ul = 0;
       }
       
       if (!active) return;
@@ -292,7 +311,7 @@ export default function CustomerProfileClient({
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
         <div className="flex items-center gap-3">
-          <Link href="/admin/customers" className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-gray-400 hover:text-white transition-all">
+          <Link href={`${basePath}/customers`} className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-gray-400 hover:text-white transition-all">
             <ArrowLeft size={20} />
           </Link>
           <h1 className="text-2xl font-bold text-white tracking-wide">Customer Profile</h1>
@@ -304,9 +323,11 @@ export default function CustomerProfileClient({
           >
             <Printer size={18} /> Download PDF
           </button>
-          <Link href={`/admin/customers/${customer.id}/edit`} className="glass-button px-4 py-2 text-neon-blue border-neon-blue/30 flex items-center gap-2">
-            <Edit size={18} /> Edit Customer
-          </Link>
+          {role !== "employee" && (
+            <Link href={`${basePath}/customers/${customer.id}/edit`} className="glass-button px-4 py-2 text-neon-blue border-neon-blue/30 flex items-center gap-2">
+              <Edit size={18} /> Edit Customer
+            </Link>
+          )}
         </div>
       </div>
 
@@ -363,12 +384,14 @@ export default function CustomerProfileClient({
         <div className="lg:col-span-2 glass-card p-6">
           <div className="flex items-center justify-between mb-5 border-b border-white/10 pb-2 flex-wrap gap-2">
             <h3 className="text-lg font-semibold text-white">Account Details</h3>
-            <button
-              onClick={() => setIsEditingDates(!isEditingDates)}
-              className="text-xs px-3 py-1.5 bg-neon-blue/10 hover:bg-neon-blue/20 border border-neon-blue/30 rounded-lg text-neon-blue font-bold transition-all no-print"
-            >
-              {isEditingDates ? "বন্ধ করুন (Cancel)" : "তারিখ ও NID এডিট (Edit Profile Dates)"}
-            </button>
+            {role !== "employee" && (
+              <button
+                onClick={() => setIsEditingDates(!isEditingDates)}
+                className="text-xs px-3 py-1.5 bg-neon-blue/10 hover:bg-neon-blue/20 border border-neon-blue/30 rounded-lg text-neon-blue font-bold transition-all no-print"
+              >
+                {isEditingDates ? "বন্ধ করুন (Cancel)" : "তারিখ ও NID এডিট (Edit Profile Dates)"}
+              </button>
+            )}
           </div>
           
           {isEditingDates ? (
@@ -464,6 +487,17 @@ export default function CustomerProfileClient({
                <Info icon={<Clock size={18} />} label="Expiration Date" value={displayExpireDate ? displayExpireDate.toLocaleString() : "N/A"} />
               <Info icon={<Clock size={18} />} label="Profile Age (কত দিন হলো)" value={getProfileAge()} />
               <Info icon={<IdCard size={18} />} label="NID Document" value={customer.nidUrl ? "Uploaded" : "Not uploaded"} />
+              <Info icon={<MapPin size={18} />} label="Assigned Area" value={areas.find(a => a.id === customer.areaId)?.name || "Not set"} />
+              <Info icon={<Wifi size={18} />} label="Connection Type" value={customer.customerType ? customer.customerType.toUpperCase() : "PPPOE"} />
+              <Info icon={<CreditCard size={18} />} label="Connection Fee" value={customer.connectionFee ? `৳${customer.connectionFee}` : "৳0"} />
+              <Info icon={<CreditCard size={18} />} label="Current Balance" value={customer.balance ? `৳${customer.balance}` : "৳0"} />
+              <Info icon={<Clock size={18} />} label="Promise Date" value={customer.promiseDate ? new Date(customer.promiseDate).toLocaleDateString() : "None"} />
+              {customer.note && (
+                <div className="p-4 bg-white/5 rounded-xl border border-white/5 md:col-span-2">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide">Customer Notes / Remarks</p>
+                  <p className="text-amber-300 font-medium italic mt-1">“ {customer.note} ”</p>
+                </div>
+              )}
               
               {isOnline && activeSession && (
                 <>

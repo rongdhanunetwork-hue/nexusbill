@@ -1,15 +1,26 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mikrotiks, olts } from "@/db/schema";
+import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "reseller" && session.role !== "employee")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const routers = await db.query.mikrotiks.findMany();
   return NextResponse.json(routers);
 }
 
 export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const { name, ipAddress, apiPort, username, password } = body;
 

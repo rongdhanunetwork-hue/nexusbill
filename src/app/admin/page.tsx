@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { users, payments, invoices, mikrotiks, olts, dataUsage } from "@/db/schema";
+import { users, payments, invoices, mikrotiks, olts, dataUsage, expenses } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import AdminDashboardClient from "./AdminDashboardClient";
 import { syncMikrotikSecrets } from "@/lib/sync";
@@ -20,6 +20,15 @@ export default async function AdminDashboard() {
     console.error("Background MikroTik sync error:", err);
   });
 
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+
   const [
     allDbCustomers,
     expired1Day,
@@ -27,10 +36,13 @@ export default async function AdminDashboard() {
     expired3Day,
     expired4Day,
     todayRechargeResult,
+    todayCollectionResult,
     collectionResult,
     dueResult,
     routerResult,
-    oltResult
+    oltResult,
+    expenseResult,
+    paidUsersThisMonthResult
   ] = await Promise.all([
     db.query.users.findMany({
       where: eq(users.role, "customer"),
@@ -41,15 +53,37 @@ export default async function AdminDashboard() {
     countExpiredDays(3),
     countExpiredDays(4),
     db.select({ count: sql<number>`cast(count(*) as int)` }).from(payments).where(sql`${payments.status} = 'approved' and ${payments.createdAt}::date = current_date`),
+    db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` }).from(payments).where(sql`${payments.status} = 'approved' and ${payments.createdAt}::date = current_date`),
     db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` }).from(payments).where(eq(payments.status, "approved")),
     db.select({ sum: sql<number>`cast(coalesce(sum(${invoices.amount}), 0) as int)` }).from(invoices).where(sql`${invoices.status} in ('unpaid', 'due')`),
     db.select({ count: sql<number>`cast(count(*) as int)` }).from(mikrotiks),
     db.select({ count: sql<number>`cast(count(*) as int)` }).from(olts),
+    db.select({ sum: sql<number>`cast(coalesce(sum(${expenses.amount}), 0) as int)` }).from(expenses),
+    db.select({ userId: payments.userId }).from(payments).where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${startOfMonth}`),
   ]);
 
   const totalCustomers = allDbCustomers.length;
   const activeCustomers = allDbCustomers.filter(c => c.status === "active").length;
   const expiredCustomers = allDbCustomers.filter(c => c.status === "expired").length;
+
+  const activeCustomersList = allDbCustomers.filter(c => c.status === "active");
+  const expectedCollection = activeCustomersList.reduce((sum, c) => {
+    const price = c.package ? parseFloat(c.package.price) : 0;
+    return sum + price;
+  }, 0);
+
+  const todayCollection = todayCollectionResult[0]?.sum || 0;
+  const totalExpense = expenseResult[0]?.sum || 0;
+  const businessBalance = (collectionResult[0]?.sum || 0) - totalExpense;
+
+  const paidUserIds = new Set(paidUsersThisMonthResult.map(r => r.userId));
+  const paidThisMonthCount = allDbCustomers.filter(c => c.status === "active" && paidUserIds.has(c.id)).length;
+  const unpaidThisMonthCount = Math.max(0, activeCustomers - paidThisMonthCount);
+
+  const totalConnectionFee = allDbCustomers.reduce((sum, c) => sum + (c.connectionFee ? parseFloat(c.connectionFee) : 0), 0);
+  const connectionFeeToday = allDbCustomers
+    .filter(c => c.createdAt && new Date(c.createdAt) >= startOfToday)
+    .reduce((sum, c) => sum + (c.connectionFee ? parseFloat(c.connectionFee) : 0), 0);
 
   const now = new Date();
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -60,19 +94,12 @@ export default async function AdminDashboard() {
   }).length;
 
   // Running Month New Users
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
   const newCustomersThisMonth = allDbCustomers.filter(c => {
     if (!c.createdAt) return false;
     return new Date(c.createdAt) >= startOfMonth;
   });
 
   // Today Expired (Expires Today)
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const endOfToday = new Date();
-  endOfToday.setHours(23, 59, 59, 999);
   const expiringToday = allDbCustomers.filter(c => {
     if (!c.expireDate) return false;
     const exp = new Date(c.expireDate);
@@ -146,6 +173,14 @@ export default async function AdminDashboard() {
       expired3Day={expired3Day}
       expired4Day={expired4Day}
       todayRecharge={todayRechargeResult[0]?.count || 0}
+      todayCollection={todayCollection}
+      expectedCollection={expectedCollection}
+      paidThisMonthCount={paidThisMonthCount}
+      unpaidThisMonthCount={unpaidThisMonthCount}
+      connectionFeeToday={connectionFeeToday}
+      totalConnectionFee={totalConnectionFee}
+      businessBalance={businessBalance}
+      totalExpense={totalExpense}
       totalizerCollection={collectionResult[0]?.sum || 0}
       dueAmount={dueResult[0]?.sum || 0}
       routerCount={routerResult[0]?.count || 0}

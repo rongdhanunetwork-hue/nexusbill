@@ -66,7 +66,7 @@ interface OltDb {
   status: boolean;
 }
 
-export default function MikrotikPageClient() {
+export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" | "reseller" | "employee" }) {
   const [activeTab, setActiveTab] = useState<"live" | "routers" | "olts" | "profiles">("live");
 
   // Live tab states
@@ -554,7 +554,7 @@ export default function MikrotikPageClient() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {liveData?.routerStatus.ok && (
+              {liveData?.routerStatus.ok && role === "admin" && (
                 <button
                   onClick={handleRebootRouter}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 transition-all text-sm font-semibold"
@@ -654,39 +654,43 @@ export default function MikrotikPageClient() {
                             </span>
                           </td>
                           <td className="p-4">
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => toggleUser(secret)}
-                                disabled={isActioning}
-                                title={isDisabled ? "Enable" : "Disable"}
-                                className={`flex items-center justify-center p-2 rounded-lg border transition-colors disabled:opacity-50 ${isDisabled
-                                  ? "bg-neon-green/20 text-neon-green border-neon-green/30 hover:bg-neon-green/30"
-                                  : "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
-                                  }`}
-                              >
-                                {isActioning ? (
-                                  <Loader2 size={14} className="animate-spin" />
-                                ) : (
-                                  <Power size={14} />
-                                )}
-                              </button>
-                              <button
-                                onClick={() => startEditSecret(secret)}
-                                disabled={isActioning}
-                                title="Edit User"
-                                className="flex items-center justify-center p-2 rounded-lg bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 transition-colors disabled:opacity-50"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteSecret(secret[".id"], secret.name)}
-                                disabled={isActioning}
-                                title="Delete User from Router"
-                                className="flex items-center justify-center p-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/35 transition-colors disabled:opacity-50"
-                              >
-                                <Trash size={14} />
-                              </button>
-                            </div>
+                            {role === "admin" ? (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => toggleUser(secret)}
+                                  disabled={isActioning}
+                                  title={isDisabled ? "Enable" : "Disable"}
+                                  className={`flex items-center justify-center p-2 rounded-lg border transition-colors disabled:opacity-50 ${isDisabled
+                                    ? "bg-neon-green/20 text-neon-green border-neon-green/30 hover:bg-neon-green/30"
+                                    : "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
+                                    }`}
+                                >
+                                  {isActioning ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                  ) : (
+                                    <Power size={14} />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => startEditSecret(secret)}
+                                  disabled={isActioning}
+                                  title="Edit User"
+                                  className="flex items-center justify-center p-2 rounded-lg bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 transition-colors disabled:opacity-50"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSecret(secret[".id"], secret.name)}
+                                  disabled={isActioning}
+                                  title="Delete User from Router"
+                                  className="flex items-center justify-center p-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/35 transition-colors disabled:opacity-50"
+                                >
+                                  <Trash size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-gray-500 font-mono">—</span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -711,8 +715,8 @@ export default function MikrotikPageClient() {
                       <th className="p-4">Username</th>
                       <th className="p-4">IP Address</th>
                       <th className="p-4">Uptime</th>
-                      <th className="p-4">Caller ID (MAC)</th>
-                      <th className="p-4 text-right">Action</th>
+                      <th className="p-4 text-gray-400">Caller ID (MAC)</th>
+                      {role === "admin" && <th className="p-4 text-right">Action</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -722,21 +726,23 @@ export default function MikrotikPageClient() {
                         <td className="p-4 text-neon-blue font-mono text-sm">{session.address}</td>
                         <td className="p-4 text-gray-300 text-sm">{session.uptime}</td>
                         <td className="p-4 text-gray-400 text-xs font-mono">{session["caller-id"]}</td>
-                        <td className="p-4 text-right">
-                          <button
-                            onClick={() => handleDisconnectActive(session[".id"], session.name)}
-                            disabled={actionLoading === session[".id"]}
-                            title="Disconnect Session (Force Reconnect)"
-                            className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors disabled:opacity-50 inline-flex items-center gap-1 text-xs font-semibold"
-                          >
-                            {actionLoading === session[".id"] ? (
-                              <Loader2 size={12} className="animate-spin" />
-                            ) : (
-                              <LogOut size={12} />
-                            )}
-                            Kick
-                          </button>
-                        </td>
+                        {role === "admin" && (
+                          <td className="p-4 text-right">
+                            <button
+                              onClick={() => handleDisconnectActive(session[".id"], session.name)}
+                              disabled={actionLoading === session[".id"]}
+                              title="Disconnect Session (Force Reconnect)"
+                              className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors disabled:opacity-50 inline-flex items-center gap-1 text-xs font-semibold"
+                            >
+                              {actionLoading === session[".id"] ? (
+                                <Loader2 size={12} className="animate-spin" />
+                              ) : (
+                                <LogOut size={12} />
+                              )}
+                              Kick
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -746,14 +752,16 @@ export default function MikrotikPageClient() {
           )}
 
           {/* Create PPPoE user form */}
-          <AddPppoeForm onSuccess={fetchLiveData} onToast={showToast} profiles={liveData?.profiles || []} />
+          {role === "admin" && (
+            <AddPppoeForm onSuccess={fetchLiveData} onToast={showToast} profiles={liveData?.profiles || []} />
+          )}
         </div>
       )}
 
       {/* Tab: Routers List */}
       {activeTab === "routers" && (
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
+        <div className={role === "admin" ? "grid lg:grid-cols-3 gap-8" : "space-y-6"}>
+          <div className={role === "admin" ? "lg:col-span-2 space-y-6" : "space-y-6"}>
             <div className="glass-card overflow-hidden">
               <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Registered Routers</h2>
@@ -767,17 +775,17 @@ export default function MikrotikPageClient() {
                       <th className="p-4">IP Address</th>
                       <th className="p-4">API Port</th>
                       <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Action</th>
+                      {role === "admin" && <th className="p-4 text-right">Action</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {routersLoading && routers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-gray-500"><Loader2 size={24} className="animate-spin mx-auto mb-2 text-neon-blue" /> Loading routers...</td>
+                        <td colSpan={role === "admin" ? 5 : 4} className="p-8 text-center text-gray-500"><Loader2 size={24} className="animate-spin mx-auto mb-2 text-neon-blue" /> Loading routers...</td>
                       </tr>
                     ) : routers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-gray-500">No routers registered yet.</td>
+                        <td colSpan={role === "admin" ? 5 : 4} className="p-8 text-center text-gray-500">No routers registered yet.</td>
                       </tr>
                     ) : (
                       routers.map((router) => (
@@ -790,14 +798,16 @@ export default function MikrotikPageClient() {
                               {router.status ? "Active" : "Disabled"}
                             </span>
                           </td>
-                          <td className="p-4 text-right">
-                            <button
-                              onClick={() => handleDeleteRouter(router.id)}
-                              className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors"
-                            >
-                              <Trash size={15} />
-                            </button>
-                          </td>
+                          {role === "admin" && (
+                            <td className="p-4 text-right">
+                              <button
+                                onClick={() => handleDeleteRouter(router.id)}
+                                className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors"
+                              >
+                                <Trash size={15} />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))
                     )}
@@ -807,45 +817,47 @@ export default function MikrotikPageClient() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <form onSubmit={handleAddRouter} className="glass-card p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2"><Plus size={18} className="text-neon-blue" /> Add Router</h3>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">Router Name</label>
-                <input name="name" required placeholder="e.g. Core MikroTik" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">IP Address / Domain</label>
-                <input name="ipAddress" required placeholder="e.g. bd2.mikrovpn.xyz" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">API REST Port</label>
-                <input name="apiPort" type="number" defaultValue={13065} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">Username</label>
-                <input name="username" defaultValue="admin" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">Password</label>
-                <input name="password" type="password" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <button
-                type="submit"
-                disabled={addingRouter}
-                className="w-full py-3 bg-neon-blue/20 text-neon-blue border border-neon-blue/30 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-neon-blue/30 transition-colors"
-              >
-                {addingRouter ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Save Router
-              </button>
-            </form>
-          </div>
+          {role === "admin" && (
+            <div className="space-y-6">
+              <form onSubmit={handleAddRouter} className="glass-card p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2"><Plus size={18} className="text-neon-blue" /> Add Router</h3>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">Router Name</label>
+                  <input name="name" required placeholder="e.g. Core MikroTik" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">IP Address / Domain</label>
+                  <input name="ipAddress" required placeholder="e.g. bd2.mikrovpn.xyz" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">API REST Port</label>
+                  <input name="apiPort" type="number" defaultValue={13065} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">Username</label>
+                  <input name="username" defaultValue="admin" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">Password</label>
+                  <input name="password" type="password" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                </div>
+                <button
+                  type="submit"
+                  disabled={addingRouter}
+                  className="w-full py-3 bg-neon-blue/20 text-neon-blue border border-neon-blue/30 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-neon-blue/30 transition-colors"
+                >
+                  {addingRouter ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Save Router
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       )}
 
       {/* Tab: OLT Devices */}
       {activeTab === "olts" && (
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
+        <div className={role === "admin" ? "grid lg:grid-cols-3 gap-8" : "space-y-6"}>
+          <div className={role === "admin" ? "lg:col-span-2 space-y-6" : "space-y-6"}>
             <div className="glass-card overflow-hidden">
               <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Registered OLT Devices</h2>
@@ -889,12 +901,14 @@ export default function MikrotikPageClient() {
                             >
                               ONU Details
                             </button>
-                            <button
-                              onClick={() => handleDeleteOlt(olt.id)}
-                              className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors"
-                            >
-                              <Trash size={15} />
-                            </button>
+                            {role === "admin" && (
+                              <button
+                                onClick={() => handleDeleteOlt(olt.id)}
+                                className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors"
+                              >
+                                <Trash size={15} />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -905,45 +919,47 @@ export default function MikrotikPageClient() {
             </div>
           </div>
  
-          <div className="space-y-6">
-            <form onSubmit={handleAddOlt} className="glass-card p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2"><Plus size={18} className="text-teal-400" /> Add OLT Device</h3>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">OLT Name</label>
-                <input name="name" required placeholder="e.g. EPON OLT 01" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">IP Address</label>
-                <input name="ipAddress" required placeholder="e.g. 192.168.10.25" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">Connection Port (Telnet/API)</label>
-                <input name="connectionPort" type="number" defaultValue="23" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">OLT Port Count</label>
-                <select name="portCount" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white">
-                  <option value="4" className="bg-slate-800">4 Ports</option>
-                  <option value="8" className="bg-slate-800">8 Ports</option>
-                  <option value="16" className="bg-slate-800">16 Ports</option>
-                </select>
-              </div>
-              <button
-                type="submit"
-                disabled={addingOlt}
-                className="w-full py-3 bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-500/30 transition-colors"
-              >
-                {addingOlt ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Save OLT Device
-              </button>
-            </form>
-          </div>
+          {role === "admin" && (
+            <div className="space-y-6">
+              <form onSubmit={handleAddOlt} className="glass-card p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2"><Plus size={18} className="text-teal-400" /> Add OLT Device</h3>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">OLT Name</label>
+                  <input name="name" required placeholder="e.g. EPON OLT 01" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">IP Address</label>
+                  <input name="ipAddress" required placeholder="e.g. 192.168.10.25" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">Connection Port (Telnet/API)</label>
+                  <input name="connectionPort" type="number" defaultValue="23" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">OLT Port Count</label>
+                  <select name="portCount" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white">
+                    <option value="4" className="bg-slate-800">4 Ports</option>
+                    <option value="8" className="bg-slate-800">8 Ports</option>
+                    <option value="16" className="bg-slate-800">16 Ports</option>
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  disabled={addingOlt}
+                  className="w-full py-3 bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-500/30 transition-colors"
+                >
+                  {addingOlt ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Save OLT Device
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       )}
 
       {/* Tab: Speed Profiles */}
       {activeTab === "profiles" && (
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
+        <div className={role === "admin" ? "grid lg:grid-cols-3 gap-8" : "space-y-6"}>
+          <div className={role === "admin" ? "lg:col-span-2 space-y-6" : "space-y-6"}>
             <div className="glass-card overflow-hidden">
               <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -960,19 +976,19 @@ export default function MikrotikPageClient() {
                       <th className="p-4">Local IP Address</th>
                       <th className="p-4">Remote IP Address (Pool)</th>
                       <th className="p-4">Rate Limit (Speed)</th>
-                      <th className="p-4 text-right">Action</th>
+                      {role === "admin" && <th className="p-4 text-right">Action</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {liveLoading && (!liveData || liveData.profiles.length === 0) ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-gray-500">
+                        <td colSpan={role === "admin" ? 5 : 4} className="p-8 text-center text-gray-500">
                           <Loader2 size={24} className="animate-spin mx-auto mb-2 text-neon-blue" /> Loading profiles...
                         </td>
                       </tr>
                     ) : !liveData || liveData.profiles.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-gray-500">No profiles found on router.</td>
+                        <td colSpan={role === "admin" ? 5 : 4} className="p-8 text-center text-gray-500">No profiles found on router.</td>
                       </tr>
                     ) : (
                       liveData.profiles.map((prof) => (
@@ -981,19 +997,21 @@ export default function MikrotikPageClient() {
                           <td className="p-4 text-gray-300 font-mono text-sm">{prof["local-address"] || "—"}</td>
                           <td className="p-4 text-gray-300 font-mono text-sm">{prof["remote-address"] || "—"}</td>
                           <td className="p-4 text-neon-green font-semibold">{prof["rate-limit"] || "Unlimited"}</td>
-                          <td className="p-4 text-right">
-                            <button
-                              onClick={() => handleDeleteProfile(prof[".id"], prof.name)}
-                              disabled={actionLoading === prof[".id"]}
-                              className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors disabled:opacity-50"
-                            >
-                              {actionLoading === prof[".id"] ? (
-                                <Loader2 size={14} className="animate-spin" />
-                              ) : (
-                                <Trash size={14} />
-                              )}
-                            </button>
-                          </td>
+                          {role === "admin" && (
+                            <td className="p-4 text-right">
+                              <button
+                                onClick={() => handleDeleteProfile(prof[".id"], prof.name)}
+                                disabled={actionLoading === prof[".id"]}
+                                className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors disabled:opacity-50"
+                              >
+                                {actionLoading === prof[".id"] ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <Trash size={14} />
+                                )}
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))
                     )}
@@ -1003,37 +1021,39 @@ export default function MikrotikPageClient() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <form onSubmit={handleAddProfile} className="glass-card p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2">
-                <Plus size={18} className="text-neon-blue" /> Create Speed Profile
-              </h3>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">Profile Name</label>
-                <input name="name" required placeholder="e.g. 10Mbps_Package" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">Local IP Address</label>
-                <input name="localAddress" placeholder="e.g. 10.0.0.1" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">Remote Address / Pool</label>
-                <input name="remoteAddress" placeholder="e.g. pppoe-pool" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">Rate Limit (Rx/Tx)</label>
-                <input name="rateLimit" placeholder="e.g. 5M/10M" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-                <span className="text-[10px] text-gray-400 mt-1 block">Format: [upload]/[download] (e.g. 5M/10M, 10M/10M)</span>
-              </div>
-              <button
-                type="submit"
-                disabled={actionLoading === "adding_profile"}
-                className="w-full py-3 bg-neon-blue/20 text-neon-blue border border-neon-blue/30 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-neon-blue/30 transition-colors disabled:opacity-50"
-              >
-                {actionLoading === "adding_profile" ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Create Profile
-              </button>
-            </form>
-          </div>
+          {role === "admin" && (
+            <div className="space-y-6">
+              <form onSubmit={handleAddProfile} className="glass-card p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2">
+                  <Plus size={18} className="text-neon-blue" /> Create Speed Profile
+                </h3>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">Profile Name</label>
+                  <input name="name" required placeholder="e.g. 10Mbps_Package" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">Local IP Address</label>
+                  <input name="localAddress" placeholder="e.g. 10.0.0.1" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">Remote Address / Pool</label>
+                  <input name="remoteAddress" placeholder="e.g. pppoe-pool" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1.5">Rate Limit (Rx/Tx)</label>
+                  <input name="rateLimit" placeholder="e.g. 5M/10M" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+                  <span className="text-[10px] text-gray-400 mt-1 block">Format: [upload]/[download] (e.g. 5M/10M, 10M/10M)</span>
+                </div>
+                <button
+                  type="submit"
+                  disabled={actionLoading === "adding_profile"}
+                  className="w-full py-3 bg-neon-blue/20 text-neon-blue border border-neon-blue/30 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-neon-blue/30 transition-colors disabled:opacity-50"
+                >
+                  {actionLoading === "adding_profile" ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Create Profile
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       )}
 

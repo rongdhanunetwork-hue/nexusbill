@@ -51,14 +51,7 @@ export default async function CustomerProfile() {
         </div>
       </div>
 
-      <div className="flex gap-4">
-        <Link
-          href="/customer/change-password"
-          className="px-5 py-2.5 rounded-xl bg-neon-blue/20 text-neon-blue border border-neon-blue/30 font-semibold hover:bg-neon-blue/30 transition-colors text-sm"
-        >
-          Change Password
-        </Link>
-      </div>
+
     </div>
   );
 }

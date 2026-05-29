@@ -5,15 +5,19 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  Banknote,
-  LifeBuoy,
+  Package,
+  CreditCard,
+  Router,
+  FileText,
+  Settings,
+  Megaphone,
   LogOut,
   Menu,
   X,
   Headphones,
-  ShieldAlert,
   Bell,
   Loader2,
+  LifeBuoy,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { clsx } from "clsx";
@@ -22,8 +26,13 @@ import { AnimatePresence, motion } from "framer-motion";
 const nav = [
   { name: "Dashboard", href: "/employee", icon: LayoutDashboard },
   { name: "Customers", href: "/employee/customers", icon: Users },
-  { name: "Bill Collection", href: "/employee/collection", icon: Banknote },
-  { name: "Tickets", href: "/employee/tickets", icon: LifeBuoy },
+  { name: "Packages", href: "/employee/packages", icon: Package },
+  { name: "Billing", href: "/employee/billing", icon: CreditCard },
+  { name: "MikroTik", href: "/employee/mikrotik", icon: Router },
+  { name: "Notice", href: "/employee/notices", icon: Megaphone },
+  { name: "Support", href: "/employee/tickets", icon: LifeBuoy },
+  { name: "Reports", href: "/employee/reports", icon: FileText },
+  { name: "Settings", href: "/employee/settings", icon: Settings },
 ];
 
 export default function EmployeeLayout({ children }: { children: React.ReactNode }) {
@@ -86,11 +95,7 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
           </button>
         </div>
 
-        <div className="m-4 p-3 rounded-xl bg-orange-500/10 text-orange-200 border border-orange-400/20 text-xs flex gap-2">
-          <ShieldAlert size={16} className="shrink-0" /> Company total income and core network settings are hidden.
-        </div>
-
-        <nav className="flex-1 px-4 py-2 space-y-2 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
           {nav.map((item) => {
             const active = pathname === item.href || (item.href !== "/employee" && pathname.startsWith(item.href));
             return (

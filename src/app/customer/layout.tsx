@@ -14,6 +14,7 @@ import {
   X,
   Loader2,
   Bell,
+  TrendingUp,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { clsx } from "clsx";
@@ -23,9 +24,9 @@ const navigation = [
   { name: 'My Account', href: '/customer', icon: LayoutDashboard },
   { name: 'Profile', href: '/customer/profile', icon: User },
   { name: 'Pay Bill', href: '/customer/pay-bill', icon: CreditCard },
+  { name: 'Package Change', href: '/customer/package-change', icon: TrendingUp },
   { name: 'History', href: '/customer/history', icon: History },
   { name: 'Support', href: '/customer/support', icon: LifeBuoy },
-  { name: 'Change Password', href: '/customer/change-password', icon: KeyRound },
 ];
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {

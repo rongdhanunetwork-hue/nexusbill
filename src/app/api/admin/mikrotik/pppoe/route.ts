@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "reseller" && session.role !== "employee")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -46,15 +46,30 @@ export async function GET() {
 
     const errorMessage = details.status.ok ? null : (details.status.error || "Connection failed");
 
+    let finalSecrets = details.secrets || [];
+    let finalActive = details.active || [];
+
+    if (session.role === "reseller") {
+      const resellerCustomers = await db.query.users.findMany({
+        where: and(eq(users.role, "customer"), eq(users.resellerId, session.userId)),
+        columns: { pppoeUsername: true }
+      });
+      const allowedUsernames = new Set(
+        resellerCustomers.map(c => c.pppoeUsername?.toLowerCase()).filter(Boolean)
+      );
+      finalSecrets = finalSecrets.filter((s: any) => allowedUsernames.has(s.name?.toLowerCase()));
+      finalActive = finalActive.filter((a: any) => allowedUsernames.has(a.name?.toLowerCase()));
+    }
+
     return NextResponse.json({
-      secrets: details.secrets,
-      active: details.active,
+      secrets: finalSecrets,
+      active: finalActive,
       routerStatus: {
         ok: details.status.ok,
         version: details.status.version || "Unknown",
         error: errorMessage || undefined
       },
-      profiles: details.profiles,
+      profiles: details.profiles || [],
       error: errorMessage,
     });
   } catch (err) {

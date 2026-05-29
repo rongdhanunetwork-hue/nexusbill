@@ -9,7 +9,7 @@ import { syncCustomerToMikrotik, syncDeleteCustomerFromMikrotik } from "@/lib/sy
 // PATCH /api/admin/customers/[id] — update customer
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "reseller")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -18,6 +18,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!customerId) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   try {
+    const oldCustomer = await db.query.users.findFirst({ where: eq(users.id, customerId) });
+    if (!oldCustomer) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+
+    // Security: reseller can only edit their own customers
+    if (session.role === "reseller" && oldCustomer.resellerId !== session.userId) {
+      return NextResponse.json({ error: "Forbidden: Not your customer" }, { status: 403 });
+    }
+
     const body = await req.json();
     const updateData: Record<string, unknown> = {};
 
@@ -26,6 +34,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.address !== undefined) updateData.address = body.address?.trim() || null;
     if (body.pppoeUsername !== undefined) updateData.pppoeUsername = body.pppoeUsername?.trim() || null;
     if (body.macAddress !== undefined) updateData.macAddress = body.macAddress?.trim() || null;
+    if (body.ipAddress !== undefined) updateData.ipAddress = body.ipAddress?.trim() || null;
     if (body.photoUrl !== undefined) updateData.photoUrl = body.photoUrl || null;
     if (body.nidUrl !== undefined) updateData.nidUrl = body.nidUrl || null;
     if (body.nidNumber !== undefined) updateData.nidNumber = body.nidNumber?.trim() || null;
@@ -35,25 +44,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.status) updateData.status = body.status;
     if (body.approvalStatus) updateData.approvalStatus = body.approvalStatus;
     if (body.mikrotikId !== undefined) updateData.mikrotikId = body.mikrotikId ? Number(body.mikrotikId) : null;
+    if (body.areaId !== undefined) updateData.areaId = body.areaId ? Number(body.areaId) : null;
+    if (body.customerType !== undefined) updateData.customerType = body.customerType || "pppoe";
+    if (body.connectionFee !== undefined) updateData.connectionFee = body.connectionFee ? String(body.connectionFee) : "0";
+    if (body.promiseDate !== undefined) updateData.promiseDate = body.promiseDate ? new Date(body.promiseDate) : null;
+    if (body.note !== undefined) updateData.note = body.note || null;
+    if (body.balance !== undefined) updateData.balance = body.balance ? String(body.balance) : "0";
 
-    // Package change — recompute expire date
+    // Package change
     if (body.packageId !== undefined) {
       updateData.packageId = body.packageId ? Number(body.packageId) : null;
-      if (body.packageId) {
-        const pkg = await db.query.packages.findFirst({ where: eq(packages.id, Number(body.packageId)) });
-        if (pkg) {
-          updateData.expireDate = new Date(Date.now() + (pkg.durationDays || 30) * 24 * 60 * 60 * 1000);
-        }
-      }
     }
 
     // Password change
     if (body.password && body.password.length >= 6) {
       updateData.password = await bcrypt.hash(body.password, 12);
     }
-
-    const oldCustomer = await db.query.users.findFirst({ where: eq(users.id, customerId) });
-    if (!oldCustomer) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
 
     const [updated] = await db.update(users).set(updateData).where(eq(users.id, customerId)).returning();
 
@@ -88,7 +94,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 // DELETE /api/admin/customers/[id] — delete customer
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "reseller")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -96,9 +102,15 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const customerId = Number(id);
   if (!customerId) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
-  // Fetch customer to get pppoeUsername before deleting
   const customer = await db.query.users.findFirst({ where: eq(users.id, customerId) });
-  if (customer && customer.pppoeUsername) {
+  if (!customer) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+
+  // Security: reseller can only delete their own customers
+  if (session.role === "reseller" && customer.resellerId !== session.userId) {
+    return NextResponse.json({ error: "Forbidden: Not your customer" }, { status: 403 });
+  }
+
+  if (customer.pppoeUsername) {
     // Delete secret from MikroTik
     await syncDeleteCustomerFromMikrotik(customer.pppoeUsername);
   }
@@ -110,7 +122,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 // GET /api/admin/customers/[id] — get single customer
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "reseller" && session.role !== "employee")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -121,5 +133,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   });
 
   if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Security: reseller can only view their own customers
+  if (session.role === "reseller" && customer.resellerId !== session.userId) {
+    return NextResponse.json({ error: "Forbidden: Not your customer" }, { status: 403 });
+  }
+
   return NextResponse.json(customer);
 }

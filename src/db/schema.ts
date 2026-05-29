@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   nidNumber: varchar("nid_number", { length: 50 }),
   pppoeUsername: varchar("pppoe_username", { length: 255 }),
   macAddress: varchar("mac_address", { length: 100 }),
+  ipAddress: varchar("ip_address", { length: 50 }),
   packageId: integer("package_id"),
   mikrotikId: integer("mikrotik_id"),
   oltId: integer("olt_id"),
@@ -34,6 +35,13 @@ export const users = pgTable("users", {
   dob: timestamp("dob"),
   lastSeen: timestamp("last_seen").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
+  promiseDate: timestamp("promise_date"),
+  balance: decimal("balance", { precision: 10, scale: 2 }).default("0"),
+  connectionFee: decimal("connection_fee", { precision: 10, scale: 2 }).default("0"),
+  areaId: integer("area_id"),
+  note: text("note"),
+  customerType: varchar("customer_type", { length: 20 }).default("pppoe"), // pppoe, static, hotspot
+  permissions: text("permissions").default("[]"),
 });
 
 export const packages = pgTable("packages", {
@@ -124,6 +132,24 @@ export const ticketReplies = pgTable("ticket_replies", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  resellerId: integer("reseller_id").notNull(),
+  customerId: integer("customer_id"),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // credit_in, recharge, refund
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const expenses = pgTable("expenses", {
+  id: serial("id").primaryKey(),
+  category: varchar("category", { length: 100 }).notNull(), // bandwidth, tower, office, salary, other
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  note: text("note"),
+  expenseDate: date("expense_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   package: one(packages, {
@@ -143,6 +169,27 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   tickets: many(tickets),
   ticketReplies: many(ticketReplies),
   dataUsage: many(dataUsage),
+  resellerTransactions: many(transactions, { relationName: "resellerTransactions" }),
+  customerTransactions: many(transactions, { relationName: "customerTransactions" }),
+  area: one(areas, {
+    fields: [users.areaId],
+    references: [areas.id],
+  }),
+  packageChangeRequests: many(packageChangeRequests),
+  withdrawalRequests: many(withdrawalRequests),
+}));
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+  reseller: one(users, {
+    fields: [transactions.resellerId],
+    references: [users.id],
+    relationName: "resellerTransactions",
+  }),
+  customer: one(users, {
+    fields: [transactions.customerId],
+    references: [users.id],
+    relationName: "customerTransactions",
+  }),
 }));
 
 export const packagesRelations = relations(packages, ({ many }) => ({
@@ -189,6 +236,84 @@ export const ticketRepliesRelations = relations(ticketReplies, ({ one }) => ({
   }),
   user: one(users, {
     fields: [ticketReplies.userId],
+    references: [users.id],
+  }),
+}));
+
+export const areas = pgTable("areas", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 20 }).notNull(), // 'area', 'subarea', 'polebox'
+  parentId: integer("parent_id"), // null for area, area_id for subarea, subarea_id for polebox
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const areasRelations = relations(areas, ({ one, many }) => ({
+  parent: one(areas, {
+    fields: [areas.parentId],
+    references: [areas.id],
+    relationName: "areaHierarchy",
+  }),
+  subAreas: many(areas, {
+    relationName: "areaHierarchy",
+  }),
+  users: many(users),
+}));
+
+export const smsLogs = pgTable("sms_logs", {
+  id: serial("id").primaryKey(),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  message: text("message").notNull(),
+  type: varchar("type", { length: 50 }), // payment, expiry, reminder, manual, bulk
+  status: varchar("status", { length: 20 }).default("sent"),
+  sentAt: timestamp("sent_at").defaultNow(),
+});
+
+export const smsTemplates = pgTable("sms_templates", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 100 }).unique().notNull(),
+  template: text("template").notNull(),
+  description: varchar("description", { length: 255 }),
+});
+
+export const packageChangeRequests = pgTable("package_change_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  currentPackageId: integer("current_package_id"),
+  requestedPackageId: integer("requested_package_id").notNull(),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const packageChangeRequestsRelations = relations(packageChangeRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [packageChangeRequests.userId],
+    references: [users.id],
+  }),
+  currentPackage: one(packages, {
+    fields: [packageChangeRequests.currentPackageId],
+    references: [packages.id],
+  }),
+  requestedPackage: one(packages, {
+    fields: [packageChangeRequests.requestedPackageId],
+    references: [packages.id],
+  }),
+}));
+
+export const withdrawalRequests = pgTable("withdrawal_requests", {
+  id: serial("id").primaryKey(),
+  resellerId: integer("reseller_id").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  method: varchar("method", { length: 50 }), // bkash, nagad, bank
+  account: varchar("account", { length: 100 }),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const withdrawalRequestsRelations = relations(withdrawalRequests, ({ one }) => ({
+  reseller: one(users, {
+    fields: [withdrawalRequests.resellerId],
     references: [users.id],
   }),
 }));

@@ -7,7 +7,7 @@ import { getPppoeTraffic } from "@/lib/mikrotik";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "reseller" && session.role !== "employee")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -24,6 +24,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     if (!customer) {
       return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+    }
+
+    // Security: reseller can only view traffic for their own customers
+    if (session.role === "reseller" && customer.resellerId !== session.userId) {
+      return NextResponse.json({ error: "Forbidden: Not your customer" }, { status: 403 });
     }
 
     if (!customer.pppoeUsername) {

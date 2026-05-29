@@ -15,8 +15,8 @@ export interface SessionPayload {
 }
 
 export async function createSession(payload: SessionPayload, rememberMe?: boolean): Promise<string> {
-  const expiry = rememberMe ? "365d" : "7d";
-  const maxAge = rememberMe ? 365 * 24 * 60 * 60 : 7 * 24 * 60 * 60; // 1 year or 7 days
+  const expiry = "365d";
+  const maxAge = 365 * 24 * 60 * 60; // 1 year by default for all logins
 
   const token = await new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })

@@ -27,6 +27,12 @@ interface Customer {
   expireDate: string | null;
   createdAt: string | null;
   dob: string | null;
+  areaId: number | null;
+  customerType: string | null;
+  connectionFee: string | null;
+  promiseDate: string | null;
+  note: string | null;
+  balance: string | null;
 }
 
 const toLocalDatetimeString = (dateInput: string | Date | null | undefined) => {
@@ -38,6 +44,25 @@ const toLocalDatetimeString = (dateInput: string | Date | null | undefined) => {
   return localDate.toISOString().slice(0, 16);
 };
 
+function getAreaLabel(item: any, list: any[]): string {
+  if (item.type === "area") return `📍 ${item.name}`;
+  if (item.type === "subarea") {
+    const parent = list.find(a => a.id === item.parentId);
+    return parent ? `📍 ${parent.name} ➔ 🧭 ${item.name}` : `🧭 ${item.name}`;
+  }
+  if (item.type === "polebox") {
+    const parentSub = list.find(a => a.id === item.parentId);
+    if (parentSub) {
+      const parentArea = list.find(a => a.id === parentSub.parentId);
+      return parentArea
+        ? `📍 ${parentArea.name} ➔ 🧭 ${parentSub.name} ➔ 📦 ${item.name}`
+        : `🧭 ${parentSub.name} ➔ 📦 ${item.name}`;
+    }
+    return `📦 ${item.name}`;
+  }
+  return item.name;
+}
+
 export default function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
@@ -45,6 +70,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
+  const [areas, setAreas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +80,12 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
     fetch("/api/admin/packages")
       .then((r) => r.json())
       .then(setPackages);
+
+    // Fetch areas
+    fetch("/api/admin/areas")
+      .then((r) => r.json())
+      .then(setAreas)
+      .catch(() => {});
 
     // Fetch customer details
     fetch(`/api/admin/customers/${customerId}`)
@@ -85,6 +117,12 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       createdAt: form.get("createdAt") ? new Date(String(form.get("createdAt"))).toISOString() : null,
       expireDate: form.get("expireDate") ? new Date(String(form.get("expireDate"))).toISOString() : null,
       dob: form.get("dob") ? new Date(String(form.get("dob"))).toISOString() : null,
+      areaId: form.get("areaId") ? Number(form.get("areaId")) : null,
+      customerType: String(form.get("customerType") || "pppoe"),
+      connectionFee: String(form.get("connectionFee") || "0"),
+      promiseDate: form.get("promiseDate") ? new Date(String(form.get("promiseDate"))).toISOString() : null,
+      note: String(form.get("note") || "").trim(),
+      balance: String(form.get("balance") || "0"),
     };
 
     setSubmitting(true);
@@ -202,6 +240,44 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
               defaultValue={customer.expireDate ? toLocalDatetimeString(customer.expireDate) : ""}
               className="w-full glass-input px-4 py-3 bg-slate-800 text-white border border-white/10"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">Customer Connection Type</label>
+            <select name="customerType" defaultValue={customer.customerType || "pppoe"} className="w-full glass-input px-4 py-3 bg-slate-800 text-white border border-white/10">
+              <option value="pppoe" className="bg-slate-800">PPPoE Connection</option>
+              <option value="static" className="bg-slate-800">Static IP Connection</option>
+              <option value="hotspot" className="bg-slate-800">Hotspot User</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">Assign Area / Pole Box</label>
+            <select name="areaId" defaultValue={customer.areaId || ""} className="w-full glass-input px-4 py-3 bg-slate-800 text-white border border-white/10">
+              <option value="" className="bg-slate-800">No area assigned</option>
+              {areas.map(item => (
+                <option key={item.id} value={item.id} className="bg-slate-800">
+                  {getAreaLabel(item, areas)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <Field label="Connection Fee (৳)" name="connectionFee" defaultValue={customer.connectionFee || "0"} />
+          <Field label="Customer Balance (৳)" name="balance" defaultValue={customer.balance || "0"} />
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">Promise Date</label>
+            <input
+              type="date"
+              name="promiseDate"
+              defaultValue={customer.promiseDate ? customer.promiseDate.slice(0, 10) : ""}
+              className="w-full glass-input px-4 py-3 bg-slate-800 text-white border border-white/10"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <Field label="Customer Remarks / Notes" name="note" defaultValue={customer.note || ""} />
           </div>
         </div>
 

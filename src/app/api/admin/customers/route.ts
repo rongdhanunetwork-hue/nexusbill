@@ -1,23 +1,32 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, packages } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { syncCustomerToMikrotik } from "@/lib/sync";
 
-// GET /api/admin/customers — list all customers
+// GET /api/admin/customers — list customers (filtered by role)
 export async function GET() {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "reseller" && session.role !== "employee")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const customers = await db.query.users.findMany({
-    where: eq(users.role, "customer"),
-    orderBy: [asc(users.name)],
-    with: { package: true },
-  });
+  let customers;
+  if (session.role === "reseller") {
+    customers = await db.query.users.findMany({
+      where: and(eq(users.role, "customer"), eq(users.resellerId, session.userId)),
+      orderBy: [asc(users.name)],
+      with: { package: true },
+    });
+  } else {
+    customers = await db.query.users.findMany({
+      where: eq(users.role, "customer"),
+      orderBy: [asc(users.name)],
+      with: { package: true },
+    });
+  }
 
   return NextResponse.json(customers);
 }
@@ -25,7 +34,7 @@ export async function GET() {
 // POST /api/admin/customers — create customer
 export async function POST(req: Request) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "reseller")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -34,8 +43,9 @@ export async function POST(req: Request) {
     const {
       name, phone, password, address,
       pppoeUsername, packageId, mikrotikId,
-      photoUrl, nidUrl, macAddress,
-      nidNumber, createdAt, expireDate, dob
+      photoUrl, nidUrl, macAddress, ipAddress,
+      nidNumber, createdAt, expireDate, dob, resellerId,
+      areaId, customerType, connectionFee, promiseDate, note
     } = body;
 
     if (!name || !phone || !password) {
@@ -49,7 +59,7 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Compute expiry: only set if custom expireDate is explicitly provided in the creation form
+    // Compute expiry: newly created customers are expired by default unless a custom future date is supplied
     let calculatedExpireDate: Date | null = null;
     if (expireDate) {
       calculatedExpireDate = new Date(expireDate);
@@ -67,17 +77,24 @@ export async function POST(req: Request) {
       nidUrl: nidUrl || null,
       nidNumber: nidNumber?.trim() || null,
       macAddress: macAddress?.trim() || null,
+      ipAddress: ipAddress?.trim() || null,
+      resellerId: session.role === "reseller" ? session.userId : (resellerId ? Number(resellerId) : null),
       role: "customer",
       approvalStatus: "approved",
-      status: "active",
+      status: "expired",
       expireDate: calculatedExpireDate,
       dob: dob ? new Date(dob) : null,
       createdAt: createdAt ? new Date(createdAt) : new Date(),
+      areaId: areaId ? Number(areaId) : null,
+      customerType: customerType || "pppoe",
+      connectionFee: connectionFee ? String(connectionFee) : "0",
+      promiseDate: promiseDate ? new Date(promiseDate) : null,
+      note: note || null,
     }).returning();
 
-    // Automatically sync customer PPPoE secret to MikroTik router
+    // Automatically sync customer PPPoE secret to MikroTik router (disabled by default)
     if (pppoeUsername?.trim()) {
-      await syncCustomerToMikrotik(pppoeUsername.trim(), password, packageId, "active");
+      await syncCustomerToMikrotik(pppoeUsername.trim(), password, packageId, "expired");
     }
 
     return NextResponse.json(customer, { status: 201 });

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Save, Shield, Globe, Phone, Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { Save, Shield, Globe, Phone, Loader2, CheckCircle2, Eye, EyeOff, MessageSquare, Clock, Send, AlertTriangle } from "lucide-react";
 
 interface SettingsMap {
   bkash_number?: string;
@@ -10,6 +10,10 @@ interface SettingsMap {
   rocket_number?: string;
   system_name?: string;
   website_logo?: string;
+  sms_provider?: string;
+  sms_api_key?: string;
+  sms_sender_id?: string;
+  sms_test_phone?: string;
 }
 
 export default function SettingsPage() {
@@ -22,6 +26,10 @@ export default function SettingsPage() {
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [showNewPwd, setShowNewPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
+  const [testSmsLoading, setTestSmsLoading] = useState(false);
+  const [testSmsResult, setTestSmsResult] = useState<string | null>(null);
+  const [cronLoading, setCronLoading] = useState(false);
+  const [cronResult, setCronResult] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -45,6 +53,35 @@ export default function SettingsPage() {
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  }
+
+  async function handleTestSMS() {
+    const phone = settings.sms_test_phone;
+    if (!phone) { setTestSmsResult("❌ Test phone number set করুন"); return; }
+    setTestSmsLoading(true);
+    setTestSmsResult(null);
+    const res = await fetch("/api/admin/settings/test-sms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone }),
+    });
+    const data = await res.json();
+    setTestSmsLoading(false);
+    setTestSmsResult(data.success ? "✅ SMS সফলভাবে পাঠানো হয়েছে!" : `❌ Error: ${data.error}`);
+  }
+
+  async function handleRunCron() {
+    setCronLoading(true);
+    setCronResult(null);
+    const secret = process.env.NEXT_PUBLIC_CRON_SECRET || "isp-cron-secret-2024";
+    const res = await fetch(`/api/cron/expire-customers?secret=${secret}`);
+    const data = await res.json();
+    setCronLoading(false);
+    if (data.success) {
+      setCronResult(`✅ Expired: ${data.expired} customers | SMS sent: ${data.smsSent} | Reminders: ${data.reminders}`);
+    } else {
+      setCronResult(`❌ Error: ${data.error}`);
+    }
   }
 
   async function handleChangePassword(e: React.FormEvent<HTMLFormElement>) {
@@ -143,6 +180,73 @@ export default function SettingsPage() {
           />
         </motion.div>
 
+        {/* SMS Configuration */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="glass-card p-6 md:p-8 space-y-6">
+          <h2 className="text-lg font-semibold text-white border-b border-white/10 pb-4 flex items-center gap-2">
+            <MessageSquare size={18} className="text-yellow-400" /> SMS Notification Settings
+          </h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">SMS Provider</label>
+              <select
+                name="sms_provider"
+                value={settings.sms_provider || ""}
+                onChange={(e) => setSettings({ ...settings, sms_provider: e.target.value })}
+                className="w-full glass-input px-4 py-3 bg-slate-800 text-white"
+              >
+                <option value="" className="bg-slate-800">— Select Provider —</option>
+                <option value="ssl_wireless" className="bg-slate-800">SSL Wireless</option>
+                <option value="bdbulksms" className="bg-slate-800">BDBulkSMS</option>
+              </select>
+            </div>
+            <Field
+              label="Sender ID / Masking"
+              name="sms_sender_id"
+              defaultValue={settings.sms_sender_id || ""}
+              placeholder="e.g. MYISP"
+            />
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">API Key / Token</label>
+              <input
+                type="password"
+                name="sms_api_key"
+                defaultValue={settings.sms_api_key || ""}
+                placeholder="Your SMS provider API key"
+                className="w-full glass-input px-4 py-3"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Test Phone Number</label>
+              <input
+                type="text"
+                value={settings.sms_test_phone || ""}
+                onChange={(e) => setSettings({ ...settings, sms_test_phone: e.target.value })}
+                placeholder="01700000000"
+                className="w-full glass-input px-4 py-3"
+              />
+              <input type="hidden" name="sms_test_phone" value={settings.sms_test_phone || ""} />
+            </div>
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={handleTestSMS}
+                disabled={testSmsLoading}
+                className="w-full px-4 py-3 rounded-xl bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 font-semibold hover:bg-yellow-500/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {testSmsLoading ? <><Loader2 size={16} className="animate-spin" /> Sending...</> : <><Send size={16} /> Send Test SMS</>}
+              </button>
+            </div>
+          </div>
+          {testSmsResult && (
+            <p className={`text-sm px-4 py-2 rounded-lg border ${testSmsResult.startsWith("✅") ? "text-neon-green bg-neon-green/10 border-neon-green/20" : "text-red-400 bg-red-500/10 border-red-500/20"}`}>
+              {testSmsResult}
+            </p>
+          )}
+          <p className="text-xs text-gray-500">
+            SMS পাঠানো হবে: payment approval, expiry reminder (৩ দিন আগে), expiry notification, এবং registration approval-এ।
+          </p>
+        </motion.div>
+
         <button
           type="submit"
           disabled={saving}
@@ -157,6 +261,32 @@ export default function SettingsPage() {
           )}
         </button>
       </form>
+
+      {/* System Tools */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="glass-card p-6 md:p-8 space-y-6">
+        <h2 className="text-lg font-semibold text-white border-b border-white/10 pb-4 flex items-center gap-2">
+          <Clock size={18} className="text-orange-400" /> System Tools
+        </h2>
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-medium text-white mb-1">Manual Expiry Check</h3>
+            <p className="text-xs text-gray-500 mb-3">এই বাটনটি চাপলে সব expired customer-এর status আপডেট হবে, MikroTik-এ disable হবে, এবং SMS যাবে। প্রতিদিন রাত ১২টায় স্বয়ংক্রিয়ভাবে চলবে।</p>
+            <button
+              type="button"
+              onClick={handleRunCron}
+              disabled={cronLoading}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-500/20 text-orange-300 border border-orange-500/30 font-semibold hover:bg-orange-500/30 transition disabled:opacity-50"
+            >
+              {cronLoading ? <><Loader2 size={18} className="animate-spin" /> Running...</> : <><AlertTriangle size={18} /> Run Expiry Check Now</>}
+            </button>
+            {cronResult && (
+              <p className={`mt-3 text-sm px-4 py-2 rounded-lg border ${cronResult.startsWith("✅") ? "text-neon-green bg-neon-green/10 border-neon-green/20" : "text-red-400 bg-red-500/10 border-red-500/20"}`}>
+                {cronResult}
+              </p>
+            )}
+          </div>
+        </div>
+      </motion.div>
 
       {/* Change Password */}
       <form onSubmit={handleChangePassword}>

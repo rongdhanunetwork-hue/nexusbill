@@ -20,10 +20,30 @@ interface MikroTik {
   ipAddress: string;
 }
 
+function getAreaLabel(item: any, list: any[]): string {
+  if (item.type === "area") return `📍 ${item.name}`;
+  if (item.type === "subarea") {
+    const parent = list.find(a => a.id === item.parentId);
+    return parent ? `📍 ${parent.name} ➔ 🧭 ${item.name}` : `🧭 ${item.name}`;
+  }
+  if (item.type === "polebox") {
+    const parentSub = list.find(a => a.id === item.parentId);
+    if (parentSub) {
+      const parentArea = list.find(a => a.id === parentSub.parentId);
+      return parentArea
+        ? `📍 ${parentArea.name} ➔ 🧭 ${parentSub.name} ➔ 📦 ${item.name}`
+        : `🧭 ${parentSub.name} ➔ 📦 ${item.name}`;
+    }
+    return `📦 ${item.name}`;
+  }
+  return item.name;
+}
+
 export default function AddCustomerPage() {
   const router = useRouter();
   const [packages, setPackages] = useState<Package[]>([]);
   const [routers, setRouters] = useState<MikroTik[]>([]);
+  const [areas, setAreas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPwd, setShowPwd] = useState(false);
@@ -33,6 +53,9 @@ export default function AddCustomerPage() {
     // Inline fetch routers from DB via a small API
     fetch("/api/admin/mikrotik/routers").then(r => r.json()).then(data => {
       if (Array.isArray(data)) setRouters(data);
+    }).catch(() => {});
+    fetch("/api/admin/areas").then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setAreas(data);
     }).catch(() => {});
   }, []);
 
@@ -55,6 +78,11 @@ export default function AddCustomerPage() {
       createdAt: form.get("createdAt") ? String(form.get("createdAt")) : null,
       expireDate: form.get("expireDate") ? String(form.get("expireDate")) : null,
       dob: form.get("dob") ? String(form.get("dob")) : null,
+      areaId: form.get("areaId") ? Number(form.get("areaId")) : null,
+      customerType: String(form.get("customerType") || "pppoe"),
+      connectionFee: String(form.get("connectionFee") || "0"),
+      promiseDate: form.get("promiseDate") ? String(form.get("promiseDate")) : null,
+      note: String(form.get("note") || "").trim(),
     };
 
     if (!body.password || body.password.length < 6) {
@@ -141,8 +169,32 @@ export default function AddCustomerPage() {
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Customer Connection Type</label>
+              <select name="customerType" className="w-full glass-input px-4 py-3 bg-slate-800">
+                <option value="pppoe" className="bg-slate-800">PPPoE Connection</option>
+                <option value="static" className="bg-slate-800">Static IP Connection</option>
+                <option value="hotspot" className="bg-slate-800">Hotspot User</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Assign Area / Pole Box</label>
+              <select name="areaId" className="w-full glass-input px-4 py-3 bg-slate-800">
+                <option value="" className="bg-slate-800">No area assigned</option>
+                {areas.map(item => (
+                  <option key={item.id} value={item.id} className="bg-slate-800">
+                    {getAreaLabel(item, areas)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Field label="Connection Fee (৳)" name="connectionFee" placeholder="0" type="number" />
+            <Field label="Promise Date" name="promiseDate" type="date" />
             <Field label="Profile Creation Date" name="createdAt" type="date" />
             <Field label="Expiration Date & Time (Expiry)" name="expireDate" type="datetime-local" />
+            <div className="md:col-span-2">
+              <Field label="Customer Remarks / Notes" name="note" placeholder="Any remarks or special instructions" />
+            </div>
           </div>
         </section>
 

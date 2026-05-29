@@ -1,12 +1,32 @@
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
-import { UserPlus, Wifi } from "lucide-react";
+import { eq, asc } from "drizzle-orm";
+import CustomersClient from "@/app/admin/customers/CustomersClient";
+
 export const dynamic = "force-dynamic";
-async function addConnection(formData: FormData) { "use server"; await db.insert(users).values({ role: "customer", name: String(formData.get("name") || ""), phone: String(formData.get("phone") || ""), password: "123456", address: String(formData.get("address") || ""), pppoeUsername: String(formData.get("pppoeUsername") || ""), macAddress: String(formData.get("macAddress") || ""), status: "offline" }); revalidatePath("/employee/customers"); }
-async function updateMac(formData: FormData) { "use server"; const id = Number(formData.get("id")); if (id) await db.update(users).set({ macAddress: String(formData.get("macAddress") || "") }).where(eq(users.id, id)); revalidatePath("/employee/customers"); }
-export default async function EmployeeCustomersPage() {
-  const customers = await db.query.users.findMany({ where: eq(users.role, "customer"), orderBy: [desc(users.createdAt)], limit: 40, with: { package: true } });
-  return <div className="grid xl:grid-cols-3 gap-8"><form action={addConnection} className="glass-card p-6 space-y-4"><h1 className="text-xl font-bold text-white flex gap-2"><UserPlus className="text-orange-300"/> New Connection Data Entry</h1><input name="name" required placeholder="Customer Name" className="w-full glass-input px-4 py-3 bg-slate-800"/><input name="phone" required placeholder="Phone/User ID" className="w-full glass-input px-4 py-3 bg-slate-800"/><input name="address" placeholder="Address" className="w-full glass-input px-4 py-3 bg-slate-800"/><input name="pppoeUsername" placeholder="PPPoE Username" className="w-full glass-input px-4 py-3 bg-slate-800"/><input name="macAddress" placeholder="MAC Address" className="w-full glass-input px-4 py-3 bg-slate-800"/><button className="w-full py-3 rounded-xl bg-orange-500/20 text-orange-300 border border-orange-400/40 font-semibold">Save Entry</button></form><div className="xl:col-span-2 glass-card overflow-hidden"><div className="p-5 border-b border-white/10 bg-white/5 flex gap-2"><Wifi className="text-neon-blue"/><h2 className="text-white font-semibold">Live Status & MAC Update</h2></div><div className="divide-y divide-white/5">{customers.map(c => <form action={updateMac} key={c.id} className="p-4 grid md:grid-cols-5 gap-3 items-center"><input type="hidden" name="id" value={c.id}/><div className="md:col-span-2"><p className="text-white font-medium">{c.name}</p><p className="text-gray-400 text-sm">{c.phone} • {c.status}</p></div><input name="macAddress" defaultValue={c.macAddress || ""} placeholder="MAC" className="md:col-span-2 glass-input px-3 py-2 bg-slate-800 font-mono"/><button className="px-3 py-2 rounded-lg bg-orange-500/20 text-orange-300 border border-orange-400/30">Update</button></form>)}</div></div></div>;
+
+export default async function EmployeeCustomersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  const { status } = await searchParams;
+
+  const allCustomers = await db.query.users.findMany({
+    where: eq(users.role, "customer"),
+    orderBy: [asc(users.name)],
+    with: { package: true, mikrotik: true }
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-2xl font-bold text-white tracking-wide font-sans">Customer Management</h1>
+      </div>
+
+      <CustomersClient 
+        allCustomers={allCustomers as any} 
+        activePppoeNames={[]}
+        activeSessions={[]}
+        initialStatus={status}
+        role="employee"
+      />
+    </div>
+  );
 }

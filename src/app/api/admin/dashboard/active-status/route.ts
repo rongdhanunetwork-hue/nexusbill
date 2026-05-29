@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getPppoeActive } from "@/lib/mikrotik";
 import { getSession } from "@/lib/auth";
 
@@ -9,16 +9,24 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "reseller" && session.role !== "employee")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
+    let customerQuery = db
+      .select({ pppoeUsername: users.pppoeUsername, status: users.status, resellerId: users.resellerId })
+      .from(users);
+
+    let whereClause;
+    if (session.role === "reseller") {
+      whereClause = and(eq(users.role, "customer"), eq(users.resellerId, session.userId));
+    } else {
+      whereClause = eq(users.role, "customer");
+    }
+
     const [allDbCustomers, activeSessions] = await Promise.all([
-      db
-        .select({ pppoeUsername: users.pppoeUsername, status: users.status })
-        .from(users)
-        .where(eq(users.role, "customer")),
+      customerQuery.where(whereClause),
       getPppoeActive().catch((err) => {
         console.error("Failed to fetch active sessions from MikroTik in dashboard API:", err);
         return [];

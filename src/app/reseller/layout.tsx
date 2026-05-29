@@ -5,15 +5,20 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  Package,
   CreditCard,
+  Router,
   FileText,
-  LifeBuoy,
+  Settings,
+  Megaphone,
   LogOut,
   Menu,
   X,
   Store,
   Bell,
   Loader2,
+  LifeBuoy,
+  ArrowDownCircle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { clsx } from "clsx";
@@ -22,9 +27,13 @@ import { AnimatePresence, motion } from "framer-motion";
 const nav = [
   { name: "Dashboard", href: "/reseller", icon: LayoutDashboard },
   { name: "Customers", href: "/reseller/customers", icon: Users },
-  { name: "Recharge", href: "/reseller/recharge", icon: CreditCard },
+  { name: "Packages", href: "/reseller/packages", icon: Package },
+  { name: "Billing", href: "/reseller/billing", icon: CreditCard },
+  { name: "MikroTik", href: "/reseller/mikrotik", icon: Router },
+  { name: "Notice", href: "/reseller/notices", icon: Megaphone },
+  { name: "Support", href: "/reseller/tickets", icon: LifeBuoy },
   { name: "Reports", href: "/reseller/reports", icon: FileText },
-  { name: "Support", href: "/reseller/support", icon: LifeBuoy },
+  { name: "Settings", href: "/reseller/settings", icon: Settings },
 ];
 
 export default function ResellerLayout({ children }: { children: React.ReactNode }) {

@@ -17,6 +17,13 @@ import {
   Loader2,
   LifeBuoy,
   Bell,
+  TrendingDown,
+  UserCog,
+  Layers,
+  MessageSquare,
+  History,
+  ArrowDownCircle,
+  TrendingUp,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { clsx } from "clsx";
@@ -25,12 +32,17 @@ import { motion, AnimatePresence } from "framer-motion";
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Customers", href: "/admin/customers", icon: Users },
+  { name: "User Management", href: "/admin/users", icon: UserCog },
   { name: "Packages", href: "/admin/packages", icon: Package },
   { name: "Billing", href: "/admin/billing", icon: CreditCard },
+  { name: "Package Requests", href: "/admin/package-requests", icon: TrendingUp },
+  { name: "SMS Templates", href: "/admin/sms-templates", icon: MessageSquare },
+  { name: "SMS Logs", href: "/admin/sms-log", icon: History },
   { name: "MikroTik", href: "/admin/mikrotik", icon: Router },
   { name: "Notice", href: "/admin/notices", icon: Megaphone },
   { name: "Support", href: "/admin/tickets", icon: LifeBuoy },
   { name: "Reports", href: "/admin/reports", icon: FileText },
+  { name: "Expenses", href: "/admin/expenses", icon: TrendingDown },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
@@ -306,10 +318,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </AnimatePresence>
               </div>
 
-              <span className="text-sm text-gray-400 hidden sm:block">Admin</span>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-neon-blue to-purple-500 flex items-center justify-center text-white font-bold shadow-lg shadow-neon-blue/20 cursor-pointer hover:scale-105 transition-transform">
-                A
-              </div>
+              <Link href="/admin/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <span className="text-sm text-gray-400 hidden sm:block">Admin</span>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-neon-blue to-purple-500 flex items-center justify-center text-white font-bold shadow-lg shadow-neon-blue/20 cursor-pointer hover:scale-105 transition-transform">
+                  A
+                </div>
+              </Link>
             </div>
           </div>
         </header>

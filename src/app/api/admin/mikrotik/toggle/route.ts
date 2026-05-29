@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { 
   enablePppoeSecret, 
   disablePppoeSecret, 
@@ -17,7 +18,7 @@ import {
 
 export async function POST(req: Request) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "employee" && session.role !== "reseller")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -57,8 +58,14 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true, message: `PPPoE user ${name} updated successfully` });
 
       case "delete":
-        await deletePppoeSecret(id);
-        return NextResponse.json({ success: true, message: `${name || id} deleted` });
+        {
+          const hasPerm = await hasPermission(session.userId, "Mikrotik Delete");
+          if (!hasPerm) {
+            return NextResponse.json({ error: "Access Denied: You do not have 'Mikrotik Delete' permission" }, { status: 403 });
+          }
+          await deletePppoeSecret(id);
+          return NextResponse.json({ success: true, message: `${name || id} deleted` });
+        }
 
       case "disconnect":
         if (!id && !name) {
@@ -100,8 +107,14 @@ export async function POST(req: Request) {
         if (!id) {
           return NextResponse.json({ error: "Profile ID required" }, { status: 400 });
         }
-        await deletePppoeProfile(id);
-        return NextResponse.json({ success: true, message: `Profile deleted successfully` });
+        {
+          const hasPerm = await hasPermission(session.userId, "Mikrotik Delete");
+          if (!hasPerm) {
+            return NextResponse.json({ error: "Access Denied: You do not have 'Mikrotik Delete' permission" }, { status: 403 });
+          }
+          await deletePppoeProfile(id);
+          return NextResponse.json({ success: true, message: `Profile deleted successfully` });
+        }
 
       default:
         return NextResponse.json({ error: "Unknown action" }, { status: 400 });

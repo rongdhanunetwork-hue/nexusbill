@@ -27,6 +27,12 @@ interface Customer {
   createdAt: string | Date | null;
   package?: { name: string; price: string; speed: string } | null;
   walletBalance?: string | null;
+  balance?: string | null;
+  areaId?: number | null;
+  customerType?: string | null;
+  connectionFee?: string | null;
+  promiseDate?: string | Date | null;
+  note?: string | null;
 }
 
 export default function CustomersClient({
@@ -35,15 +41,40 @@ export default function CustomersClient({
   activePppoeNames = [],
   activeSessions = [],
   initialStatus = "All Status",
+  role = "admin",
 }: {
   allCustomers: Customer[];
-  deleteCustomerAction: (formData: FormData) => Promise<void>;
+  deleteCustomerAction?: (formData: FormData) => Promise<void>;
   activePppoeNames?: string[];
   activeSessions?: any[];
   initialStatus?: string;
+  role?: "admin" | "reseller" | "employee";
 }) {
+  const basePath = role === "reseller" ? "/reseller" : role === "employee" ? "/employee" : "/admin";
   const [searchTerm, setSearchTerm] = useState("");
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
+  
+  // Custom filters state
+  const [areasList, setAreasList] = useState<any[]>([]);
+  const [packagesList, setPackagesList] = useState<any[]>([]);
+  const [selectedAreaId, setSelectedAreaId] = useState("All Areas");
+  const [selectedPackageId, setSelectedPackageId] = useState("All Packages");
+
+  useEffect(() => {
+    fetch("/api/admin/areas")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setAreasList(data);
+      })
+      .catch(() => {});
+
+    fetch("/api/admin/packages")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setPackagesList(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const formatOfflineDuration = (lastSeen: string | Date | null, createdAt: string | Date | null): { label: string; level: "fresh" | "hours" | "days" | "none" } => {
     if (!lastSeen) return { label: "", level: "none" };
@@ -169,6 +200,8 @@ export default function CustomersClient({
   const getInitialStatus = () => {
     if (!initialStatus) return "All Status";
     if (initialStatus === "new_month") return "New This Month";
+    if (initialStatus === "paid_month") return "Paid (Month)";
+    if (initialStatus === "unpaid_month") return "Unpaid (Month)";
     const formatted = initialStatus.charAt(0).toUpperCase() + initialStatus.slice(1).toLowerCase();
     if (["All Status", "Active", "Online", "Offline", "Expired", "Upcoming"].includes(formatted)) {
       return formatted;
@@ -223,9 +256,14 @@ export default function CustomersClient({
       (statusFilter === "Offline" && displayStatus === "offline") ||
       (statusFilter === "Expired" && isExpired) ||
       (statusFilter === "Upcoming" && isUpcoming) ||
-      (statusFilter === "New This Month" && !!isNewThisMonth);
+      (statusFilter === "New This Month" && !!isNewThisMonth) ||
+      (statusFilter === "Paid (Month)" && customer.status === "active" && !isExpired) ||
+      (statusFilter === "Unpaid (Month)" && isExpired);
 
-    return matchesSearch && matchesStatus;
+    const matchesArea = selectedAreaId === "All Areas" || String(customer.areaId) === selectedAreaId;
+    const matchesPackage = selectedPackageId === "All Packages" || String(customer.packageId) === selectedPackageId;
+
+    return matchesSearch && matchesStatus && matchesArea && matchesPackage;
   });
 
   // Calculate values for Recharge Modal
@@ -295,11 +333,13 @@ export default function CustomersClient({
   // Trigger server delete action
   const triggerDelete = (id: number, name: string) => {
     if (confirm(`Are you sure you want to delete customer "${name}"?`)) {
-      const formData = new FormData();
-      formData.append("id", String(id));
-      deleteCustomerAction(formData).then(() => {
-        window.location.reload();
-      });
+      if (deleteCustomerAction) {
+        const formData = new FormData();
+        formData.append("id", String(id));
+        deleteCustomerAction(formData).then(() => {
+          window.location.reload();
+        });
+      }
     }
   };
 
@@ -324,11 +364,25 @@ export default function CustomersClient({
     }
   };
 
-  // Mock SMS Sender
-  const triggerSms = (customer: Customer) => {
-    const msg = prompt(`Enter SMS message to send to ${customer.name} (${customer.phone}):`, `NexusBill ISP: Your subscription is expiring soon. Please recharge to avoid disconnection.`);
-    if (msg) {
-      alert(`Mock SMS sent to ${customer.phone} successfully!\n\nMessage: "${msg}"`);
+  // Real SMS Sender
+  const triggerSms = async (customer: Customer) => {
+    const msg = prompt(`Enter SMS message to send to ${customer.name} (${customer.phone}):`, `NexusBill ISP: Dear ${customer.name}, your subscription is active. Thank you.`);
+    if (!msg) return;
+
+    try {
+      const res = await fetch("/api/admin/sms/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: customer.id, message: msg }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert("SMS sent successfully!");
+      } else {
+        alert(data.error || "Failed to send SMS");
+      }
+    } catch {
+      alert("Network error while sending SMS");
     }
   };
 
@@ -461,7 +515,7 @@ export default function CustomersClient({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="glass-input px-4 py-2 bg-slate-800 focus:ring-neon-blue focus:ring-2 cursor-pointer text-xs font-semibold"
+            className="glass-input px-4 py-2 bg-slate-800 focus:ring-neon-blue focus:ring-2 cursor-pointer text-xs font-semibold text-white border border-white/10"
           >
             <option value="All Status" className="bg-slate-800">All Status</option>
             <option value="Active" className="bg-slate-800">Active (Paid)</option>
@@ -470,6 +524,34 @@ export default function CustomersClient({
             <option value="Expired" className="bg-slate-800">Expired</option>
             <option value="Upcoming" className="bg-slate-800">Upcoming Expire (7 Days)</option>
             <option value="New This Month" className="bg-slate-800">New This Month</option>
+            <option value="Paid (Month)" className="bg-slate-800">Paid (Month)</option>
+            <option value="Unpaid (Month)" className="bg-slate-800">Unpaid (Month)</option>
+          </select>
+
+          <select
+            value={selectedAreaId}
+            onChange={(e) => setSelectedAreaId(e.target.value)}
+            className="glass-input px-4 py-2 bg-slate-800 focus:ring-neon-blue focus:ring-2 cursor-pointer text-xs font-semibold text-white border border-white/10"
+          >
+            <option value="All Areas" className="bg-slate-800">All Areas</option>
+            {areasList.map(area => (
+              <option key={area.id} value={String(area.id)} className="bg-slate-800">
+                {area.type === "polebox" ? `📦 ${area.name}` : area.type === "subarea" ? `🧭 ${area.name}` : `📍 ${area.name}`}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedPackageId}
+            onChange={(e) => setSelectedPackageId(e.target.value)}
+            className="glass-input px-4 py-2 bg-slate-800 focus:ring-neon-blue focus:ring-2 cursor-pointer text-xs font-semibold text-white border border-white/10"
+          >
+            <option value="All Packages" className="bg-slate-800">All Packages</option>
+            {packagesList.map(pkg => (
+              <option key={pkg.id} value={String(pkg.id)} className="bg-slate-800">
+                ⚡ {pkg.name} (৳{pkg.price})
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -522,13 +604,24 @@ export default function CustomersClient({
                       {/* 1. Customer Info */}
                       <td className="p-5">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <Link href={`/admin/customers/${customer.id}`} className="font-bold text-white hover:text-neon-blue text-base transition-colors">
+                          <Link href={`${basePath}/customers/${customer.id}`} className="font-bold text-white hover:text-neon-blue text-base transition-colors">
                             {customer.name}
                           </Link>
                           <span className="text-[10px] font-bold text-neon-blue bg-neon-blue/10 border border-neon-blue/25 px-2 py-0.5 rounded-md font-mono">RDN-{customer.id}</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-gray-400 border border-white/5 uppercase font-mono">{customer.customerType || "pppoe"}</span>
                         </div>
                         <div className="text-sm text-gray-400">{customer.phone}</div>
                         <div className="text-xs text-gray-500 max-w-48 truncate">{customer.address || "No address"}</div>
+                        {customer.areaId && (
+                          <div className="text-[11px] text-neon-blue mt-1 font-semibold flex items-center gap-1">
+                            <span>📍</span> {areasList.find(a => a.id === customer.areaId)?.name || `Area ID: ${customer.areaId}`}
+                          </div>
+                        )}
+                        {customer.note && (
+                          <div className="text-[10px] text-amber-300 bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10 mt-1 max-w-[200px] truncate" title={customer.note}>
+                            📝 {customer.note}
+                          </div>
+                        )}
                       </td>
 
                       {/* 2. Connection */}
@@ -546,14 +639,30 @@ export default function CustomersClient({
 
                       {/* 3. Bill / Balance */}
                       <td className="p-5">
-                        <div className="text-gray-300 font-semibold">৳{customer.package?.price || "0"}</div>
-                        <div className="text-xs text-neon-green mt-0.5">৳{customer.walletBalance || "0"}</div>
+                        <div className="text-gray-300 font-semibold text-xs">Pkg: ৳{customer.package?.price || "0"}</div>
+                        {(() => {
+                          const bal = parseFloat(customer.balance || "0");
+                          if (bal > 0) {
+                            return <div className="text-xs text-emerald-400 mt-1 font-bold">Adv: ৳{bal}</div>;
+                          } else if (bal < 0) {
+                            return <div className="text-xs text-rose-400 mt-1 font-bold font-mono">Due: ৳{Math.abs(bal)}</div>;
+                          } else {
+                            return <div className="text-xs text-gray-500 mt-1">Bal: ৳0</div>;
+                          }
+                        })()}
                       </td>
 
-                      <td className="p-5 text-gray-300 font-mono text-sm">
-                        {customer.expireDate 
-                          ? new Date(customer.expireDate).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) 
-                          : "N/A"}
+                      <td className="p-5 text-gray-300 font-mono text-xs">
+                        <div>
+                          {customer.expireDate 
+                            ? new Date(customer.expireDate).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) 
+                            : "N/A"}
+                        </div>
+                        {customer.promiseDate && (
+                          <div className="text-[10px] text-amber-400 font-semibold mt-1">
+                            🤝 Promise: {new Date(customer.promiseDate).toLocaleDateString()}
+                          </div>
+                        )}
                       </td>
 
                       {/* 5. Date Left (দিন বাকি) */}
@@ -639,78 +748,88 @@ export default function CustomersClient({
                             <div className="absolute right-5 top-12 w-48 rounded-xl bg-slate-900 border border-white/10 shadow-2xl z-50 py-1 text-left overflow-hidden">
                               {/* 1. প্রোফাইল */}
                               <Link 
-                                href={`/admin/customers/${customer.id}`} 
+                                href={`${basePath}/customers/${customer.id}`} 
                                 className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
                               >
                                 <Eye size={13} /> প্রোফাইল (Profile)
                               </Link>
                               
                               {/* 2. রিচার্জ করুন */}
-                              <button
-                                onClick={() => {
-                                  setRechargeCustomer(customer);
-                                  setSelectedMonths([new Date().toLocaleString("default", { month: "long", year: "numeric" })]);
-                                  setActiveDropdownId(null);
-                                }}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                              >
-                                <Zap size={13} className="text-neon-green" /> রিচার্জ করুন (Recharge)
-                              </button>
+                              {role !== "employee" && (
+                                <button
+                                  onClick={() => {
+                                    setRechargeCustomer(customer);
+                                    setSelectedMonths([new Date().toLocaleString("default", { month: "long", year: "numeric" })]);
+                                    setActiveDropdownId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                                >
+                                  <Zap size={13} className="text-neon-green" /> রিচার্জ করুন (Recharge)
+                                </button>
+                              )}
 
                               {/* 3. এডিট */}
-                              <Link 
-                                href={`/admin/customers/${customer.id}/edit`} 
-                                className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                              >
-                                <Edit size={13} /> এডিট (Edit)
-                              </Link>
+                              {role !== "employee" && (
+                                <Link 
+                                  href={`${basePath}/customers/${customer.id}/edit`} 
+                                  className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                                >
+                                  <Edit size={13} /> এডিট (Edit)
+                                </Link>
+                              )}
 
                               {/* 4. টিকেট */}
                               <Link 
-                                href={`/admin/tickets?userId=${customer.id}`} 
+                                href={`${basePath}/tickets?userId=${customer.id}`} 
                                 className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
                               >
                                 <FileText size={13} /> টিকেট (Ticket List)
                               </Link>
 
                               {/* 5. নোট */}
-                              <button
-                                onClick={() => {
-                                  const n = prompt("কাস্টমার নোট এডিট করুন:", customer.address || "");
-                                  if (n !== null) {
-                                    alert("নোট সংরক্ষিত হয়েছে!");
-                                  }
-                                  setActiveDropdownId(null);
-                                }}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                              >
-                                <FileText size={13} /> নোট (Note)
-                              </button>
+                              {role !== "employee" && (
+                                <button
+                                  onClick={() => {
+                                    const n = prompt("কাস্টমার নোট এডিট করুন:", customer.address || "");
+                                    if (n !== null) {
+                                      alert("নোট সংরক্ষিত হয়েছে!");
+                                    }
+                                    setActiveDropdownId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                                >
+                                  <FileText size={13} /> নোট (Note)
+                                </button>
+                              )}
 
                               {/* 6. ডিলিট */}
-                              <button
-                                onClick={() => {
-                                  triggerDelete(customer.id, customer.name);
-                                  setActiveDropdownId(null);
-                                }}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors"
-                              >
-                                <Trash size={13} /> ডিলিট (Delete)
-                              </button>
+                              {role !== "employee" && (
+                                <button
+                                  onClick={() => {
+                                    triggerDelete(customer.id, customer.name);
+                                    setActiveDropdownId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors"
+                                >
+                                  <Trash size={13} /> ডিলিট (Delete)
+                                </button>
+                              )}
 
                               {/* 7. মেসেজ */}
-                              <button
-                                onClick={() => {
-                                  triggerSms(customer);
-                                  setActiveDropdownId(null);
-                                }}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                              >
-                                <MessageSquare size={13} /> মেসেজ (Send SMS)
-                              </button>
+                              {role !== "employee" && (
+                                <button
+                                  onClick={() => {
+                                    triggerSms(customer);
+                                    setActiveDropdownId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                                >
+                                  <MessageSquare size={13} /> মেসেজ (Send SMS)
+                                </button>
+                              )}
 
                               {/* 8. ডিসকানেক্ট দিন */}
-                              {customer.pppoeUsername && (
+                              {role !== "employee" && customer.pppoeUsername && (
                                 <button
                                   onClick={() => {
                                     triggerKick(customer.pppoeUsername!);
@@ -724,7 +843,7 @@ export default function CustomersClient({
 
                               {/* 9. ওপেন সাপোর্ট টিকেট */}
                               <Link 
-                                href={`/admin/tickets`} 
+                                href={`${basePath}/tickets`} 
                                 className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
                               >
                                 <ShieldAlert size={13} /> ওপেন সাপোর্ট টিকেট

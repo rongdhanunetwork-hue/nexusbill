@@ -122,6 +122,22 @@ async function seed() {
     console.log("✅ Sample notice created");
   }
 
+  // 6. Default SMS Templates
+  const defaultSmsTemplates = [
+    { key: "payment_success", template: "Dear {name}, we have received your payment of Tk {amount}. Your account is now active until {expire_date}. Thank you for choosing us!", description: "Sent automatically when a payment is approved" },
+    { key: "billing_reminder", template: "Dear {name}, this is a reminder that your internet bill of Tk {amount} is due on {due_date}. Please pay to avoid disconnection.", description: "Sent as billing reminder" },
+    { key: "connection_expiry", template: "Dear {name}, your internet connection has expired. Please recharge Tk {amount} to resume service. Contact: {contact}.", description: "Sent when connection expires" },
+    { key: "custom_message", template: "Dear customer, {message}", description: "Default manual/custom SMS template" },
+  ];
+
+  for (const t of defaultSmsTemplates) {
+    const ex = await db.query.smsTemplates.findFirst({ where: eq(schema.smsTemplates.key, t.key) });
+    if (!ex) {
+      await db.insert(schema.smsTemplates).values(t);
+      console.log(`✅ Default SMS template created: ${t.key}`);
+    }
+  }
+
   console.log("\n🎉 Seed / Password Reset complete!");
   console.log("   Admin Portal:      phone=01700000000, password=password123");
   console.log("   Customer Portal:   phone=01618721061, password=password123 (Pronoy Saha)");

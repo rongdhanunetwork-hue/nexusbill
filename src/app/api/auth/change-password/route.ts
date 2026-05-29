@@ -11,6 +11,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
+  if (session.role === "customer") {
+    return NextResponse.json({ error: "Password change is disabled for customers" }, { status: 403 });
+  }
+
   const { newPassword } = await req.json();
   if (!newPassword || newPassword.length < 6) {
     return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });

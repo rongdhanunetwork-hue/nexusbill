@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { tickets, ticketReplies } from "@/db/schema";
+import { tickets, ticketReplies, users } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 
@@ -21,7 +21,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
   }
 
-  if (session.role !== "admin" && ticket.userId !== session.userId) {
+  let isAuthorized = false;
+  if (session.role === "admin" || session.role === "employee") {
+    isAuthorized = true;
+  } else if (session.role === "customer" && ticket.userId === session.userId) {
+    isAuthorized = true;
+  } else if (session.role === "reseller") {
+    const customer = await db.query.users.findFirst({
+      where: eq(users.id, ticket.userId)
+    });
+    if (customer && customer.resellerId === session.userId) {
+      isAuthorized = true;
+    }
+  }
+
+  if (!isAuthorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -58,7 +72,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
   }
 
-  if (session.role !== "admin" && ticket.userId !== session.userId) {
+  let isAuthorized = false;
+  if (session.role === "admin") {
+    isAuthorized = true;
+  } else if (session.role === "customer" && ticket.userId === session.userId) {
+    isAuthorized = true;
+  } else if (session.role === "reseller") {
+    const customer = await db.query.users.findFirst({
+      where: eq(users.id, ticket.userId)
+    });
+    if (customer && customer.resellerId === session.userId) {
+      isAuthorized = true;
+    }
+  }
+
+  if (!isAuthorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -68,6 +96,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     message: message.trim(),
   }).returning();
 
-  // If admin is replying, update ticket status to open (or keeping open, maybe resolved if they want, but usually it stays open until closed)
   return NextResponse.json(newReply, { status: 201 });
 }

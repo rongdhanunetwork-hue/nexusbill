@@ -11,7 +11,7 @@ function AnimatedCounter({ value, prefix = "" }: { value: number; prefix?: strin
 
   useEffect(() => {
     let start = 0;
-    const end = Math.max(0, value);
+    const end = isNaN(value) ? 0 : Math.max(0, value);
     if (end === 0) {
       setCount(0);
       return;
@@ -44,7 +44,11 @@ const usageData = [
   { name: "Fri", download: 470, upload: 170 },
 ];
 
-export default function AdminDashboardClient(props: {
+export default function AdminDashboardClient({
+  role = "admin",
+  ...props
+}: {
+  role?: "admin" | "reseller" | "employee";
   totalCustomers: number;
   activeCustomers: number;
   onlineCustomers: number;
@@ -55,6 +59,14 @@ export default function AdminDashboardClient(props: {
   expired3Day: number;
   expired4Day: number;
   todayRecharge: number;
+  todayCollection?: number;
+  expectedCollection?: number;
+  paidThisMonthCount?: number;
+  unpaidThisMonthCount?: number;
+  connectionFeeToday?: number;
+  totalConnectionFee?: number;
+  businessBalance?: number;
+  totalExpense?: number;
   totalizerCollection: number;
   dueAmount: number;
   routerCount: number;
@@ -65,9 +77,23 @@ export default function AdminDashboardClient(props: {
   monthlyIncomeData?: { name: string; income: number }[];
   dailyUsageData?: { name: string; download: number; upload: number }[];
 }) {
+  const todayCollection = props.todayCollection ?? 0;
+  const expectedCollection = props.expectedCollection ?? 0;
+  const paidThisMonthCount = props.paidThisMonthCount ?? 0;
+  const unpaidThisMonthCount = props.unpaidThisMonthCount ?? 0;
+  const connectionFeeToday = props.connectionFeeToday ?? 0;
+  const totalConnectionFee = props.totalConnectionFee ?? 0;
+  const businessBalance = props.businessBalance ?? 0;
+  const totalExpense = props.totalExpense ?? 0;
+
   const [onlineCount, setOnlineCount] = useState<number | null>(null);
   const [offlineCount, setOfflineCount] = useState<number | null>(null);
   const [activeModal, setActiveModal] = useState<"today_expire" | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const downloadCSV = (title: string, data: any[]) => {
     const headers = ["Name", "Phone", "PPPoE Username", "Package", "Created At", "Expire Date"];
@@ -91,6 +117,8 @@ export default function AdminDashboardClient(props: {
     link.click();
     document.body.removeChild(link);
   };
+
+  const basePath = role === "reseller" ? "/reseller" : role === "employee" ? "/employee" : "/admin";
 
   useEffect(() => {
     const fetchStatus = () => {
@@ -117,50 +145,140 @@ export default function AdminDashboardClient(props: {
   }, [props.activeCustomers]);
 
   const stats = [
-    { name: "Total Customer", value: props.totalCustomers, icon: Users, color: "text-blue-400", glow: "shadow-blue-500/40", href: "/admin/customers" },
-    { name: "Active Customer", value: props.activeCustomers, icon: Wifi, color: "text-neon-green", glow: "shadow-green-500/40", href: "/admin/customers?status=active" },
-    { name: "Online Customer", value: onlineCount !== null ? onlineCount : 0, icon: Activity, color: "text-teal-300", glow: "shadow-teal-500/40", href: "/admin/customers?status=online" },
-    { name: "Offline Customer", value: offlineCount !== null ? offlineCount : props.activeCustomers, icon: WifiOff, color: "text-neon-red", glow: "shadow-red-500/40", href: "/admin/customers?status=offline" },
-    { name: "Expired Customer", value: props.expiredCustomers, icon: Clock, color: "text-orange-400", glow: "shadow-orange-500/40", href: "/admin/customers?status=expired" },
+    { name: "Total Customer", value: props.totalCustomers, icon: Users, color: "text-blue-400", glow: "shadow-blue-500/40", href: `${basePath}/customers` },
+    { name: "Active Customer", value: props.activeCustomers, icon: Wifi, color: "text-neon-green", glow: "shadow-green-500/40", href: `${basePath}/customers?status=active` },
+    { name: "Online Customer", value: onlineCount !== null ? onlineCount : 0, icon: Activity, color: "text-teal-300", glow: "shadow-teal-500/40", href: `${basePath}/customers?status=online` },
+    { name: "Offline Customer", value: offlineCount !== null ? offlineCount : props.activeCustomers, icon: WifiOff, color: "text-neon-red", glow: "shadow-red-500/40", href: `${basePath}/customers?status=offline` },
+    { name: "Expired Customer", value: props.expiredCustomers, icon: Clock, color: "text-orange-400", glow: "shadow-orange-500/40", href: `${basePath}/customers?status=expired` },
     
+    // New month collection / paid status stats
+    { name: "Paid Customer (Month)", value: paidThisMonthCount, icon: Users, color: "text-emerald-400", glow: "shadow-emerald-500/40", href: `${basePath}/customers?status=paid_month` },
+    { name: "Unpaid Customer (Month)", value: unpaidThisMonthCount, icon: Users, color: "text-rose-400", glow: "shadow-rose-500/40", href: `${basePath}/customers?status=unpaid_month` },
+
     // New clickable card triggers
-    { name: "Running Month New User", value: props.newCustomersThisMonth?.length || 0, icon: Users, color: "text-indigo-400", glow: "shadow-indigo-500/40", href: "/admin/customers?status=new_month" },
+    { name: "Running Month New User", value: props.newCustomersThisMonth?.length || 0, icon: Users, color: "text-indigo-400", glow: "shadow-indigo-500/40", href: `${basePath}/customers?status=new_month` },
     { name: "Today Expire", value: props.expiringToday?.length || 0, icon: Clock, color: "text-pink-400", glow: "shadow-pink-500/40", onClick: () => setActiveModal("today_expire") },
 
-    { name: "1 Day Expired", value: props.expired1Day, icon: AlertTriangle, color: "text-red-300", glow: "shadow-red-400/40", href: "/admin/customers?status=expired" },
-    { name: "2 Day Expired", value: props.expired2Day, icon: AlertTriangle, color: "text-red-400", glow: "shadow-red-500/40", href: "/admin/customers?status=expired" },
-    { name: "3 Day Expired", value: props.expired3Day, icon: AlertTriangle, color: "text-red-500", glow: "shadow-red-600/40", href: "/admin/customers?status=expired" },
-    { name: "4 Day Expired", value: props.expired4Day, icon: AlertTriangle, color: "text-red-600", glow: "shadow-red-700/40", href: "/admin/customers?status=expired" },
-    { name: "Today Recharge", value: props.todayRecharge, icon: CalendarCheck, color: "text-neon-blue", glow: "shadow-cyan-500/40", href: "/admin/billing" },
-    { name: "Upcoming Expire", value: props.upcomingExpires, icon: Clock, color: "text-yellow-400", glow: "shadow-yellow-500/40", href: "/admin/customers?status=upcoming" },
-    { name: "Router Added", value: props.routerCount, icon: Router, color: "text-purple-300", glow: "shadow-purple-500/40", href: "/admin/mikrotik" },
-    { name: "OLT Added", value: props.oltCount, icon: RadioTower, color: "text-pink-300", glow: "shadow-pink-500/40", href: "/admin/mikrotik" },
+    { name: "1 Day Expired", value: props.expired1Day, icon: AlertTriangle, color: "text-red-300", glow: "shadow-red-400/40", href: `${basePath}/customers?status=expired` },
+    { name: "2 Day Expired", value: props.expired2Day, icon: AlertTriangle, color: "text-red-400", glow: "shadow-red-500/40", href: `${basePath}/customers?status=expired` },
+    { name: "3 Day Expired", value: props.expired3Day, icon: AlertTriangle, color: "text-red-500", glow: "shadow-red-600/40", href: `${basePath}/customers?status=expired` },
+    { name: "4 Day Expired", value: props.expired4Day, icon: AlertTriangle, color: "text-red-600", glow: "shadow-red-700/40", href: `${basePath}/customers?status=expired` },
+    { name: "Today Recharge", value: props.todayRecharge, icon: CalendarCheck, color: "text-neon-blue", glow: "shadow-cyan-500/40", href: `${basePath}/billing` },
+    { name: "Upcoming Expire", value: props.upcomingExpires, icon: Clock, color: "text-yellow-400", glow: "shadow-yellow-500/40", href: `${basePath}/customers?status=upcoming` },
+    { name: "Router Added", value: props.routerCount, icon: Router, color: "text-purple-300", glow: "shadow-purple-500/40", href: `${basePath}/mikrotik` },
+    { name: "OLT Added", value: props.oltCount, icon: RadioTower, color: "text-pink-300", glow: "shadow-pink-500/40", href: `${basePath}/mikrotik` },
   ];
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-8 flex items-center justify-between relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-r from-neon-green/10 to-transparent opacity-70" />
-          <div className="relative z-10">
-            <p className="text-gray-400 font-medium mb-1">Totalizer Collection</p>
-            <h2 className="text-4xl font-bold text-white tracking-wider"><AnimatedCounter value={props.totalizerCollection} prefix="৳" /></h2>
-          </div>
-          <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-neon-green shadow-[0_0_20px_rgba(57,255,20,0.25)] relative z-10">
-            <DollarSign size={32} />
-          </div>
-        </motion.div>
+      {/* Tier 1 Primary Financial Indicators */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Link href={`${basePath}/customers?status=unpaid_month`} className="block group">
+          <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-6 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
+            <div className="relative z-10">
+              <p className="text-gray-400 font-medium mb-1 text-sm group-hover:text-blue-300 transition-colors">Expected Collection</p>
+              <h2 className="text-3xl font-bold text-white tracking-wider"><AnimatedCounter value={expectedCollection} prefix="৳" /></h2>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.25)] relative z-10 group-hover:scale-110 transition-transform animate-pulse">
+              <CalendarCheck size={24} />
+            </div>
+          </motion.div>
+        </Link>
 
-        <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-8 flex items-center justify-between relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-r from-neon-red/10 to-transparent opacity-70" />
-          <div className="relative z-10">
-            <p className="text-gray-400 font-medium mb-1">Due Amount</p>
-            <h2 className="text-4xl font-bold text-white tracking-wider"><AnimatedCounter value={props.dueAmount} prefix="৳" /></h2>
-          </div>
-          <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-neon-red shadow-[0_0_20px_rgba(255,7,58,0.25)] relative z-10">
-            <AlertTriangle size={32} />
-          </div>
-        </motion.div>
+        <Link href={`${basePath}/billing`} className="block group">
+          <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-6 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-r from-neon-green/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
+            <div className="relative z-10">
+              <p className="text-gray-400 font-medium mb-1 text-sm group-hover:text-green-300 transition-colors">Totalizer Collection</p>
+              <h2 className="text-3xl font-bold text-white tracking-wider"><AnimatedCounter value={props.totalizerCollection} prefix="৳" /></h2>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-neon-green shadow-[0_0_20px_rgba(57,255,20,0.25)] relative z-10 group-hover:scale-110 transition-transform">
+              <DollarSign size={24} />
+            </div>
+          </motion.div>
+        </Link>
+
+        <Link href={`${basePath}/customers?status=unpaid_month`} className="block group">
+          <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-6 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-r from-neon-red/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
+            <div className="relative z-10">
+              <p className="text-gray-400 font-medium mb-1 text-sm group-hover:text-red-300 transition-colors">Due Amount</p>
+              <h2 className="text-3xl font-bold text-white tracking-wider"><AnimatedCounter value={props.dueAmount} prefix="৳" /></h2>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-neon-red shadow-[0_0_20px_rgba(255,7,58,0.25)] relative z-10 group-hover:scale-110 transition-transform">
+              <AlertTriangle size={24} />
+            </div>
+          </motion.div>
+        </Link>
+
+        <Link href={role === "admin" ? "/admin/expenses" : `${basePath}/reports`} className="block group">
+          <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-6 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
+            <div className="relative z-10">
+              <p className="text-gray-400 font-medium mb-1 text-sm group-hover:text-teal-300 transition-colors">Business Balance (Net)</p>
+              <h2 className="text-3xl font-bold text-white tracking-wider"><AnimatedCounter value={businessBalance} prefix="৳" /></h2>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-teal-300 shadow-[0_0_20px_rgba(20,184,166,0.25)] relative z-10 group-hover:scale-110 transition-transform">
+              <Activity size={24} />
+            </div>
+          </motion.div>
+        </Link>
+      </div>
+
+      {/* Tier 2 Secondary Indicators */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Link href={`${basePath}/billing`} className="block group">
+          <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-5 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
+            <div className="relative z-10">
+              <p className="text-gray-400 font-medium mb-1 text-xs group-hover:text-indigo-300 transition-colors">Today's Collection</p>
+              <h2 className="text-2xl font-bold text-white tracking-wider"><AnimatedCounter value={todayCollection} prefix="৳" /></h2>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.2)] relative z-10 group-hover:scale-110 transition-transform">
+              <DollarSign size={20} />
+            </div>
+          </motion.div>
+        </Link>
+
+        <Link href={role === "admin" ? "/admin/expenses" : `${basePath}/reports`} className="block group">
+          <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-5 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-r from-pink-500/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
+            <div className="relative z-10">
+              <p className="text-gray-400 font-medium mb-1 text-xs group-hover:text-pink-300 transition-colors">Today's Expenses</p>
+              <h2 className="text-2xl font-bold text-white tracking-wider"><AnimatedCounter value={totalExpense} prefix="৳" /></h2>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.2)] relative z-10 group-hover:scale-110 transition-transform">
+              <DollarSign size={20} />
+            </div>
+          </motion.div>
+        </Link>
+
+        <Link href={`${basePath}/customers`} className="block group">
+          <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-5 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
+            <div className="relative z-10">
+              <p className="text-gray-400 font-medium mb-1 text-xs group-hover:text-yellow-300 transition-colors">Today's Connection Fee</p>
+              <h2 className="text-2xl font-bold text-white tracking-wider"><AnimatedCounter value={connectionFeeToday} prefix="৳" /></h2>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.2)] relative z-10 group-hover:scale-110 transition-transform">
+              <DollarSign size={20} />
+            </div>
+          </motion.div>
+        </Link>
+
+        <Link href={`${basePath}/customers`} className="block group">
+          <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-5 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
+            <div className="relative z-10">
+              <p className="text-gray-400 font-medium mb-1 text-xs group-hover:text-orange-300 transition-colors">Total Connection Fee</p>
+              <h2 className="text-2xl font-bold text-white tracking-wider"><AnimatedCounter value={totalConnectionFee} prefix="৳" /></h2>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.2)] relative z-10 group-hover:scale-110 transition-transform">
+              <DollarSign size={20} />
+            </div>
+          </motion.div>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -200,41 +318,49 @@ export default function AdminDashboardClient(props: {
       </div>
 
       <div className="grid xl:grid-cols-2 gap-6">
-        <div className="glass-card p-6">
+        <div className="glass-card p-6 min-w-0 overflow-hidden">
           <h3 className="text-xl font-semibold text-white mb-6">Monthly Income Graph</h3>
           <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={props.monthlyIncomeData || []}>
-                <defs><linearGradient id="income" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#00f3ff" stopOpacity={0.35}/><stop offset="95%" stopColor="#00f3ff" stopOpacity={0}/></linearGradient></defs>
-                <XAxis dataKey="name" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" tickFormatter={(v) => `৳${v.toLocaleString()}`} />
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} 
-                  formatter={(value: any) => [`৳${Number(value).toLocaleString()}`, "Income"]}
-                />
-                <Area type="monotone" dataKey="income" stroke="#00f3ff" strokeWidth={3} fill="url(#income)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            {mounted ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={props.monthlyIncomeData || []}>
+                  <defs><linearGradient id="income" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#00f3ff" stopOpacity={0.35}/><stop offset="95%" stopColor="#00f3ff" stopOpacity={0}/></linearGradient></defs>
+                  <XAxis dataKey="name" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" tickFormatter={(v) => `৳${v.toLocaleString()}`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} 
+                    formatter={(value: any) => [`৳${Number(value).toLocaleString()}`, "Income"]}
+                  />
+                  <Area type="monotone" dataKey="income" stroke="#00f3ff" strokeWidth={3} fill="url(#income)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full bg-white/5 rounded-xl animate-pulse" />
+            )}
           </div>
         </div>
 
-        <div className="glass-card p-6">
+        <div className="glass-card p-6 min-w-0 overflow-hidden">
           <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2"><Download size={18} className="text-neon-green" /> Customer Download / <Upload size={18} className="text-neon-blue" /> Upload Graph</h3>
           <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={props.dailyUsageData || []}>
-                <XAxis dataKey="name" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" tickFormatter={(v) => `${v} GB`} />
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} 
-                  formatter={(value: any, name: any) => [`${value} GB`, name === "download" ? "Download" : "Upload"]}
-                />
-                <Line type="monotone" dataKey="download" stroke="#39ff14" strokeWidth={3} dot={{ r: 4 }} name="download" />
-                <Line type="monotone" dataKey="upload" stroke="#00f3ff" strokeWidth={3} dot={{ r: 4 }} name="upload" />
-              </LineChart>
-            </ResponsiveContainer>
+            {mounted ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={props.dailyUsageData || []}>
+                  <XAxis dataKey="name" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" tickFormatter={(v) => `${v} GB`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} 
+                    formatter={(value: any, name: any) => [`${value} GB`, name === "download" ? "Download" : "Upload"]}
+                  />
+                  <Line type="monotone" dataKey="download" stroke="#39ff14" strokeWidth={3} dot={{ r: 4 }} name="download" />
+                  <Line type="monotone" dataKey="upload" stroke="#00f3ff" strokeWidth={3} dot={{ r: 4 }} name="upload" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full bg-white/5 rounded-xl animate-pulse" />
+            )}
           </div>
         </div>
       </div>
