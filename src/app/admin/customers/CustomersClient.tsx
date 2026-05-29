@@ -935,11 +935,6 @@ export default function CustomersClient({
                   </table>
                 </div>
 
-                {/* Status Indicator */}
-                <div className="text-sm font-bold text-[#38bdf8] bg-[#0284c7]/10 border border-[#0284c7]/20 px-4 py-2.5 rounded-xl">
-                  {rechargeCustomer.pppoeUsername || "User"} মোট বিল ৳{displayCalculated} | পরিশোধিত ৳{displayPaid} | বকেয়া ৳{displayDue}
-                </div>
-
                 {/* Input Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1018,16 +1013,6 @@ export default function CustomersClient({
                       <option value="বিকাশ" className="bg-slate-800">বিকাশ</option>
                       <option value="নাগাদ" className="bg-slate-800">নাগাদ</option>
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">ডিসকাউন্ট (Discount)</label>
-                    <input 
-                      type="text" 
-                      value={discount} 
-                      onChange={(e) => setDiscount(e.target.value)}
-                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
-                    />
                   </div>
                 </div>
 
