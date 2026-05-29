@@ -1,7 +1,7 @@
-import MikrotikClient from "@/app/admin/mikrotik/MikrotikClient";
+import ResellerMikrotikClient from "./ResellerMikrotikClient";
 
 export const dynamic = "force-dynamic";
 
 export default function ResellerMikrotikPage() {
-  return <MikrotikClient role="reseller" />;
+  return <ResellerMikrotikClient />;
 }

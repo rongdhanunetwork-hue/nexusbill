@@ -58,6 +58,16 @@ export async function GET(req: Request) {
       }
     }
 
+    if (session.role === "reseller" && !routerId) {
+      return NextResponse.json({
+        secrets: [],
+        active: [],
+        routerStatus: { ok: false, error: "No router configured. Please add a router in 'Routers List' first." },
+        profiles: [],
+        error: "No router configured",
+      });
+    }
+
     // Fetch all router details using a SINGLE connection sequentially
     const details = await getRouterDetails(routerId);
 
