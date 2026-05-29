@@ -607,7 +607,6 @@ export default function CustomersClient({
                           <Link href={`${basePath}/customers/${customer.id}`} className="font-bold text-white hover:text-neon-blue text-base transition-colors">
                             {customer.name}
                           </Link>
-                          <span className="text-[10px] font-bold text-neon-blue bg-neon-blue/10 border border-neon-blue/25 px-2 py-0.5 rounded-md font-mono">RDN-{customer.id}</span>
                           <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-gray-400 border border-white/5 uppercase font-mono">{customer.customerType || "pppoe"}</span>
                         </div>
                         <div className="text-sm text-gray-400">{customer.phone}</div>
@@ -1235,7 +1234,7 @@ export default function CustomersClient({
             return (
               <tr key={customer.id}>
                 <td className="excel-td text-center font-mono">{index + 1}</td>
-                <td className="excel-td text-center font-mono font-bold">RDN-{customer.id}</td>
+                <td className="excel-td text-center font-mono font-bold">{customer.id}</td>
                 <td className="excel-td font-bold">{customer.name}</td>
                 <td className="excel-td font-mono">{customer.phone}</td>
                 <td className="excel-td text-xs">{customer.address || "N/A"}</td>

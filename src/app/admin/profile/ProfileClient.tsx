@@ -489,7 +489,7 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-white">{companyName}</p>
-                <p className="text-xs text-gray-400">ID: RDN-{adminUser.id}</p>
+                <p className="text-xs text-gray-400">ID: {adminUser.id}</p>
               </div>
               <p className="text-[11px] text-gray-500 leading-normal">
                 Scan this QR code to quickly share subscription parameters, company profiles, or support portal configurations.
