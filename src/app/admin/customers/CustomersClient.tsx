@@ -180,6 +180,7 @@ export default function CustomersClient({
   const [rechargeNote, setRechargeNote] = useState("");
   const [rechargeLoading, setRechargeLoading] = useState(false);
   const [rechargeSuccessMessage, setRechargeSuccessMessage] = useState<string | null>(null);
+  const [selectedNewPackageId, setSelectedNewPackageId] = useState<string>("");
 
   // Manual overrides for Recharge Modal fields
   const [overrideCalculated, setOverrideCalculated] = useState<string>("");
@@ -268,7 +269,11 @@ export default function CustomersClient({
   });
 
   // Calculate values for Recharge Modal
-  const monthlyPrice = rechargeCustomer ? parseFloat(rechargeCustomer.package?.price || "0") : 0;
+  // If admin selected a new package, use that package's price for calculation
+  const selectedNewPkg = selectedNewPackageId ? packagesList.find((p: any) => String(p.id) === selectedNewPackageId) : null;
+  const monthlyPrice = selectedNewPkg
+    ? parseFloat(selectedNewPkg.price || "0")
+    : rechargeCustomer ? parseFloat(rechargeCustomer.package?.price || "0") : 0;
   let calculatedAmount = 0;
   let durationVal = 1;
 
@@ -305,7 +310,12 @@ export default function CustomersClient({
     setOverrideCalculated("");
     setOverridePaid("");
     setOverrideDue("");
-  }, [rechargeCustomer, billingType, selectedMonths, rechargeDays, discount]);
+  }, [rechargeCustomer, billingType, selectedMonths, rechargeDays, discount, selectedNewPackageId]);
+
+  // Reset new package selection when modal opens for a different customer
+  useEffect(() => {
+    setSelectedNewPackageId("");
+  }, [rechargeCustomer?.id]);
 
   // Handle advanced recharge submit
   const handleRechargeSubmit = async (e: React.FormEvent) => {
@@ -327,6 +337,7 @@ export default function CustomersClient({
           discount: parseFloat(discount) || 0,
           note: showNoteDate ? rechargeNote : "",
           renewBack,
+          newPackageId: selectedNewPackageId ? Number(selectedNewPackageId) : undefined,
         }),
       });
 
@@ -933,6 +944,41 @@ export default function CustomersClient({
                       </tr>
                     </tbody>
                   </table>
+                </div>
+
+                {/* Package Change Option */}
+                <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white/3 border border-white/8">
+                  <div className="flex-shrink-0">
+                    <div className="w-7 h-7 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-purple-400"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">প্যাকেজ পরিবর্তন (Package Change)</label>
+                    <select
+                      value={selectedNewPackageId}
+                      onChange={(e) => setSelectedNewPackageId(e.target.value)}
+                      className="w-full glass-input px-2.5 py-1.5 bg-slate-800 text-xs text-white"
+                    >
+                      <option value="" className="bg-slate-800">— বর্তমান প্যাকেজ রাখুন ({rechargeCustomer?.package?.name || "N/A"} - ৳{rechargeCustomer?.package?.price || "0"}) —</option>
+                      {packagesList
+                        .filter((p: any) => String(p.id) !== String(rechargeCustomer?.packageId))
+                        .map((p: any) => (
+                          <option key={p.id} value={p.id} className="bg-slate-800">
+                            {p.name} — {p.speed} — ৳{p.price}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  {selectedNewPackageId && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNewPackageId("")}
+                      className="flex-shrink-0 text-gray-500 hover:text-white transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
 
                 {/* Input Fields */}

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { CheckCircle, Clock, DollarSign, FileText, AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
 import RollbackButton from "./RollbackButton";
+import PaymentHistoryTable from "./PaymentHistoryTable";
 
 
 export const dynamic = "force-dynamic";
@@ -221,7 +222,7 @@ async function generateMonthlyBills() {
 
 export default async function BillingPage() {
   const pendingPayments = await db.query.payments.findMany({ where: eq(payments.status, "pending"), orderBy: [desc(payments.createdAt)], with: { user: true } });
-  const paymentHistory = await db.query.payments.findMany({ orderBy: [desc(payments.createdAt)], limit: 15, with: { user: true } });
+  const paymentHistory = await db.query.payments.findMany({ orderBy: [desc(payments.createdAt)], limit: 200, with: { user: true } });
   const dueInvoices = await db.query.invoices.findMany({ where: sql`${invoices.status} in ('unpaid','due')`, orderBy: [desc(invoices.createdAt)], with: { user: true } });
   const [dueTotal] = await db.select({ sum: sql<number>`cast(coalesce(sum(${invoices.amount}),0) as int)` }).from(invoices).where(sql`${invoices.status} in ('unpaid','due')`);
 
@@ -324,40 +325,13 @@ export default async function BillingPage() {
         ))}
       </Table>
 
-      <Table title="Payment History / Invoice" headers={["Customer", "Amount", "Method", "Trx ID", "Status", "Date", "Action"]}>
-        {paymentHistory.length === 0 ? <Empty colSpan={7} text="No payments yet." /> : paymentHistory.map(payment => (
-          <tr key={payment.id} className="hover:bg-white/5">
-            <td className="p-4 text-white">{payment.user?.name}</td>
-            <td className="p-4 text-white font-bold">৳{payment.amount}</td>
-            <td className="p-4 text-gray-300 capitalize">{payment.method}</td>
-            <td className="p-4 text-gray-300 font-mono">{payment.trxId}</td>
-            <td className="p-4 capitalize">
-              <span className={
-                payment.status === "approved" 
-                  ? "text-neon-green font-semibold" 
-                  : payment.status === "rejected" 
-                    ? "text-red-400" 
-                    : payment.status === "rolled_back" 
-                      ? "text-gray-400 italic font-medium" 
-                      : "text-yellow-400"
-              }>
-                {payment.status === "rolled_back" ? "Rolled Back" : payment.status}
-              </span>
-            </td>
-            <td className="p-4 text-gray-400">{payment.createdAt?.toLocaleDateString()}</td>
-            <td className="p-4">
-              {payment.status === "approved" && (
-                <RollbackButton
-                  paymentId={payment.id}
-                  customerName={payment.user?.name ?? null}
-                  amount={payment.amount}
-                  rollbackAction={rollbackPayment}
-                />
-              )}
-            </td>
-          </tr>
-        ))}
-      </Table>
+      <PaymentHistoryTable
+        payments={paymentHistory.map(p => ({
+          ...p,
+          createdAt: p.createdAt ?? null,
+        }))}
+        rollbackAction={rollbackPayment}
+      />
     </div>
   );
 }

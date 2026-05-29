@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { userId, amount, due, billingType, duration, method, discount, note, renewBack } = body;
+    const { userId, amount, due, billingType, duration, method, discount, note, renewBack, newPackageId } = body;
 
     if (!userId || amount === undefined) {
       return NextResponse.json({ error: "User ID and amount are required" }, { status: 400 });
@@ -94,12 +94,22 @@ export async function POST(req: Request) {
     // Update customer in database
     const currentBalance = Number(customer.balance || 0);
     const newBalance = currentBalance - (Number(due) || 0);
+    const updateFields: any = {
+      expireDate: newExpireDate,
+      status: "active",
+      balance: String(newBalance.toFixed(2)),
+    };
+    // If admin selected a new package, change it
+    if (newPackageId && session.role === "admin") {
+      const newPkg = await db.query.packages.findFirst({
+        where: eq(packages.id, Number(newPackageId)),
+      });
+      if (newPkg) {
+        updateFields.packageId = newPkg.id;
+      }
+    }
     await db.update(users)
-      .set({
-        expireDate: newExpireDate,
-        status: "active",
-        balance: String(newBalance.toFixed(2))
-      })
+      .set(updateFields)
       .where(eq(users.id, customer.id));
 
     // Record the payment
