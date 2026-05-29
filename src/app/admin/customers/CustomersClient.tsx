@@ -183,6 +183,7 @@ export default function CustomersClient({
 
   // Manual overrides for Recharge Modal fields
   const [overrideCalculated, setOverrideCalculated] = useState<string>("");
+  const [overridePaid, setOverridePaid] = useState<string>("");
   const [overrideDue, setOverrideDue] = useState<string>("");
 
   // Month list generator (next 6 months)
@@ -286,11 +287,23 @@ export default function CustomersClient({
   const currentDiscountVal = parseFloat(discount) || 0;
   const finalAmount = Math.max(0, currentCalculatedVal - currentDiscountVal);
 
-  const displayDue = overrideDue !== "" ? overrideDue : String(finalAmount);
+  let displayPaid = String(finalAmount);
+  let displayDue = "0";
+
+  if (overrideDue !== "") {
+    const dueVal = parseFloat(overrideDue) || 0;
+    displayDue = overrideDue;
+    displayPaid = String(Math.max(0, finalAmount - dueVal));
+  } else if (overridePaid !== "") {
+    const paidVal = parseFloat(overridePaid) || 0;
+    displayPaid = overridePaid;
+    displayDue = String(Math.max(0, finalAmount - paidVal));
+  }
 
   // Reset overrides when recharge configuration inputs change
   useEffect(() => {
     setOverrideCalculated("");
+    setOverridePaid("");
     setOverrideDue("");
   }, [rechargeCustomer, billingType, selectedMonths, rechargeDays, discount]);
 
@@ -306,7 +319,8 @@ export default function CustomersClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: rechargeCustomer.id,
-          amount: parseFloat(displayDue) || 0,
+          amount: parseFloat(displayPaid) || 0,
+          due: parseFloat(displayDue) || 0,
           billingType,
           duration: durationVal,
           method: rechargeMethod,
@@ -923,7 +937,7 @@ export default function CustomersClient({
 
                 {/* Status Indicator */}
                 <div className="text-sm font-bold text-[#38bdf8] bg-[#0284c7]/10 border border-[#0284c7]/20 px-4 py-2.5 rounded-xl">
-                  {rechargeCustomer.pppoeUsername || "User"} মোট টাকা ৳{displayDue}
+                  {rechargeCustomer.pppoeUsername || "User"} মোট বিল ৳{displayCalculated} | পরিশোধিত ৳{displayPaid} | বকেয়া ৳{displayDue}
                 </div>
 
                 {/* Input Fields */}
@@ -963,12 +977,33 @@ export default function CustomersClient({
                   </div>
 
                   <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">ডিসকাউন্ট (Discount)</label>
+                    <input 
+                      type="text" 
+                      value={discount} 
+                      onChange={(e) => setDiscount(e.target.value)}
+                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
+                    />
+                  </div>
+
+                  <div>
                     <label className="block text-xs font-semibold text-gray-300 mb-1.5">পরিশোধিত টাকা (Paid Amount)</label>
+                    <input 
+                      type="text"
+                      value={displayPaid} 
+                      onChange={(e) => setOverridePaid(e.target.value)}
+                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">বকেয়া (Due Amount)</label>
                     <input 
                       type="text"
                       value={displayDue} 
                       onChange={(e) => setOverrideDue(e.target.value)}
                       className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
+                      placeholder="0"
                     />
                   </div>
 

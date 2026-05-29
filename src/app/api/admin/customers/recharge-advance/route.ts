@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { userId, amount, billingType, duration, method, discount, note, renewBack } = body;
+    const { userId, amount, due, billingType, duration, method, discount, note, renewBack } = body;
 
     if (!userId || amount === undefined) {
       return NextResponse.json({ error: "User ID and amount are required" }, { status: 400 });
@@ -92,10 +92,13 @@ export async function POST(req: Request) {
     }
 
     // Update customer in database
+    const currentBalance = Number(customer.balance || 0);
+    const newBalance = currentBalance - (Number(due) || 0);
     await db.update(users)
       .set({
         expireDate: newExpireDate,
-        status: "active"
+        status: "active",
+        balance: String(newBalance.toFixed(2))
       })
       .where(eq(users.id, customer.id));
 
