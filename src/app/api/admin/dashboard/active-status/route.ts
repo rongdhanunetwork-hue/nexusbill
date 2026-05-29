@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { users, mikrotiks } from "@/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import { getPppoeActive } from "@/lib/mikrotik";
 import { getSession } from "@/lib/auth";
 
@@ -25,19 +25,39 @@ export async function GET() {
       whereClause = eq(users.role, "customer");
     }
 
-    const [allDbCustomers, activeSessions] = await Promise.all([
+    const [allDbCustomers, routers] = await Promise.all([
       customerQuery.where(whereClause),
-      getPppoeActive().catch((err) => {
-        console.error("Failed to fetch active sessions from MikroTik in dashboard API:", err);
-        return [];
-      }),
+      db.select().from(mikrotiks).where(
+        session.role === "reseller"
+          ? and(eq(mikrotiks.resellerId, session.userId), eq(mikrotiks.status, true))
+          : and(isNull(mikrotiks.resellerId), eq(mikrotiks.status, true))
+      )
     ]);
 
+    // Fetch active sessions from all relevant routers in parallel
+    const activeSessionsLists = await Promise.all(
+      routers.map((r) => 
+        getPppoeActive(r.id).catch((err) => {
+          console.error(`Failed to fetch active sessions from router ${r.id}:`, err);
+          return [];
+        })
+      )
+    );
+
+    // Combine all active session names
+    const activePppoeNames = new Set<string>();
+    for (const list of activeSessionsLists) {
+      for (const sess of list) {
+        if (sess.name) {
+          activePppoeNames.add(sess.name.toLowerCase());
+        }
+      }
+    }
+
     const activeCustomers = allDbCustomers.filter(c => c.status === "active");
-    const activePppoeNames = activeSessions.map((s) => s.name);
 
     const onlineCustomers = activeCustomers.filter(c => {
-      return c.pppoeUsername && activePppoeNames.includes(c.pppoeUsername);
+      return c.pppoeUsername && activePppoeNames.has(c.pppoeUsername.toLowerCase());
     }).length;
 
     const offlineCustomers = Math.max(0, activeCustomers.length - onlineCustomers);

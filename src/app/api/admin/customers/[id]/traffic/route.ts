@@ -35,7 +35,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ rxBps: 0, txBps: 0, isOnline: false });
     }
 
-    const traffic = await getPppoeTraffic(customer.pppoeUsername);
+    const traffic = await getPppoeTraffic(customer.pppoeUsername, customer.mikrotikId || undefined);
     if (!traffic) {
       // Return 0 if not active/online on router
       return NextResponse.json({ rxBps: 0, txBps: 0, isOnline: false });

@@ -13,10 +13,10 @@ import {
   disconnectPppoeActive
 } from "./mikrotik";
 
-export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[]) {
+export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerId?: number) {
   try {
     // 1. Fetch secrets from MikroTik
-    const secrets = passedSecrets || await getPppoeSecrets();
+    const secrets = passedSecrets || await getPppoeSecrets(routerId);
     
     // 2. Fetch customers from DB
     const dbCustomers = await db
@@ -24,9 +24,12 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[]) {
       .from(users)
       .where(eq(users.role, "customer"));
 
-    // 3. Find first registered router id to link the new customers to
-    const firstRouter = await db.select({ id: mikrotiks.id }).from(mikrotiks).limit(1);
-    const routerId = firstRouter[0]?.id || 1;
+    // 3. Use passed routerId, or find first registered router id to link the new customers to
+    let finalRouterId = routerId;
+    if (!finalRouterId) {
+      const firstRouter = await db.select({ id: mikrotiks.id }).from(mikrotiks).limit(1);
+      finalRouterId = firstRouter[0]?.id || 1;
+    }
 
     const defaultHashedPassword =
       "$2b$12$9mgzlniYFoY0qfZF1Xyx0OXTPULdCMzpvV4ha2334CDP1ZVxbOwKm"; // password123
@@ -66,7 +69,7 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[]) {
           status: secret.disabled === "true" ? "expired" : "active",
           role: "customer",
           approvalStatus: "approved",
-          mikrotikId: routerId,
+          mikrotikId: finalRouterId,
         });
       }
     }
@@ -82,10 +85,18 @@ export async function syncCustomerToMikrotik(
   pppoeUsername: string,
   plainTextPassword?: string,
   packageId?: number | null,
-  status?: string | null
+  status?: string | null,
+  routerId?: number | null
 ) {
   try {
-    // 1. Fetch package speed to map to router profile
+    // 1. Fetch user from DB to find routerId if not passed
+    const user = await db.query.users.findFirst({
+      where: eq(users.pppoeUsername, pppoeUsername),
+      columns: { mikrotikId: true }
+    });
+    const finalRouterId = routerId || user?.mikrotikId || undefined;
+
+    // 2. Fetch package speed to map to router profile
     let profile = "default";
     if (packageId) {
       const pkg = await db.query.packages.findFirst({ where: eq(packages.id, Number(packageId)) });
@@ -93,7 +104,7 @@ export async function syncCustomerToMikrotik(
         // Normalize speed, e.g. "10 Mbps" -> "10mbps"
         const normSpeed = pkg.speed.toLowerCase().replace(/\s+/g, "");
         try {
-          const routerProfiles = await getPppoeProfiles();
+          const routerProfiles = await getPppoeProfiles(finalRouterId);
           const hasProfile = routerProfiles.some(p => p.name.toLowerCase() === normSpeed);
           if (hasProfile) {
             profile = normSpeed;
@@ -104,8 +115,8 @@ export async function syncCustomerToMikrotik(
       }
     }
 
-    // 2. Fetch secrets to check if this user already exists
-    const secrets = await getPppoeSecrets();
+    // 3. Fetch secrets to check if this user already exists
+    const secrets = await getPppoeSecrets(finalRouterId);
     const existingSecret = secrets.find(s => s.name.toLowerCase() === pppoeUsername.toLowerCase());
 
     const isDisabled = status === "expired" || status === "suspended" ? "true" : "false";
@@ -119,8 +130,8 @@ export async function syncCustomerToMikrotik(
       if (plainTextPassword) {
         updateData.password = plainTextPassword;
       }
-      await updatePppoeSecret(existingSecret[".id"], updateData);
-      console.log(`Successfully updated MikroTik secret for "${pppoeUsername}"`);
+      await updatePppoeSecret(existingSecret[".id"], updateData, finalRouterId);
+      console.log(`Successfully updated MikroTik secret for "${pppoeUsername}" on router ${finalRouterId}`);
     } else {
       // Create new secret on MikroTik
       await createPppoeSecret({
@@ -128,22 +139,22 @@ export async function syncCustomerToMikrotik(
         password: plainTextPassword || "password123",
         profile,
         comment: "Created from Billing Software",
-      });
-      console.log(`Successfully created MikroTik secret for "${pppoeUsername}"`);
+      }, finalRouterId);
+      console.log(`Successfully created MikroTik secret for "${pppoeUsername}" on router ${finalRouterId}`);
     }
 
     // Force disconnect active session to apply changes (status / speed profile) instantly
     try {
-      const activeSessions = await getPppoeActive();
+      const activeSessions = await getPppoeActive(finalRouterId);
       const session = activeSessions.find(
         (s) => s.name.toLowerCase() === pppoeUsername.toLowerCase()
       );
       if (session) {
-        await disconnectPppoeActive(session[".id"]);
-        console.log(`Kicked active session for "${pppoeUsername}" to apply changes instantly.`);
+        await disconnectPppoeActive(session[".id"], finalRouterId);
+        console.log(`Kicked active session for "${pppoeUsername}" to apply changes instantly on router ${finalRouterId}.`);
       }
     } catch (err) {
-      console.error(`Failed to disconnect active session for "${pppoeUsername}":`, err);
+      console.error(`Failed to disconnect active session for "${pppoeUsername}" on router ${finalRouterId}:`, err);
     }
   } catch (err) {
     console.error(`Failed to sync customer "${pppoeUsername}" to MikroTik:`, err);
@@ -155,12 +166,18 @@ export async function syncCustomerToMikrotik(
  */
 export async function syncDeleteCustomerFromMikrotik(pppoeUsername: string) {
   try {
-    const secrets = await getPppoeSecrets();
+    const user = await db.query.users.findFirst({
+      where: eq(users.pppoeUsername, pppoeUsername),
+      columns: { mikrotikId: true }
+    });
+    const routerId = user?.mikrotikId || undefined;
+
+    const secrets = await getPppoeSecrets(routerId);
     const existingSecret = secrets.find(s => s.name.toLowerCase() === pppoeUsername.toLowerCase());
     
     if (existingSecret) {
-      await deletePppoeSecret(existingSecret[".id"]);
-      console.log(`Successfully deleted MikroTik secret for "${pppoeUsername}"`);
+      await deletePppoeSecret(existingSecret[".id"], routerId);
+      console.log(`Successfully deleted MikroTik secret for "${pppoeUsername}" on router ${routerId}`);
     }
   } catch (err) {
     console.error(`Failed to delete MikroTik secret for "${pppoeUsername}":`, err);
@@ -186,17 +203,28 @@ export async function checkAndSuspendExpiredUsers() {
 
     console.log(`[Expiration Checker] Found ${expiredUsers.length} expired users to suspend.`);
 
-    // 1. Collect usernames to suspend on the router
-    const pppoeUsernames = expiredUsers
-      .map(u => u.pppoeUsername)
-      .filter((username): username is string => !!username);
-
-    // 2. Suspend them on the router in a single connection
-    if (pppoeUsernames.length > 0) {
-      await suspendUsers(pppoeUsernames);
+    // Group users by their mikrotikId
+    const usersByRouter: Record<number, typeof expiredUsers> = {};
+    for (const user of expiredUsers) {
+      const rId = user.mikrotikId || 0;
+      if (!usersByRouter[rId]) {
+        usersByRouter[rId] = [];
+      }
+      usersByRouter[rId].push(user);
     }
 
-    // 3. Update database status to "expired" for these users
+    for (const [routerIdStr, rUsers] of Object.entries(usersByRouter)) {
+      const routerId = Number(routerIdStr) || undefined;
+      const pppoeUsernames = rUsers
+        .map(u => u.pppoeUsername)
+        .filter((username): username is string => !!username);
+
+      if (pppoeUsernames.length > 0) {
+        await suspendUsers(pppoeUsernames, routerId);
+      }
+    }
+
+    // Update database status to "expired" for these users
     for (const user of expiredUsers) {
       await db
         .update(users)
@@ -239,15 +267,36 @@ function parseUptimeToSeconds(uptime: string): number {
 
 export async function trackCustomerDataUsage() {
   try {
-    // 1. Fetch active sessions from MikroTik
-    const activeSessions = await getPppoeActive();
+    const routers = await db.select().from(mikrotiks).where(eq(mikrotiks.status, true));
+    if (routers.length === 0) {
+      // Fallback to default if no routers in DB yet
+      await trackRouterUsage(undefined);
+      return;
+    }
+
+    for (const router of routers) {
+      await trackRouterUsage(router.id);
+    }
+  } catch (err) {
+    console.error("trackCustomerDataUsage error:", err);
+  }
+}
+
+async function trackRouterUsage(routerId?: number) {
+  try {
+    const activeSessions = await getPppoeActive(routerId);
     if (!activeSessions || activeSessions.length === 0) return;
 
-    // 2. Fetch all customers from DB to map pppoeUsername to userId
+    // Fetch customers assigned to this router
     const dbCustomers = await db
       .select({ id: users.id, pppoeUsername: users.pppoeUsername })
       .from(users)
-      .where(eq(users.role, "customer"));
+      .where(
+        and(
+          eq(users.role, "customer"),
+          routerId ? eq(users.mikrotikId, routerId) : undefined
+        )
+      );
 
     const usernameToUserId = new Map<string, number>();
     for (const c of dbCustomers) {
@@ -271,7 +320,9 @@ export async function trackCustomerDataUsage() {
       const currentBytesOut = parseInt((session as any)["bytes-out"] || "0");
       const currentUptime = session.uptime || "";
 
-      const prev = lastSessionTraffic.get(username.toLowerCase());
+      // Differentiate sessions on different routers if usernames ever collide
+      const trafficKey = `${routerId || 0}-${username.toLowerCase()}`;
+      const prev = lastSessionTraffic.get(trafficKey);
       let deltaIn = 0;
       let deltaOut = 0;
 
@@ -292,7 +343,7 @@ export async function trackCustomerDataUsage() {
         deltaOut = 0;
       }
 
-      lastSessionTraffic.set(username.toLowerCase(), {
+      lastSessionTraffic.set(trafficKey, {
         bytesIn: currentBytesIn,
         bytesOut: currentBytesOut,
         uptime: currentUptime,
@@ -331,7 +382,7 @@ export async function trackCustomerDataUsage() {
       }
     }
   } catch (err) {
-    console.error("trackCustomerDataUsage error:", err);
+    console.error(`trackRouterUsage error for router ${routerId}:`, err);
   }
 }
 

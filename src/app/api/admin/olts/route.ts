@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { olts } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, isNull } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await getSession();
@@ -10,13 +12,24 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const allOlts = await db.query.olts.findMany({ orderBy: [desc(olts.createdAt)] });
+  let allOlts;
+  if (session.role === "reseller") {
+    allOlts = await db.query.olts.findMany({
+      where: eq(olts.resellerId, session.userId),
+      orderBy: [desc(olts.createdAt)],
+    });
+  } else {
+    allOlts = await db.query.olts.findMany({
+      where: isNull(olts.resellerId),
+      orderBy: [desc(olts.createdAt)],
+    });
+  }
   return NextResponse.json(allOlts);
 }
 
 export async function POST(req: Request) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "reseller")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -34,6 +47,7 @@ export async function POST(req: Request) {
       portCount: Number(portCount) || 8,
       connectionPort: Number(connectionPort) || 23,
       status: true,
+      resellerId: session.role === "reseller" ? session.userId : null,
     }).returning();
 
     return NextResponse.json(olt, { status: 201 });

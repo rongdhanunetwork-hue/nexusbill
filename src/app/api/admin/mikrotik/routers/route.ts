@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { mikrotiks, olts } from "@/db/schema";
+import { mikrotiks } from "@/db/schema";
 import { getSession } from "@/lib/auth";
+import { eq, isNull } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -11,13 +12,23 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const routers = await db.query.mikrotiks.findMany();
+  let routers;
+  if (session.role === "reseller") {
+    routers = await db.query.mikrotiks.findMany({
+      where: eq(mikrotiks.resellerId, session.userId),
+    });
+  } else {
+    // Admin & Employees see Admin-level routers (where resellerId is NULL)
+    routers = await db.query.mikrotiks.findMany({
+      where: isNull(mikrotiks.resellerId),
+    });
+  }
   return NextResponse.json(routers);
 }
 
 export async function POST(req: Request) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "reseller")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -35,6 +46,7 @@ export async function POST(req: Request) {
     username: username?.trim() || "admin",
     password: password.trim(),
     status: true,
+    resellerId: session.role === "reseller" ? session.userId : null,
   }).returning();
 
   return NextResponse.json(router, { status: 201 });

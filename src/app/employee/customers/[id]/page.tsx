@@ -21,7 +21,7 @@ export default async function EmployeeCustomerProfilePage({ params }: { params: 
   let activeSession: any = null;
   let plainTextPassword = "";
   try {
-    const details = await getRouterDetails();
+    const details = await getRouterDetails(customer.mikrotikId || undefined);
     const activeSessions = details.active;
     const secrets = details.secrets;
 

@@ -61,6 +61,7 @@ export const mikrotiks = pgTable("mikrotiks", {
   username: varchar("username", { length: 255 }).notNull(),
   password: text("password").notNull(),
   status: boolean("status").default(true),
+  resellerId: integer("reseller_id"),
 });
 
 export const olts = pgTable("olts", {
@@ -71,6 +72,7 @@ export const olts = pgTable("olts", {
   connectionPort: integer("connection_port").default(23),
   status: boolean("status").default(true),
   createdAt: timestamp("created_at").defaultNow(),
+  resellerId: integer("reseller_id"),
 });
 
 export const dataUsage = pgTable("data_usage", {

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
+import { db } from "@/db";
+import { users, mikrotiks } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { 
   enablePppoeSecret, 
   disablePppoeSecret, 
@@ -23,6 +26,7 @@ export async function POST(req: Request) {
   }
 
   try {
+    const body = await req.json();
     const { 
       action, 
       id, 
@@ -32,29 +36,70 @@ export async function POST(req: Request) {
       rateLimit, 
       localAddress, 
       remoteAddress 
-    } = await req.json();
+    } = body;
+
+    let routerId: number | undefined = undefined;
+    if (session.role === "reseller") {
+      const bodyRouterId = body.routerId;
+      if (bodyRouterId) {
+        // Verify ownership
+        const routerObj = await db.query.mikrotiks.findFirst({
+          where: and(
+            eq(mikrotiks.id, Number(bodyRouterId)),
+            eq(mikrotiks.resellerId, session.userId)
+          )
+        });
+        if (!routerObj) {
+          return NextResponse.json({ error: "Access denied to this router" }, { status: 403 });
+        }
+        routerId = routerObj.id;
+      } else {
+        // Fall back to reseller's mikrotikId
+        const resellerUser = await db.query.users.findFirst({
+          where: eq(users.id, session.userId),
+          columns: { mikrotikId: true }
+        });
+        if (resellerUser?.mikrotikId) {
+          routerId = resellerUser.mikrotikId;
+        } else {
+          // Find first router registered by this reseller
+          const firstRouter = await db.query.mikrotiks.findFirst({
+            where: eq(mikrotiks.resellerId, session.userId),
+          });
+          if (firstRouter) {
+            routerId = firstRouter.id;
+            // Update profile
+            await db.update(users).set({ mikrotikId: routerId }).where(eq(users.id, session.userId));
+          }
+        }
+      }
+    } else {
+      if (body.routerId) {
+        routerId = Number(body.routerId);
+      }
+    }
 
     switch (action) {
       case "enable":
-        await enablePppoeSecret(id);
+        await enablePppoeSecret(id, routerId);
         return NextResponse.json({ success: true, message: `${name || id} enabled` });
 
       case "disable":
-        await disablePppoeSecret(id);
+        await disablePppoeSecret(id, routerId);
         return NextResponse.json({ success: true, message: `${name || id} disabled` });
 
       case "create":
         if (!name || !password) {
           return NextResponse.json({ error: "Name and password required" }, { status: 400 });
         }
-        const created = await createPppoeSecret({ name, password, profile: profile || "default" });
+        const created = await createPppoeSecret({ name, password, profile: profile || "default" }, routerId);
         return NextResponse.json({ success: true, user: created });
 
       case "edit":
         if (!id) {
           return NextResponse.json({ error: "Secret ID required" }, { status: 400 });
         }
-        await updatePppoeSecret(id, { name, password, profile });
+        await updatePppoeSecret(id, { name, password, profile }, routerId);
         return NextResponse.json({ success: true, message: `PPPoE user ${name} updated successfully` });
 
       case "delete":
@@ -63,7 +108,7 @@ export async function POST(req: Request) {
           if (!hasPerm) {
             return NextResponse.json({ error: "Access Denied: You do not have 'Mikrotik Delete' permission" }, { status: 403 });
           }
-          await deletePppoeSecret(id);
+          await deletePppoeSecret(id, routerId);
           return NextResponse.json({ success: true, message: `${name || id} deleted` });
         }
 
@@ -73,7 +118,7 @@ export async function POST(req: Request) {
         }
         let sessionToKick = id;
         if (!sessionToKick && name) {
-          const activeSessions = await getPppoeActive();
+          const activeSessions = await getPppoeActive(routerId);
           const found = activeSessions.find((s: PppoeActive) => s.name.toLowerCase() === name.toLowerCase());
           if (found) {
             sessionToKick = found[".id"];
@@ -82,25 +127,25 @@ export async function POST(req: Request) {
         if (!sessionToKick) {
           return NextResponse.json({ error: "No active session found for this customer" }, { status: 404 });
         }
-        await disconnectPppoeActive(sessionToKick);
+        await disconnectPppoeActive(sessionToKick, routerId);
         return NextResponse.json({ success: true, message: `Active session for ${name || id} disconnected` });
 
       case "reboot":
-        await rebootRouter();
+        await rebootRouter(routerId);
         return NextResponse.json({ success: true, message: "Router reboot command sent successfully. Router will restart." });
 
       case "createProfile":
         if (!name) {
           return NextResponse.json({ error: "Profile name required" }, { status: 400 });
         }
-        const createdProf = await createPppoeProfile({ name, rateLimit, localAddress, remoteAddress });
+        const createdProf = await createPppoeProfile({ name, rateLimit, localAddress, remoteAddress }, routerId);
         return NextResponse.json({ success: true, profile: createdProf });
 
       case "editProfile":
         if (!id) {
           return NextResponse.json({ error: "Profile ID required" }, { status: 400 });
         }
-        await updatePppoeProfile(id, { name, rateLimit, localAddress, remoteAddress });
+        await updatePppoeProfile(id, { name, rateLimit, localAddress, remoteAddress }, routerId);
         return NextResponse.json({ success: true, message: `Profile ${name} updated successfully` });
 
       case "deleteProfile":
@@ -112,7 +157,7 @@ export async function POST(req: Request) {
           if (!hasPerm) {
             return NextResponse.json({ error: "Access Denied: You do not have 'Mikrotik Delete' permission" }, { status: 403 });
           }
-          await deletePppoeProfile(id);
+          await deletePppoeProfile(id, routerId);
           return NextResponse.json({ success: true, message: `Profile deleted successfully` });
         }
 

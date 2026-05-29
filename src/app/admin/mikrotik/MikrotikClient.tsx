@@ -69,6 +69,9 @@ interface OltDb {
 export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" | "reseller" | "employee" }) {
   const [activeTab, setActiveTab] = useState<"live" | "routers" | "olts" | "profiles">("live");
 
+  // Router selection state
+  const [selectedRouterId, setSelectedRouterId] = useState<number | null>(null);
+
   // Live tab states
   const [liveData, setLiveData] = useState<MikrotikData | null>(null);
   const [liveLoading, setLiveLoading] = useState(true);
@@ -104,7 +107,10 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
   const fetchLiveData = useCallback(async () => {
     setLiveLoading(true);
     try {
-      const res = await fetch("/api/admin/mikrotik/pppoe");
+      const url = selectedRouterId 
+        ? `/api/admin/mikrotik/pppoe?routerId=${selectedRouterId}`
+        : "/api/admin/mikrotik/pppoe";
+      const res = await fetch(url);
       const d = await res.json();
       setLiveData(d);
     } catch {
@@ -112,7 +118,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
     } finally {
       setLiveLoading(false);
     }
-  }, []);
+  }, [selectedRouterId]);
 
   const fetchRouters = useCallback(async () => {
     setRoutersLoading(true);
@@ -140,7 +146,19 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
     }
   }, []);
 
-  // Effect to load initial tab data
+  // Fetch routers list on mount to populate the selector dropdown
+  useEffect(() => {
+    fetchRouters();
+  }, [fetchRouters]);
+
+  // Set default selected router when routers list is loaded
+  useEffect(() => {
+    if (routers.length > 0 && selectedRouterId === null) {
+      setSelectedRouterId(routers[0].id);
+    }
+  }, [routers, selectedRouterId]);
+
+  // Effect to load initial tab data and respond to active router change
   useEffect(() => {
     if (activeTab === "live" || activeTab === "profiles") {
       fetchLiveData();
@@ -149,7 +167,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
     } else if (activeTab === "olts") {
       fetchOlts();
     }
-  }, [activeTab, fetchLiveData, fetchRouters, fetchOlts]);
+  }, [activeTab, selectedRouterId, fetchLiveData, fetchRouters, fetchOlts]);
 
   // 2. Action functions
   async function toggleUser(secret: PppoeSecret) {
@@ -163,6 +181,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
           action: isDisabled ? "enable" : "disable",
           id: secret[".id"],
           name: secret.name,
+          routerId: selectedRouterId,
         }),
       });
       const d = await res.json();
@@ -185,7 +204,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
       const res = await fetch("/api/admin/mikrotik/toggle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "reboot" }),
+        body: JSON.stringify({ action: "reboot", routerId: selectedRouterId }),
       });
       if (res.ok) {
         showToast("Reboot command sent. Router is restarting...", true);
@@ -205,7 +224,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
       const res = await fetch("/api/admin/mikrotik/toggle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "disconnect", id, name }),
+        body: JSON.stringify({ action: "disconnect", id, name, routerId: selectedRouterId }),
       });
       const d = await res.json();
       if (res.ok) {
@@ -243,6 +262,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
           name: editingSecret.name,
           password: editSecretForm.password,
           profile: editSecretForm.profile,
+          routerId: selectedRouterId,
         }),
       });
       const d = await res.json();
@@ -267,7 +287,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
       const res = await fetch("/api/admin/mikrotik/toggle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete", id, name }),
+        body: JSON.stringify({ action: "delete", id, name, routerId: selectedRouterId }),
       });
       const d = await res.json();
       if (res.ok) {
@@ -292,6 +312,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
       rateLimit: String(form.get("rateLimit") || "").trim(),
       localAddress: String(form.get("localAddress") || "").trim(),
       remoteAddress: String(form.get("remoteAddress") || "").trim(),
+      routerId: selectedRouterId,
     };
 
     if (!body.name) {
@@ -328,7 +349,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
       const res = await fetch("/api/admin/mikrotik/toggle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "deleteProfile", id }),
+        body: JSON.stringify({ action: "deleteProfile", id, routerId: selectedRouterId }),
       });
       const d = await res.json();
       if (res.ok) {
@@ -468,6 +489,11 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
     }
   }
 
+  const activeRouter = routers.find(r => r.id === selectedRouterId);
+  const routerLabel = activeRouter 
+    ? `${activeRouter.name} (${activeRouter.ipAddress}:${activeRouter.apiPort})`
+    : "System Default Router";
+
   const activeNames = new Set((liveData?.active || []).map((a) => a.name));
 
   return (
@@ -492,49 +518,62 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
 
       {/* Title */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold text-white tracking-wide">
-          {role === "reseller" ? "MikroTik Router Status" : "MikroTik Router & OLT Devices"}
-        </h1>
-        {role !== "reseller" && (
-          <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
-            <button
-              onClick={() => setActiveTab("live")}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "live"
-                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-                : "text-gray-400 hover:text-white"
-                }`}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <h1 className="text-2xl font-bold text-white tracking-wide">
+            MikroTik Router & OLT Devices
+          </h1>
+          {routers.length > 0 && (activeTab === "live" || activeTab === "profiles") && (
+            <select
+              value={selectedRouterId || ""}
+              onChange={(e) => setSelectedRouterId(Number(e.target.value))}
+              className="glass-input px-3 py-1.5 bg-slate-900 text-white text-sm rounded-xl border border-white/10 focus:outline-none focus:ring-1 focus:ring-neon-blue"
             >
-              Live Control
-            </button>
-            <button
-              onClick={() => setActiveTab("profiles")}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "profiles"
-                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-                : "text-gray-400 hover:text-white"
-                }`}
-            >
-              Speed Profiles
-            </button>
-            <button
-              onClick={() => setActiveTab("routers")}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "routers"
-                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-                : "text-gray-400 hover:text-white"
-                }`}
-            >
-              Routers List
-            </button>
-            <button
-              onClick={() => setActiveTab("olts")}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "olts"
-                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-                : "text-gray-400 hover:text-white"
-                }`}
-            >
-              OLTs List
-            </button>
-          </div>
-        )}
+              {routers.map((r) => (
+                <option key={r.id} value={r.id} className="bg-slate-900 text-white">
+                  {r.name} ({r.ipAddress})
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+        <div className="flex gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
+          <button
+            onClick={() => setActiveTab("live")}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "live"
+              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+              : "text-gray-400 hover:text-white"
+              }`}
+          >
+            Live Control
+          </button>
+          <button
+            onClick={() => setActiveTab("profiles")}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "profiles"
+              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+              : "text-gray-400 hover:text-white"
+              }`}
+          >
+            Speed Profiles
+          </button>
+          <button
+            onClick={() => setActiveTab("routers")}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "routers"
+              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+              : "text-gray-400 hover:text-white"
+              }`}
+          >
+            Routers List
+          </button>
+          <button
+            onClick={() => setActiveTab("olts")}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "olts"
+              ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+              : "text-gray-400 hover:text-white"
+              }`}
+          >
+            OLTs List
+          </button>
+        </div>
       </div>
 
       {/* Tab: Live Router Control */}
@@ -548,7 +587,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
               </div>
               <div>
                 <p className="text-white font-semibold">
-                  MikroTik Router — bd2.mikrovpn.xyz:13065
+                  MikroTik Router — {routerLabel}
                 </p>
                 <p className={`text-sm ${liveData?.routerStatus.ok ? "text-neon-green" : "text-red-400"}`}>
                   {liveData?.routerStatus.ok
@@ -558,7 +597,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {liveData?.routerStatus.ok && role === "admin" && (
+              {liveData?.routerStatus.ok && (role === "admin" || role === "reseller") && (
                 <button
                   onClick={handleRebootRouter}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 transition-all text-sm font-semibold"
@@ -658,7 +697,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
                             </span>
                           </td>
                           <td className="p-4">
-                            {role === "admin" ? (
+                            {(role === "admin" || role === "reseller") ? (
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => toggleUser(secret)}
@@ -720,7 +759,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
                       <th className="p-4">IP Address</th>
                       <th className="p-4">Uptime</th>
                       <th className="p-4 text-gray-400">Caller ID (MAC)</th>
-                      {role === "admin" && <th className="p-4 text-right">Action</th>}
+                      {(role === "admin" || role === "reseller") && <th className="p-4 text-right">Action</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -730,7 +769,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
                         <td className="p-4 text-neon-blue font-mono text-sm">{session.address}</td>
                         <td className="p-4 text-gray-300 text-sm">{session.uptime}</td>
                         <td className="p-4 text-gray-400 text-xs font-mono">{session["caller-id"]}</td>
-                        {role === "admin" && (
+                        {(role === "admin" || role === "reseller") && (
                           <td className="p-4 text-right">
                             <button
                               onClick={() => handleDisconnectActive(session[".id"], session.name)}
@@ -756,16 +795,16 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
           )}
 
           {/* Create PPPoE user form */}
-          {role === "admin" && (
-            <AddPppoeForm onSuccess={fetchLiveData} onToast={showToast} profiles={liveData?.profiles || []} />
+          {(role === "admin" || role === "reseller") && (
+            <AddPppoeForm onSuccess={fetchLiveData} onToast={showToast} profiles={liveData?.profiles || []} routerId={selectedRouterId} />
           )}
         </div>
       )}
 
       {/* Tab: Routers List */}
       {activeTab === "routers" && (
-        <div className={role === "admin" ? "grid lg:grid-cols-3 gap-8" : "space-y-6"}>
-          <div className={role === "admin" ? "lg:col-span-2 space-y-6" : "space-y-6"}>
+        <div className={(role === "admin" || role === "reseller") ? "grid lg:grid-cols-3 gap-8" : "space-y-6"}>
+          <div className={(role === "admin" || role === "reseller") ? "lg:col-span-2 space-y-6" : "space-y-6"}>
             <div className="glass-card overflow-hidden">
               <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Registered Routers</h2>
@@ -779,17 +818,17 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
                       <th className="p-4">IP Address</th>
                       <th className="p-4">API Port</th>
                       <th className="p-4">Status</th>
-                      {role === "admin" && <th className="p-4 text-right">Action</th>}
+                      {(role === "admin" || role === "reseller") && <th className="p-4 text-right">Action</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {routersLoading && routers.length === 0 ? (
                       <tr>
-                        <td colSpan={role === "admin" ? 5 : 4} className="p-8 text-center text-gray-500"><Loader2 size={24} className="animate-spin mx-auto mb-2 text-neon-blue" /> Loading routers...</td>
+                        <td colSpan={(role === "admin" || role === "reseller") ? 5 : 4} className="p-8 text-center text-gray-500"><Loader2 size={24} className="animate-spin mx-auto mb-2 text-neon-blue" /> Loading routers...</td>
                       </tr>
                     ) : routers.length === 0 ? (
                       <tr>
-                        <td colSpan={role === "admin" ? 5 : 4} className="p-8 text-center text-gray-500">No routers registered yet.</td>
+                        <td colSpan={(role === "admin" || role === "reseller") ? 5 : 4} className="p-8 text-center text-gray-500">No routers registered yet.</td>
                       </tr>
                     ) : (
                       routers.map((router) => (
@@ -802,7 +841,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
                               {router.status ? "Active" : "Disabled"}
                             </span>
                           </td>
-                          {role === "admin" && (
+                          {(role === "admin" || role === "reseller") && (
                             <td className="p-4 text-right">
                               <button
                                 onClick={() => handleDeleteRouter(router.id)}
@@ -821,7 +860,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
             </div>
           </div>
 
-          {role === "admin" && (
+          {(role === "admin" || role === "reseller") && (
             <div className="space-y-6">
               <form onSubmit={handleAddRouter} className="glass-card p-6 space-y-4">
                 <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2"><Plus size={18} className="text-neon-blue" /> Add Router</h3>
@@ -860,8 +899,8 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
 
       {/* Tab: OLT Devices */}
       {activeTab === "olts" && (
-        <div className={role === "admin" ? "grid lg:grid-cols-3 gap-8" : "space-y-6"}>
-          <div className={role === "admin" ? "lg:col-span-2 space-y-6" : "space-y-6"}>
+        <div className={(role === "admin" || role === "reseller") ? "grid lg:grid-cols-3 gap-8" : "space-y-6"}>
+          <div className={(role === "admin" || role === "reseller") ? "lg:col-span-2 space-y-6" : "space-y-6"}>
             <div className="glass-card overflow-hidden">
               <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Registered OLT Devices</h2>
@@ -905,7 +944,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
                             >
                               ONU Details
                             </button>
-                            {role === "admin" && (
+                            {(role === "admin" || role === "reseller") && (
                               <button
                                 onClick={() => handleDeleteOlt(olt.id)}
                                 className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors"
@@ -923,7 +962,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
             </div>
           </div>
  
-          {role === "admin" && (
+          {(role === "admin" || role === "reseller") && (
             <div className="space-y-6">
               <form onSubmit={handleAddOlt} className="glass-card p-6 space-y-4">
                 <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2"><Plus size={18} className="text-teal-400" /> Add OLT Device</h3>
@@ -962,8 +1001,8 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
 
       {/* Tab: Speed Profiles */}
       {activeTab === "profiles" && (
-        <div className={role === "admin" ? "grid lg:grid-cols-3 gap-8" : "space-y-6"}>
-          <div className={role === "admin" ? "lg:col-span-2 space-y-6" : "space-y-6"}>
+        <div className={(role === "admin" || role === "reseller") ? "grid lg:grid-cols-3 gap-8" : "space-y-6"}>
+          <div className={(role === "admin" || role === "reseller") ? "lg:col-span-2 space-y-6" : "space-y-6"}>
             <div className="glass-card overflow-hidden">
               <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -980,19 +1019,19 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
                       <th className="p-4">Local IP Address</th>
                       <th className="p-4">Remote IP Address (Pool)</th>
                       <th className="p-4">Rate Limit (Speed)</th>
-                      {role === "admin" && <th className="p-4 text-right">Action</th>}
+                      {(role === "admin" || role === "reseller") && <th className="p-4 text-right">Action</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {liveLoading && (!liveData || liveData.profiles.length === 0) ? (
                       <tr>
-                        <td colSpan={role === "admin" ? 5 : 4} className="p-8 text-center text-gray-500">
+                        <td colSpan={(role === "admin" || role === "reseller") ? 5 : 4} className="p-8 text-center text-gray-500">
                           <Loader2 size={24} className="animate-spin mx-auto mb-2 text-neon-blue" /> Loading profiles...
                         </td>
                       </tr>
                     ) : !liveData || liveData.profiles.length === 0 ? (
                       <tr>
-                        <td colSpan={role === "admin" ? 5 : 4} className="p-8 text-center text-gray-500">No profiles found on router.</td>
+                        <td colSpan={(role === "admin" || role === "reseller") ? 5 : 4} className="p-8 text-center text-gray-500">No profiles found on router.</td>
                       </tr>
                     ) : (
                       liveData.profiles.map((prof) => (
@@ -1001,7 +1040,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
                           <td className="p-4 text-gray-300 font-mono text-sm">{prof["local-address"] || "—"}</td>
                           <td className="p-4 text-gray-300 font-mono text-sm">{prof["remote-address"] || "—"}</td>
                           <td className="p-4 text-neon-green font-semibold">{prof["rate-limit"] || "Unlimited"}</td>
-                          {role === "admin" && (
+                          {(role === "admin" || role === "reseller") && (
                             <td className="p-4 text-right">
                               <button
                                 onClick={() => handleDeleteProfile(prof[".id"], prof.name)}
@@ -1025,7 +1064,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
             </div>
           </div>
 
-          {role === "admin" && (
+          {(role === "admin" || role === "reseller") && (
             <div className="space-y-6">
               <form onSubmit={handleAddProfile} className="glass-card p-6 space-y-4">
                 <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2">
@@ -1250,7 +1289,7 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
   );
 }
 
-function AddPppoeForm({ onSuccess, onToast, profiles }: { onSuccess: () => void; onToast: (msg: string, ok: boolean) => void; profiles: PppoeProfile[] }) {
+function AddPppoeForm({ onSuccess, onToast, profiles, routerId }: { onSuccess: () => void; onToast: (msg: string, ok: boolean) => void; profiles: PppoeProfile[]; routerId: number | null }) {
   const [adding, setAdding] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
@@ -1271,7 +1310,7 @@ function AddPppoeForm({ onSuccess, onToast, profiles }: { onSuccess: () => void;
     const res = await fetch("/api/admin/mikrotik/toggle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "create", name, password, profile }),
+      body: JSON.stringify({ action: "create", name, password, profile, routerId }),
     });
     const d = await res.json();
     setAdding(false);
