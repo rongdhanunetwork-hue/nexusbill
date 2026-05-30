@@ -37,6 +37,18 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const [notifications, setNotifications] = useState<{ id: string; text: string; link: string }[]>([]);
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
+  const [customerInfo, setCustomerInfo] = useState<{ name: string; photoUrl: string | null } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/customer/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.name) {
+          setCustomerInfo(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch("/api/customer/notifications")
@@ -185,9 +197,17 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                 </AnimatePresence>
               </div>
 
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-neon-green to-teal-500 flex items-center justify-center text-white font-bold shadow-lg shadow-neon-green/20 cursor-pointer hover:scale-105 transition-transform">
-                C
-              </div>
+              {customerInfo?.photoUrl ? (
+                <img 
+                  src={customerInfo.photoUrl} 
+                  alt={customerInfo.name} 
+                  className="w-10 h-10 rounded-full object-cover shadow-lg border border-white/10 hover:scale-105 transition-transform cursor-pointer" 
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-neon-green to-teal-500 flex items-center justify-center text-white font-bold shadow-lg shadow-neon-green/20 cursor-pointer hover:scale-105 transition-transform">
+                  {customerInfo ? customerInfo.name.charAt(0).toUpperCase() : "C"}
+                </div>
+              )}
             </div>
           </div>
         </header>

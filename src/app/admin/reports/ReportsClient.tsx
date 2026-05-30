@@ -350,6 +350,17 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
           )}
 
           {reportType === "customer" && (
+            <div>
+              <div className="p-4 bg-white/5 border-b border-white/10 flex items-center justify-between gap-4">
+                <p className="text-sm text-gray-400">Download customer list formatted for BTRC compliance.</p>
+                <a
+                  href="/api/admin/reports/btrc"
+                  download
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neon-blue/20 text-neon-blue border border-neon-blue/30 text-sm font-semibold hover:bg-neon-blue/30 transition"
+                >
+                  <FileText size={14} /> Download BTRC Report (CSV)
+                </a>
+              </div>
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-white/10 text-xs text-gray-400 uppercase tracking-wider bg-white/5">
@@ -384,6 +395,7 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
                 )}
               </tbody>
             </table>
+            </div>
           )}
 
           {reportType === "ledger" && (

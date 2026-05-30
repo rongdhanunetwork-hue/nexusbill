@@ -46,36 +46,38 @@ export default async function EmployeeCustomerProfilePage({ params }: { params: 
   const customerInvoices = await db.query.invoices.findMany({ where: eq(invoices.userId, customerId), orderBy: [desc(invoices.createdAt)], limit: 8 });
   
   // Fetch real data usage
-  let usage = await db.query.dataUsage.findMany({
+  const rawUsage = await db.query.dataUsage.findMany({
     where: eq(dataUsage.userId, customerId),
     orderBy: [desc(dataUsage.recordedAt)],
-    limit: 15
+    limit: 7,
   });
 
-  // If empty, generate beautiful mock usage data for display
-  if (usage.length === 0) {
-    usage = Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
-      return {
-        id: i,
-        userId: customerId,
-        downloadGb: String(parseFloat((Math.random() * 15 + 5).toFixed(2))),
-        uploadGb: String(parseFloat((Math.random() * 5 + 1).toFixed(2))),
-        recordedAt: d
-      };
+  // Build 7-day chart data chronologically
+  const last7DaysUsage = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const yyyymmdd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+    const match = rawUsage.find((u) => {
+      if (!u.recordedAt) return false;
+      const rd = new Date(u.recordedAt);
+      const rdStr = `${rd.getFullYear()}-${String(rd.getMonth() + 1).padStart(2, "0")}-${String(rd.getDate()).padStart(2, "0")}`;
+      return rdStr === yyyymmdd;
     });
-  } else {
-    // Reverse it so it displays chronologically from past to present
-    usage = [...usage].reverse();
-  }
+
+    return {
+      recordedAt: d,
+      downloadGb: match ? String(match.downloadGb || 0) : "0",
+      uploadGb: match ? String(match.uploadGb || 0) : "0",
+    };
+  });
 
   return (
     <CustomerProfileClient
       customer={customer as any}
       payments={customerPayments as any}
       invoices={customerInvoices as any}
-      usageHistory={usage as any}
+      usageHistory={last7DaysUsage as any}
       isOnline={isOnline}
       activeSession={activeSession}
       plainTextPassword={plainTextPassword}

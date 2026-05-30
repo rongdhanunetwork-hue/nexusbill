@@ -5,6 +5,7 @@ import { eq, asc, and } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { syncCustomerToMikrotik } from "@/lib/sync";
+import { insertAuditLog } from "@/lib/audit";
 
 // GET /api/admin/customers — list customers (filtered by role)
 export async function GET() {
@@ -96,6 +97,8 @@ export async function POST(req: Request) {
     if (pppoeUsername?.trim()) {
       await syncCustomerToMikrotik(pppoeUsername.trim(), password, packageId, "expired");
     }
+
+    await insertAuditLog(session.userId, "CREATE_CUSTOMER", `Created customer ${customer.name} (Phone: ${customer.phone})`);
 
     return NextResponse.json(customer, { status: 201 });
   } catch (err) {

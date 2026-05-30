@@ -1,9 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Package, CreditCard, Clock, AlertTriangle, ChevronRight, Megaphone, Download, Upload } from "lucide-react";
+import {
+  Package, CreditCard, Clock, AlertTriangle, ChevronRight, Megaphone,
+  Download, Upload, Loader2, Activity
+} from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface UsageDay {
   day: string;
@@ -23,6 +27,7 @@ export default function CustomerDashboardClient({
   noticeMessage,
   status,
   usageData = [],
+  pppoeUsername = null,
 }: {
   customerName: string;
   packageName: string;
@@ -34,6 +39,7 @@ export default function CustomerDashboardClient({
   noticeMessage: string | null;
   status: string;
   usageData?: UsageDay[];
+  pppoeUsername?: string | null;
 }) {
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
@@ -51,10 +57,127 @@ export default function CustomerDashboardClient({
     { label: "Expire Date", value: daysRemaining !== null ? `${daysRemaining} days` : "N/A", sub: expireDate ? new Date(expireDate).toLocaleDateString() : "N/A", icon: Clock, color: "text-orange-400" },
   ];
 
-  const maxDownload = Math.max(...usageData.map(d => d.download), 0.1);
-  const maxUpload = Math.max(...usageData.map(d => d.upload), 0.1);
-  const maxVal = Math.max(maxDownload, maxUpload, 0.1);
-  const hasAnyRealData = usageData.some(d => d.hasReal);
+  // Recharts states and totals
+  const chartData = usageData.map((u) => ({
+    name: u.day,
+    download: parseFloat(String(u.download || 0)),
+    upload: parseFloat(String(u.upload || 0)),
+  }));
+
+  const dbTotalDownload = chartData.reduce((sum, d) => sum + d.download, 0);
+  const dbTotalUpload = chartData.reduce((sum, d) => sum + d.upload, 0);
+
+  const [chartMode, setChartMode] = useState<"history" | "live">(status === "active" || status === "online" ? "live" : "history");
+  const [liveDownloadRate, setLiveDownloadRate] = useState<number>(0);
+  const [liveUploadRate, setLiveUploadRate] = useState<number>(0);
+  const [liveBytesIn, setLiveBytesIn] = useState<number>(0);
+  const [liveBytesOut, setLiveBytesOut] = useState<number>(0);
+  const [accumulatedDownloadBytes, setAccumulatedDownloadBytes] = useState<number>(0);
+  const [accumulatedUploadBytes, setAccumulatedUploadBytes] = useState<number>(0);
+  const [isOnline, setIsOnline] = useState<boolean>(status === "active" || status === "online");
+
+  const [liveData, setLiveData] = useState<{ name: string; download: number; upload: number }[]>(() => 
+    Array.from({ length: 15 }).map((_, i) => ({
+      name: `-${15 - i}s`,
+      download: 0,
+      upload: 0
+    }))
+  );
+
+  useEffect(() => {
+    // If user's package is expired/suspended or not active, rates remain 0
+    if (status !== "active" && status !== "online") {
+      setLiveDownloadRate(0);
+      setLiveUploadRate(0);
+      setIsOnline(false);
+      return;
+    }
+
+    let active = true;
+    const interval = setInterval(async () => {
+      let dl = 0;
+      let ul = 0;
+      let bIn = 0;
+      let bOut = 0;
+      let online = false;
+
+      try {
+        const res = await fetch("/api/customer/traffic");
+        const data = await res.json();
+        if (res.ok && data.isOnline) {
+          dl = parseFloat((data.txBps / 1000000).toFixed(2));
+          ul = parseFloat((data.rxBps / 1000000).toFixed(2));
+          bIn = data.bytesIn || 0;
+          bOut = data.bytesOut || 0;
+          online = true;
+        }
+      } catch (e) {
+        console.error("Live traffic speed check failed:", e);
+      }
+
+      if (!active) return;
+
+      setIsOnline(online);
+      setLiveDownloadRate(dl);
+      setLiveUploadRate(ul);
+
+      const dlBytes = Math.round((dl * 1000000) / 8);
+      const ulBytes = Math.round((ul * 1000000) / 8);
+      setAccumulatedDownloadBytes((prev) => prev + dlBytes);
+      setAccumulatedUploadBytes((prev) => prev + ulBytes);
+
+      if (bIn > 0) {
+        setLiveBytesIn(bIn);
+      } else {
+        setLiveBytesIn((prev) => prev + ulBytes);
+      }
+
+      if (bOut > 0) {
+        setLiveBytesOut(bOut);
+      } else {
+        setLiveBytesOut((prev) => prev + dlBytes);
+      }
+
+      setLiveData((prev) => {
+        const timeStr = new Date().toLocaleTimeString(undefined, { hour12: false, hour: "numeric", minute: "numeric", second: "numeric" }).slice(-5);
+        return [...prev.slice(1), {
+          name: timeStr,
+          download: dl,
+          upload: ul
+        }];
+      });
+    }, 1000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [status]);
+
+  const accumulatedDownloadGb = accumulatedDownloadBytes / (1024 * 1024 * 1024);
+  const accumulatedUploadGb = accumulatedUploadBytes / (1024 * 1024 * 1024);
+
+  const totalDownload = (dbTotalDownload + accumulatedDownloadGb).toFixed(4);
+  const totalUpload = (dbTotalUpload + accumulatedUploadGb).toFixed(4);
+
+  function formatBytes(bytes: number) {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
+
+  function formatSpeed(val: any) {
+    const rateInMbps = parseFloat(val);
+    if (isNaN(rateInMbps)) return "0 Kbps";
+    if (rateInMbps < 0.001) return "0 Kbps";
+    if (rateInMbps < 1) {
+      const kbps = Math.round(rateInMbps * 1000);
+      return `${kbps} Kbps`;
+    }
+    return `${rateInMbps.toFixed(1)} Mbps`;
+  }
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
@@ -71,8 +194,8 @@ export default function CustomerDashboardClient({
                 ? "bg-neon-green/20 text-neon-green border-neon-green/30" 
                 : status === "expired" 
                   ? "bg-orange-500/20 text-orange-400 border-orange-500/30" 
-                  : status === "pending"
-                    ? "bg-neon-blue/20 text-neon-blue border-neon-blue/30"
+                  : status === "suspended"
+                    ? "bg-red-500/20 text-red-400 border-red-500/30"
                     : "bg-red-500/20 text-red-400 border-red-500/30"
             }`}>
               {status}
@@ -87,7 +210,7 @@ export default function CustomerDashboardClient({
           <div className="flex-1">
             <h3 className="font-bold text-white">প্যাকেজ মেয়াদ শেষ হওয়ার সতর্কতা!</h3>
             <p className="text-gray-300 text-sm mt-0.5">
-              আপনার ইন্টারনেট কানেকশনের মেয়াদ আর মাত্র <span className="text-orange-400 font-bold">{daysRemaining} দিন</span> বাকি আছে। সচল রাখতে দ্রুত রিচার্জ করুন।
+              আপনার internet কানেকশনের মেয়াদ আর মাত্র <span className="text-orange-400 font-bold">{daysRemaining} দিন</span> বাকি আছে। সচল রাখতে দ্রুত রিচার্জ করুন।
             </p>
           </div>
           <Link
@@ -106,55 +229,171 @@ export default function CustomerDashboardClient({
       </div>
 
       {/* Data Usage Chart */}
-      <div className="glass-card p-6 md:p-8">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold text-white">Data Usage - Last 7 Days</h3>
-          <div className="flex items-center gap-4 text-xs text-gray-400">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-neon-blue/80 inline-block" /> Download</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-neon-green/80 inline-block" /> Upload</span>
+      <div className="glass-card p-4 sm:p-6">
+        <h3 className="text-lg font-semibold text-white mb-5 border-b border-white/10 pb-2 flex items-center justify-between flex-wrap gap-2">
+          <span>{chartMode === "live" ? "Real-time Traffic Monitor" : "Data Usage History"}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-gray-400 no-print">
+              {chartMode === "live" ? "Live Traffic Speed" : `Cumulative: Down ${totalDownload} GB / Up ${totalUpload} GB`}
+            </span>
+            <div className="flex gap-1.5 bg-white/5 p-1 rounded-xl no-print border border-white/10">
+              <button
+                type="button"
+                onClick={() => setChartMode("history")}
+                className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                  chartMode === "history"
+                    ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                Historical (GB)
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartMode("live")}
+                className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                  chartMode === "live"
+                    ? "bg-neon-green/20 text-neon-green border border-neon-green/20"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full bg-neon-green ${chartMode === "live" ? "animate-pulse" : ""}`} />
+                Live Rate
+              </button>
+            </div>
+          </div>
+        </h3>
+
+        {chartMode === "history" ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3">
+                <div className="text-neon-green"><Download size={20} /></div>
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Total Downloaded</p>
+                  <p className="text-xl font-bold text-white">{totalDownload} GB</p>
+                </div>
+              </div>
+              <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3">
+                <div className="text-neon-blue"><Upload size={20} /></div>
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Total Uploaded</p>
+                  <p className="text-xl font-bold text-white">{totalUpload} GB</p>
+                </div>
+              </div>
+            </div>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="downGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#39ff14" stopOpacity={0.25}/>
+                      <stop offset="95%" stopColor="#39ff14" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="upGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00f3ff" stopOpacity={0.25}/>
+                      <stop offset="95%" stopColor="#00f3ff" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} />
+                  <YAxis stroke="#9ca3af" fontSize={11} unit=" GB" />
+                  <Tooltip contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} />
+                  <Area type="monotone" dataKey="download" stroke="#39ff14" strokeWidth={2} fillOpacity={1} fill="url(#downGrad)" name="Download (GB)" />
+                  <Area type="monotone" dataKey="upload" stroke="#00f3ff" strokeWidth={2} fillOpacity={1} fill="url(#upGrad)" name="Upload (GB)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-neon-green/20 relative overflow-hidden">
+                <div className="absolute top-2 right-2 flex items-center gap-1.5 text-[9px] uppercase font-bold text-neon-green bg-neon-green/10 px-2 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-ping" />
+                  Live
+                </div>
+                <div className="text-neon-green"><Download size={20} /></div>
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Download Speed</p>
+                  <p className="text-xl font-bold text-white font-mono">{formatSpeed(liveDownloadRate)}</p>
+                </div>
+              </div>
+              <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-neon-blue/20 relative overflow-hidden">
+                <div className="absolute top-2 right-2 flex items-center gap-1.5 text-[9px] uppercase font-bold text-neon-blue bg-neon-blue/10 px-2 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-neon-blue animate-ping" />
+                  Live
+                </div>
+                <div className="text-neon-blue"><Upload size={20} /></div>
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Upload Speed</p>
+                  <p className="text-xl font-bold text-white font-mono">{formatSpeed(liveUploadRate)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={liveData}>
+                  <defs>
+                    <linearGradient id="liveDownGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="liveUpGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} />
+                  <YAxis stroke="#9ca3af" fontSize={11} domain={[0, "auto"]} tickFormatter={formatSpeed} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }}
+                    formatter={(value: any, name: any) => [formatSpeed(Number(value)), name === "download" ? "Download" : "Upload"]}
+                  />
+                  <Area type="monotone" dataKey="download" stroke="#10b981" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} fillOpacity={1} fill="url(#liveDownGrad)" name="download" />
+                  <Area type="monotone" dataKey="upload" stroke="#06b6d4" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} fillOpacity={1} fill="url(#liveUpGrad)" name="upload" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Live RX/TX Interface Statistics Box */}
+      <div className="glass-card p-6 border border-teal-500/20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 to-transparent opacity-60" />
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? "bg-teal-400 animate-ping" : "bg-red-500"}`} />
+              Live MikroTik PPPoE Interface Statistics (RX / TX)
+            </h3>
+            <p className="text-xs text-gray-400 font-mono">Interface: {pppoeUsername ? `<pppoe-${pppoeUsername}>` : "N/A"}</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full lg:w-auto">
+            <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 text-center min-w-[130px]">
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">RX (Upload Speed)</span>
+              <p className="text-base font-bold text-neon-blue font-mono mt-1">{formatSpeed(liveUploadRate)}</p>
+            </div>
+            <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 text-center min-w-[130px]">
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">TX (Download Speed)</span>
+              <p className="text-base font-bold text-neon-green font-mono mt-1">{formatSpeed(liveDownloadRate)}</p>
+            </div>
+            <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 text-center min-w-[130px]">
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">RX Total (Upload)</span>
+              <p className="text-base font-bold text-teal-300 font-mono mt-1">
+                {formatBytes((dbTotalUpload * 1024 * 1024 * 1024) + liveBytesIn)}
+              </p>
+            </div>
+            <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 text-center min-w-[130px]">
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">TX Total (Download)</span>
+              <p className="text-base font-bold text-teal-300 font-mono mt-1">
+                {formatBytes((dbTotalDownload * 1024 * 1024 * 1024) + liveBytesOut)}
+              </p>
+            </div>
           </div>
         </div>
-
-        {hasAnyRealData ? (
-          <div>
-            <div className="grid grid-cols-7 gap-2 h-36 items-end mb-3">
-              {usageData.map((day, index) => (
-                <div key={index} className="flex flex-col items-center gap-1 h-full justify-end">
-                  <div className="w-full flex gap-0.5 items-end justify-center" style={{ height: "100%" }}>
-                    {/* Download bar */}
-                    <div
-                      className="flex-1 rounded-t-md bg-gradient-to-t from-neon-blue/40 to-neon-blue/80 transition-all duration-700"
-                      style={{ height: day.download > 0 ? `${Math.max(4, (day.download / maxVal) * 100)}%` : "2px" }}
-                      title={`Download: ${day.download.toFixed(2)} GB`}
-                    />
-                    {/* Upload bar */}
-                    <div
-                      className="flex-1 rounded-t-md bg-gradient-to-t from-neon-green/40 to-neon-green/80 transition-all duration-700"
-                      style={{ height: day.upload > 0 ? `${Math.max(4, (day.upload / maxVal) * 100)}%` : "2px" }}
-                      title={`Upload: ${day.upload.toFixed(2)} GB`}
-                    />
-                  </div>
-                  <span className="text-[10px] text-gray-500">{day.day}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-between items-center mt-4 pt-4 border-t border-white/5">
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <Download size={14} className="text-neon-blue" />
-                Total: <span className="text-white font-semibold">{usageData.reduce((a, d) => a + d.download, 0).toFixed(2)} GB</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <Upload size={14} className="text-neon-green" />
-                Total: <span className="text-white font-semibold">{usageData.reduce((a, d) => a + d.upload, 0).toFixed(2)} GB</span>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="h-36 flex flex-col items-center justify-center text-gray-600 space-y-2">
-            <Download size={32} className="text-gray-700" />
-            <p className="text-sm">এখনও কোনো ডেটা ব্যবহারের রেকর্ড নেই।</p>
-          </div>
-        )}
       </div>
 
       <div className="glass-card p-6 md:p-8">

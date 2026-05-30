@@ -12,6 +12,8 @@ import {
   Settings,
   Megaphone,
   LogOut,
+  ShieldAlert,
+  Box,
   Menu,
   X,
   Loader2,
@@ -42,6 +44,7 @@ const navigation = [
   { name: "Notice", href: "/admin/notices", icon: Megaphone },
   { name: "Support", href: "/admin/tickets", icon: LifeBuoy },
   { name: "Reports", href: "/admin/reports", icon: FileText },
+  { name: "Audit Logs", href: "/admin/reports/audit-logs", icon: ShieldAlert },
   { name: "Expenses", href: "/admin/expenses", icon: TrendingDown },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];

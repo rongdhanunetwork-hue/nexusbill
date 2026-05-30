@@ -10,12 +10,15 @@ async function createPackage(formData: FormData) {
   const customSpeed = String(formData.get("speed_custom") || "").trim();
   // If user entered a custom speed, use it; otherwise use the preset
   const finalSpeed = customSpeed.length > 0 ? customSpeed : (selectedSpeed || "10 Mbps");
+  const dataLimitStr = formData.get("dataLimitGb");
+  const dataLimitGb = dataLimitStr ? Number(dataLimitStr) : null;
 
   await db.insert(packages).values({
     name: String(formData.get("name") || ""),
     speed: finalSpeed,
     price: String(formData.get("price") || "0"),
     durationDays: Number(formData.get("durationDays")) || 30,
+    dataLimitGb,
   });
   redirect("/admin/packages");
 }
@@ -65,6 +68,10 @@ export default function CreatePackagePage() {
         <div>
           <label className="block text-sm text-gray-300 mb-2">Expire/Duration Days</label>
           <input name="durationDays" type="number" defaultValue={30} className="w-full glass-input px-4 py-3 bg-slate-800" />
+        </div>
+        <div>
+          <label className="block text-sm text-gray-300 mb-2">Data Limit (GB) - Leave blank for Unlimited FUP</label>
+          <input name="dataLimitGb" type="number" placeholder="e.g. 500" className="w-full glass-input px-4 py-3 bg-slate-800" />
         </div>
         <button className="w-full py-3 rounded-xl bg-neon-blue/20 text-neon-blue border border-neon-blue/40 font-semibold hover:bg-neon-blue/30">Save Package</button>
       </form>

@@ -74,6 +74,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPwd, setShowPwd] = useState(false);
 
   useEffect(() => {
     // Fetch packages
@@ -104,7 +105,8 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
     e.preventDefault();
     const form = new FormData(e.currentTarget);
 
-    const body = {
+    const password = String(form.get("password") || "").trim();
+    const body: any = {
       name: String(form.get("name") || "").trim(),
       phone: String(form.get("phone") || "").trim(),
       address: String(form.get("address") || "").trim(),
@@ -124,6 +126,14 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       note: String(form.get("note") || "").trim(),
       balance: String(form.get("balance") || "0"),
     };
+
+    if (password) {
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters.");
+        return;
+      }
+      body.password = password;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -280,6 +290,33 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
             <Field label="Customer Remarks / Notes" name="note" defaultValue={customer.note || ""} />
           </div>
         </div>
+
+        {/* Password Section */}
+        <section className="border-t border-white/10 pt-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Login & PPPoE Password</h3>
+          <div className="max-w-sm">
+            <label className="block text-sm text-gray-300 mb-2">Password</label>
+            <div className="relative">
+              <input
+                name="password"
+                type={showPwd ? "text" : "password"}
+                placeholder="Leave blank to keep current password"
+                className="w-full glass-input px-4 py-3 pr-12 bg-slate-800 text-white border border-white/10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(!showPwd)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                tabIndex={-1}
+              >
+                {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Note: Changing this password will update both the billing portal login password and the customer's PPPoE password on the MikroTik router.
+            </p>
+          </div>
+        </section>
 
         {error && (
           <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">

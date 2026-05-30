@@ -7,7 +7,7 @@ import { createSession } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
-    const { phone, password, role, rememberMe } = await req.json();
+    const { phone, password, role, rememberMe, otpToken } = await req.json();
 
     if (!phone || !password || !role) {
       return NextResponse.json({ error: "Phone, password, and role required" }, { status: 400 });
@@ -46,6 +46,22 @@ export async function POST(req: Request) {
       const boundIp = user.ipAddress.trim();
       if (boundIp && boundIp !== clientIp && clientIp !== "127.0.0.1" && clientIp !== "::1") {
         return NextResponse.json({ error: `IP Binding error: Access locked to IP ${boundIp}` }, { status: 403 });
+      }
+    }
+
+    // 2FA Verification
+    if (user.twoFactorEnabled && user.twoFactorSecret) {
+      if (!otpToken) {
+        return NextResponse.json({ error: "2FA_REQUIRED", message: "OTP Token is required" }, { status: 401 });
+      }
+      const speakeasy = require("speakeasy");
+      const verified = speakeasy.totp.verify({
+        secret: user.twoFactorSecret,
+        encoding: 'base32',
+        token: otpToken
+      });
+      if (!verified) {
+        return NextResponse.json({ error: "Invalid OTP token" }, { status: 401 });
       }
     }
 

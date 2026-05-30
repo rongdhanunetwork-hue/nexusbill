@@ -80,9 +80,9 @@ export default function PayBillClient({ bkashNumber, nagadNumber, rocketNumber }
             >
               <CheckCircle2 size={48} />
             </motion.div>
-            <h2 className="text-2xl font-bold text-white mb-4 relative z-10">Payment Submitted!</h2>
+            <h2 className="text-2xl font-bold text-white mb-4 relative z-10">Payment Successful!</h2>
             <p className="text-gray-400 mb-8 relative z-10">
-              আপনার payment এখন Pending tab-এ আছে। Admin Transaction ID verify করে approve করলে bill Paid হবে।
+              আপনার পেমেন্ট সফলভাবে রিসিভ করা হয়েছে এবং আপনার ইন্টারনেট লাইন অটোমেটিক চালু/রিচার্জ হয়ে গেছে!
             </p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 relative z-10">
               <button
@@ -116,7 +116,7 @@ export default function PayBillClient({ bkashNumber, nagadNumber, rocketNumber }
                     bKash Online Pay (বিকাশ অনলাইন পেমেন্ট)
                   </h3>
                   <p className="text-xs text-gray-300">
-                    সেন্ড মানি করার প্রয়োজন নেই; সরাসরি বিকাশ অনলাইন পেমেন্ট লিংকের মাধ্যমে বিল পে করতে ডানপাশের বাটনে ক্লিক করুন।
+                    সেন্ড মানি করার প্রয়োজন নেই; সরাসরি বিকাশ অনলাইন পেমেন্ট লিংকের মাধ্যমে বিল পে করতে ডানপাশের বাটনে ক্লিক করুন এবং ট্রানজাকশন আইডি নিচে সাবমিট করুন।
                   </p>
                 </div>
                 <a

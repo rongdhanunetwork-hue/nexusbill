@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Save, Shield, Globe, Phone, Loader2, CheckCircle2, Eye, EyeOff, MessageSquare, Clock, Send, AlertTriangle } from "lucide-react";
+import { Save, Shield, Globe, Phone, Loader2, CheckCircle2, Eye, EyeOff, MessageSquare, Clock, Send, AlertTriangle, Download } from "lucide-react";
 
 interface SettingsMap {
   bkash_number?: string;
@@ -284,6 +284,18 @@ export default function SettingsPage() {
                 {cronResult}
               </p>
             )}
+          </div>
+          
+          <div className="pt-4 border-t border-white/10">
+            <h3 className="text-sm font-medium text-white mb-1">Database Backup</h3>
+            <p className="text-xs text-gray-500 mb-3">সম্পূর্ণ ডাটাবেসের (Customers, Packages, Inventory, Transactions) একটি JSON ব্যাকআপ ডাউনলোড করুন।</p>
+            <a
+              href="/api/admin/settings/backup"
+              download
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-neon-blue/20 text-neon-blue border border-neon-blue/30 font-semibold hover:bg-neon-blue/30 transition"
+            >
+              <Download size={18} /> Download JSON Backup
+            </a>
           </div>
         </div>
       </motion.div>

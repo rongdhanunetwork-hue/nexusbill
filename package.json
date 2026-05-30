@@ -12,6 +12,8 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@types/qrcode": "^1.5.6",
+    "@types/speakeasy": "^2.0.10",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.3.0",
@@ -23,9 +25,11 @@
     "next": "16.2.5",
     "node-routeros": "^1.6.8",
     "pg": "8.20.0",
+    "qrcode": "^1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "recharts": "^3.8.1",
+    "speakeasy": "^2.0.0",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {

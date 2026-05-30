@@ -36,6 +36,7 @@ export default async function PackagesPage() {
               <div className="text-sm text-gray-400 mt-1">Speed: {pkg.speed}</div>
               <div className="text-4xl font-bold text-neon-blue mt-5">৳{pkg.price}</div>
               <div className="text-xs text-gray-500 mt-1">Expire/Duration: {pkg.durationDays} days</div>
+              <div className="text-xs text-gray-400 mt-1">Data Limit (FUP): {pkg.dataLimitGb ? `${pkg.dataLimitGb} GB` : "Unlimited"}</div>
             </div>
             <div className="bg-white/5 px-6 py-3 flex justify-end gap-3 relative z-10">
               <form action={deletePackage}>

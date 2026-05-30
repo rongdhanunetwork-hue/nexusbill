@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { payments } from "@/db/schema";
+import { payments, users, transactions } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
+import { syncCustomerToMikrotik } from "@/lib/sync";
+import { insertAuditLog } from "@/lib/audit";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -17,14 +19,63 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Transaction ID, amount, and method required" }, { status: 400 });
     }
 
+    // Fetch customer to calculate new expiry
+    const customer = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      with: { package: true }
+    });
+
+    if (!customer) {
+      return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+    }
+
+    // Process Auto Recharge Logic
+    let baseDate = new Date();
+    const isCustomerActive = customer.status === "active" && customer.expireDate && new Date(customer.expireDate) > baseDate;
+    if (isCustomerActive) {
+      baseDate = new Date(customer.expireDate!);
+    }
+    
+    let newExpireDate = new Date(baseDate);
+    const durationDays = customer.package?.durationDays || 30;
+    newExpireDate.setDate(newExpireDate.getDate() + durationDays);
+
+    // Update customer DB
+    await db.update(users)
+      .set({
+        expireDate: newExpireDate,
+        status: "active",
+      })
+      .where(eq(users.id, customer.id));
+
+    // Record Payment as auto-approved
     const [payment] = await db.insert(payments).values({
       userId: session.userId,
       amount: String(amount),
       trxId: trxId.trim().toUpperCase(),
       method,
       screenshotUrl: screenshotUrl?.trim() || null,
-      status: "pending",
+      status: "approved",
     }).returning();
+
+    // Log transaction
+    await db.insert(transactions).values({
+      customerId: customer.id,
+      amount: String(amount),
+      type: "recharge",
+    });
+
+    // Sync to Mikrotik to turn line on
+    if (customer.pppoeUsername) {
+      await syncCustomerToMikrotik(
+        customer.pppoeUsername,
+        undefined,
+        customer.packageId,
+        "active"
+      );
+    }
+
+    await insertAuditLog(customer.id, "CUSTOMER_AUTO_PAYMENT", `Payment ${trxId} auto-approved. Amount: ${amount}. New Expiry: ${newExpireDate.toLocaleString()}`);
 
     return NextResponse.json(payment, { status: 201 });
   } catch (err) {

@@ -42,6 +42,8 @@ export const users = pgTable("users", {
   note: text("note"),
   customerType: varchar("customer_type", { length: 20 }).default("pppoe"), // pppoe, static, hotspot
   permissions: text("permissions").default("[]"),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  twoFactorSecret: varchar("two_factor_secret", { length: 255 }),
 });
 
 export const packages = pgTable("packages", {
@@ -50,6 +52,7 @@ export const packages = pgTable("packages", {
   speed: varchar("speed", { length: 50 }).notNull(), // e.g., '10 Mbps'
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   durationDays: integer("duration_days").default(30),
+  dataLimitGb: integer("data_limit_gb"), // null means unlimited
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -319,3 +322,39 @@ export const withdrawalRequestsRelations = relations(withdrawalRequests, ({ one 
     references: [users.id],
   }),
 }));
+
+export const inventory = pgTable("inventory", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 50 }).notNull(), // router, onu, cable, switch, tool
+  serialNumber: varchar("serial_number", { length: 100 }).unique(),
+  status: varchar("status", { length: 20 }).default("in_stock"), // in_stock, assigned, faulty, lost
+  assignedUserId: integer("assigned_user_id"), // Technician or Reseller
+  branchId: integer("branch_id"),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const inventoryRelations = relations(inventory, ({ one }) => ({
+  assignedUser: one(users, {
+    fields: [inventory.assignedUserId],
+    references: [users.id],
+  }),
+}));
+
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  action: varchar("action", { length: 100 }).notNull(), // e.g., 'CREATE_CUSTOMER', 'DELETE_INVOICE'
+  details: text("details"), // JSON stringified or text description
+  ipAddress: varchar("ip_address", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [auditLogs.userId],
+    references: [users.id],
+  }),
+}));
+

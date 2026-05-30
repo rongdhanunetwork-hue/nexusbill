@@ -4,6 +4,7 @@ import { users, payments, invoices, packages, transactions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import { syncCustomerToMikrotik } from "@/lib/sync";
+import { insertAuditLog } from "@/lib/audit";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { userId, amount, due, billingType, duration, method, discount, note, renewBack, newPackageId } = body;
+    const { userId, amount, due, billingType, duration, method, discount, note, renewBack, newPackageId, customBaseDate, customExpireDate } = body;
 
     if (!userId || amount === undefined) {
       return NextResponse.json({ error: "User ID and amount are required" }, { status: 400 });
@@ -49,22 +50,29 @@ export async function POST(req: Request) {
     }
 
     // Calculate new expiration date
-    // Recharge: Start from now/today if customer is expired or inactive
-    // Renew: Extend from current expiration date if customer is currently active
-    let baseDate = new Date();
-    const isCustomerActive = customer.status === "active" && customer.expireDate && new Date(customer.expireDate) > baseDate;
+    let newExpireDate: Date;
 
-    if (isCustomerActive && renewBack) {
-      baseDate = new Date(customer.expireDate!);
-    }
-
-    let newExpireDate = new Date(baseDate);
-    const numDuration = Number(duration) || 1;
-
-    if (billingType === "monthly") {
-      newExpireDate.setDate(newExpireDate.getDate() + numDuration * 30);
+    if (customExpireDate) {
+      newExpireDate = new Date(customExpireDate);
     } else {
-      newExpireDate.setDate(newExpireDate.getDate() + numDuration);
+      let baseDate = new Date();
+      if (customBaseDate) {
+        baseDate = new Date(customBaseDate);
+      } else {
+        const isCustomerActive = customer.status === "active" && customer.expireDate && new Date(customer.expireDate) > baseDate;
+        if (isCustomerActive && renewBack) {
+          baseDate = new Date(customer.expireDate!);
+        }
+      }
+
+      newExpireDate = new Date(baseDate);
+      const numDuration = Number(duration) || 1;
+
+      if (billingType === "monthly") {
+        newExpireDate.setDate(newExpireDate.getDate() + numDuration * 30);
+      } else {
+        newExpireDate.setDate(newExpireDate.getDate() + numDuration);
+      }
     }
 
     // If Reseller, deduct balance
@@ -139,6 +147,8 @@ export async function POST(req: Request) {
         "active"
       );
     }
+
+    await insertAuditLog(session.userId, "RECHARGE_CUSTOMER", `Recharged customer ${customer.name} with amount ${amount}. New expiry: ${newExpireDate.toLocaleString()}`);
 
     return NextResponse.json({
       success: true,

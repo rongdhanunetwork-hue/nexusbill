@@ -13,6 +13,8 @@ export default function CustomerLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
+  const [require2FA, setRequire2FA] = useState(false);
+  const [otpToken, setOtpToken] = useState("");
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,12 +35,17 @@ export default function CustomerLoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, password, role: "customer", rememberMe }),
+        body: JSON.stringify({ phone, password, role: "customer", rememberMe, otpToken: require2FA ? otpToken : undefined }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.error === "2FA_REQUIRED") {
+          setRequire2FA(true);
+          setError(null);
+          return;
+        }
         setError(data.error || "Login failed.");
         triggerShake();
         return;
@@ -120,6 +127,20 @@ export default function CustomerLoginPage() {
               </button>
             </div>
           </div>
+
+          {require2FA && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
+              <label className="block text-sm font-medium text-gray-300 mb-2">2FA Authenticator Code</label>
+              <input
+                type="text"
+                value={otpToken}
+                onChange={e => setOtpToken(e.target.value)}
+                placeholder="6-digit code"
+                maxLength={6}
+                className="w-full glass-input px-4 py-3 tracking-widest text-center"
+              />
+            </motion.div>
+          )}
 
           {/* Remember me */}
           <div className="flex items-center">

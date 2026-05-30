@@ -178,6 +178,8 @@ export default function CustomersClient({
   const [showNoteDate, setShowNoteDate] = useState(false);
   const [renewBack, setRenewBack] = useState(true);
   const [rechargeNote, setRechargeNote] = useState("");
+  const [customBaseDate, setCustomBaseDate] = useState<string>("");
+  const [customExpireDate, setCustomExpireDate] = useState<string>("");
   const [rechargeLoading, setRechargeLoading] = useState(false);
   const [rechargeSuccessMessage, setRechargeSuccessMessage] = useState<string | null>(null);
   const [selectedNewPackageId, setSelectedNewPackageId] = useState<string>("");
@@ -278,7 +280,19 @@ export default function CustomersClient({
   let durationVal = 1;
 
   if (billingType === "monthly") {
-    durationVal = Math.max(1, selectedMonths.length);
+    if (customBaseDate && customExpireDate) {
+      const start = new Date(customBaseDate);
+      const end = new Date(customExpireDate);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start) {
+        const diffTime = end.getTime() - start.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        durationVal = Math.max(1, Math.round(diffDays / 30));
+      } else {
+        durationVal = 1;
+      }
+    } else {
+      durationVal = 1;
+    }
     calculatedAmount = monthlyPrice * durationVal;
   } else {
     const daysVal = parseInt(rechargeDays) || 30;
@@ -310,12 +324,47 @@ export default function CustomersClient({
     setOverrideCalculated("");
     setOverridePaid("");
     setOverrideDue("");
-  }, [rechargeCustomer, billingType, selectedMonths, rechargeDays, discount, selectedNewPackageId]);
+  }, [rechargeCustomer, billingType, selectedMonths, rechargeDays, discount, selectedNewPackageId, customBaseDate, customExpireDate]);
 
-  // Reset new package selection when modal opens for a different customer
+  // Reset new package selection and custom dates when modal opens for a different customer
   useEffect(() => {
     setSelectedNewPackageId("");
-  }, [rechargeCustomer?.id]);
+    setRechargeNote("");
+    setShowNoteDate(false);
+
+    if (rechargeCustomer) {
+      const today = new Date();
+      const todayStr = today.toISOString().split("T")[0];
+      let defaultBase = todayStr;
+
+      if (renewBack && rechargeCustomer.expireDate) {
+        const expDate = new Date(rechargeCustomer.expireDate);
+        if (!isNaN(expDate.getTime()) && expDate > today) {
+          defaultBase = expDate.toISOString().split("T")[0];
+        }
+      }
+      setCustomBaseDate(defaultBase);
+
+      const expDateObj = new Date(defaultBase);
+      expDateObj.setMonth(expDateObj.getMonth() + 1);
+      const yyyy = expDateObj.getFullYear();
+      const mm = String(expDateObj.getMonth() + 1).padStart(2, '0');
+      const dd = String(expDateObj.getDate()).padStart(2, '0');
+      let hh = "23";
+      let min = "59";
+      if (rechargeCustomer.expireDate) {
+        const origExp = new Date(rechargeCustomer.expireDate);
+        if (!isNaN(origExp.getTime())) {
+          hh = String(origExp.getHours()).padStart(2, '0');
+          min = String(origExp.getMinutes()).padStart(2, '0');
+        }
+      }
+      setCustomExpireDate(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
+    } else {
+      setCustomBaseDate("");
+      setCustomExpireDate("");
+    }
+  }, [rechargeCustomer?.id, renewBack]);
 
   // Handle advanced recharge submit
   const handleRechargeSubmit = async (e: React.FormEvent) => {
@@ -338,6 +387,8 @@ export default function CustomersClient({
           note: showNoteDate ? rechargeNote : "",
           renewBack,
           newPackageId: selectedNewPackageId ? Number(selectedNewPackageId) : undefined,
+          customBaseDate: customBaseDate ? customBaseDate : undefined,
+          customExpireDate: customExpireDate ? customExpireDate : undefined,
         }),
       });
 
@@ -1058,39 +1109,47 @@ export default function CustomersClient({
 
                 {/* Conditional Fields based on Billing Type */}
                 {billingType === "monthly" ? (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">মাস সিলেক্ট করুন (Select Months)</label>
-                    <div className="flex gap-2 flex-wrap mb-2">
-                      {selectedMonths.map((m) => (
-                        <span key={m} className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#0284c7]/20 text-[#38bdf8] border border-[#0284c7]/30 text-xs font-bold">
-                          {m} 
-                          <button 
-                            type="button" 
-                            onClick={() => setSelectedMonths(selectedMonths.filter(x => x !== m))}
-                            className="text-red-400 hover:text-red-200"
-                          >
-                            <X size={10} />
-                          </button>
-                        </span>
-                      ))}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">রিচার্জ শুরুর তারিখ (Base Date)</label>
+                      <input 
+                        type="date"
+                        value={customBaseDate}
+                        onChange={(e) => {
+                          const newBase = e.target.value;
+                          setCustomBaseDate(newBase);
+                          
+                          // Recalculate expiry date automatically to 1 month from newBase
+                          if (newBase) {
+                            const expDateObj = new Date(newBase);
+                            expDateObj.setMonth(expDateObj.getMonth() + 1);
+                            const yyyy = expDateObj.getFullYear();
+                            const mm = String(expDateObj.getMonth() + 1).padStart(2, '0');
+                            const dd = String(expDateObj.getDate()).padStart(2, '0');
+                            let hh = "23";
+                            let min = "59";
+                            if (rechargeCustomer?.expireDate) {
+                              const origExp = new Date(rechargeCustomer.expireDate);
+                              if (!isNaN(origExp.getTime())) {
+                                hh = String(origExp.getHours()).padStart(2, '0');
+                                min = String(origExp.getMinutes()).padStart(2, '0');
+                              }
+                            }
+                            setCustomExpireDate(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
+                          }
+                        }}
+                        className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
+                      />
                     </div>
-                    <select
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val && !selectedMonths.includes(val)) {
-                          setSelectedMonths([...selectedMonths, val]);
-                        }
-                        e.target.value = "";
-                      }}
-                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white"
-                    >
-                      <option value="">-- মাস নির্বাচন করুন --</option>
-                      {getMonthsList().map((m) => (
-                        <option key={m} value={m} disabled={selectedMonths.includes(m)} className="bg-slate-800">
-                          {m}
-                        </option>
-                      ))}
-                    </select>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">মেয়াদ শেষ হওয়ার তারিখ (Expiry Date)</label>
+                      <input 
+                        type="datetime-local"
+                        value={customExpireDate}
+                        onChange={(e) => setCustomExpireDate(e.target.value)}
+                        className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div>
@@ -1098,7 +1157,30 @@ export default function CustomersClient({
                     <input 
                       type="text" 
                       value={rechargeDays} 
-                      onChange={(e) => setRechargeDays(e.target.value)}
+                      onChange={(e) => {
+                        const daysVal = e.target.value;
+                        setRechargeDays(daysVal);
+                        
+                        // Dynamically update customExpireDate based on number of days from baseDate
+                        if (customBaseDate) {
+                          const base = new Date(customBaseDate);
+                          const numDays = parseInt(daysVal) || 0;
+                          base.setDate(base.getDate() + numDays);
+                          const yyyy = base.getFullYear();
+                          const mm = String(base.getMonth() + 1).padStart(2, '0');
+                          const dd = String(base.getDate()).padStart(2, '0');
+                          let hh = "23";
+                          let min = "59";
+                          if (rechargeCustomer?.expireDate) {
+                            const origExp = new Date(rechargeCustomer.expireDate);
+                            if (!isNaN(origExp.getTime())) {
+                              hh = String(origExp.getHours()).padStart(2, '0');
+                              min = String(origExp.getMinutes()).padStart(2, '0');
+                            }
+                          }
+                          setCustomExpireDate(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
+                        }
+                      }}
                       className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
                     />
                   </div>
@@ -1140,7 +1222,7 @@ export default function CustomersClient({
                       className="rounded bg-slate-800 border-white/10 text-neon-blue focus:ring-0" 
                     />
                     <label htmlFor="showNoteDate" className="text-xs font-semibold text-gray-300 cursor-pointer select-none">
-                      নোট এবং তারিখ (Note and Date)
+                      নোট (Note)
                     </label>
                   </div>
                 </div>
@@ -1149,15 +1231,17 @@ export default function CustomersClient({
                   <motion.div 
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
-                    className="space-y-1"
+                    className="space-y-3"
                   >
-                    <label className="block text-xs font-semibold text-gray-300">নোট (Note)</label>
-                    <textarea 
-                      value={rechargeNote} 
-                      onChange={(e) => setRechargeNote(e.target.value)}
-                      placeholder="পেমেন্ট বা রিচার্জ নোট লিখুন..." 
-                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white h-16 resize-none" 
-                    />
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1">নোট (Note)</label>
+                      <textarea 
+                        value={rechargeNote} 
+                        onChange={(e) => setRechargeNote(e.target.value)}
+                        placeholder="পেমেন্ট বা রিচার্জ নোট লিখুন..." 
+                        className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white h-16 resize-none" 
+                      />
+                    </div>
                   </motion.div>
                 )}
 

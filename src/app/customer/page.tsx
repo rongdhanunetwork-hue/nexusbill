@@ -69,7 +69,7 @@ export default async function CustomerDashboard() {
       day: label,
       download: match ? parseFloat(String(match.downloadGb || 0)) : 0,
       upload: match ? parseFloat(String(match.uploadGb || 0)) : 0,
-      hasReal: !!match,
+      hasReal: true, // Display the chart with populated real/0 data
     };
   });
 
@@ -85,6 +85,7 @@ export default async function CustomerDashboard() {
       noticeMessage={latestNotice?.message || null}
       status={customer.status || "active"}
       usageData={last7DaysUsage}
+      pppoeUsername={customer.pppoeUsername || null}
     />
   );
 }
