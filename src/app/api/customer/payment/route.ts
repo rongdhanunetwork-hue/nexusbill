@@ -61,6 +61,7 @@ export async function POST(req: Request) {
     // Log transaction
     await db.insert(transactions).values({
       customerId: customer.id,
+      resellerId: customer.resellerId || 1, // Fallback to 1 (Admin) if direct customer
       amount: String(amount),
       type: "recharge",
     });
