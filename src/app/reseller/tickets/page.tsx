@@ -43,22 +43,26 @@ export default function ResellerTicketsPage() {
   const [sendingReply, setSendingReply] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  useEffect(() => {
-    fetchTickets();
-  }, []);
-
   async function fetchTickets() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/tickets");
-      const data = await res.json();
-      if (Array.isArray(data)) setTickets(data);
+      if (res.ok) {
+        const data = await res.json();
+        setTickets(data);
+      }
     } catch (err) {
-      console.error("Error fetching tickets:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+
 
   async function handleSelectTicket(ticket: Ticket) {
     setSelectedTicket(ticket);

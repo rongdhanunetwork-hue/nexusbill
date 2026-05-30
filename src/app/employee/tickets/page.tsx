@@ -41,6 +41,8 @@ export default function EmployeeTicketsPage() {
   const [repliesLoading, setRepliesLoading] = useState(false);
 
   async function fetchTickets() {
+    setLoading(true);
+    try {
       const res = await fetch("/api/admin/tickets");
       const data = await res.json();
       if (Array.isArray(data)) setTickets(data);

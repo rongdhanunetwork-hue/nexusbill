@@ -61,7 +61,7 @@ export default async function ResellerDashboard() {
   const expiredCustomers = allDbCustomers.filter(c => c.status === "expired").length;
 
   const now = new Date();
-  const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const upcomingExpires = allDbCustomers.filter(c => {
     if (c.status !== "active" || !c.expireDate) return false;
     const exp = new Date(c.expireDate);
