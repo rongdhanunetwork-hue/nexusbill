@@ -30,26 +30,45 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const updateData: Record<string, unknown> = {};
 
     if (body.name) updateData.name = body.name.trim();
-    if (body.phone) updateData.phone = body.phone.trim();
+    if (body.phone) {
+      const p = body.phone.trim();
+      if (p !== oldCustomer.phone) {
+        const existingPhone = await db.query.users.findFirst({ where: eq(users.phone, p) });
+        if (existingPhone && existingPhone.id !== customerId) {
+          return NextResponse.json({ error: "Phone already registered" }, { status: 409 });
+        }
+      }
+      updateData.phone = p;
+    }
     if (body.address !== undefined) updateData.address = body.address?.trim() || null;
-    if (body.pppoeUsername !== undefined) updateData.pppoeUsername = body.pppoeUsername?.trim() || null;
+    if (body.pppoeUsername !== undefined) {
+      const ppp = body.pppoeUsername?.trim() || null;
+      if (ppp && ppp !== oldCustomer.pppoeUsername) {
+        const existingPPPoE = await db.query.users.findFirst({ where: eq(users.pppoeUsername, ppp) });
+        if (existingPPPoE && existingPPPoE.id !== customerId) {
+          return NextResponse.json({ error: "PPPoE Username already exists. Please use a unique ID." }, { status: 409 });
+        }
+      }
+      updateData.pppoeUsername = ppp;
+    }
     if (body.macAddress !== undefined) updateData.macAddress = body.macAddress?.trim() || null;
     if (body.ipAddress !== undefined) updateData.ipAddress = body.ipAddress?.trim() || null;
     if (body.photoUrl !== undefined) updateData.photoUrl = body.photoUrl || null;
     if (body.nidUrl !== undefined) updateData.nidUrl = body.nidUrl || null;
     if (body.nidNumber !== undefined) updateData.nidNumber = body.nidNumber?.trim() || null;
-    if (body.createdAt !== undefined) updateData.createdAt = body.createdAt ? new Date(body.createdAt) : null;
-    if (body.expireDate !== undefined) updateData.expireDate = body.expireDate ? new Date(body.expireDate) : null;
-    if (body.dob !== undefined) updateData.dob = body.dob ? new Date(body.dob) : null;
+    if (body.createdAt !== undefined) updateData.createdAt = body.createdAt ? new Date(body.createdAt + (body.createdAt.includes('Z') ? '' : 'Z')) : null;
+    if (body.expireDate !== undefined) updateData.expireDate = body.expireDate ? new Date(body.expireDate + (body.expireDate.includes('Z') ? '' : 'Z')) : null;
+    if (body.dob !== undefined) updateData.dob = body.dob ? new Date(body.dob + (body.dob.includes('Z') ? '' : 'Z')) : null;
     if (body.status) updateData.status = body.status;
     if (body.approvalStatus) updateData.approvalStatus = body.approvalStatus;
     if (body.mikrotikId !== undefined) updateData.mikrotikId = body.mikrotikId ? Number(body.mikrotikId) : null;
     if (body.areaId !== undefined) updateData.areaId = body.areaId ? Number(body.areaId) : null;
     if (body.customerType !== undefined) updateData.customerType = body.customerType || "pppoe";
     if (body.connectionFee !== undefined) updateData.connectionFee = body.connectionFee ? String(body.connectionFee) : "0";
-    if (body.promiseDate !== undefined) updateData.promiseDate = body.promiseDate ? new Date(body.promiseDate) : null;
+    if (body.promiseDate !== undefined) updateData.promiseDate = body.promiseDate ? new Date(body.promiseDate + (body.promiseDate.includes('Z') ? '' : 'Z')) : null;
     if (body.note !== undefined) updateData.note = body.note || null;
     if (body.balance !== undefined) updateData.balance = body.balance ? String(body.balance) : "0";
+    if (body.autoRenew !== undefined) updateData.autoRenew = Boolean(body.autoRenew);
 
     // Package change
     if (body.packageId !== undefined) {
@@ -74,13 +93,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
 
       if (newUsername) {
-        // Sync the new/updated secret
-        await syncCustomerToMikrotik(
-          newUsername,
-          body.password || undefined,
-          updated.packageId,
-          updated.status
-        );
+        // Only sync if crucial connection details changed
+        const needsMikrotikSync = 
+          (body.password !== undefined && body.password.length >= 6) ||
+          (updated.packageId !== oldCustomer.packageId) ||
+          (updated.status !== oldCustomer.status) ||
+          (oldUsername !== newUsername);
+          
+        if (needsMikrotikSync) {
+          // Sync the new/updated secret
+          await syncCustomerToMikrotik(
+            newUsername,
+            body.password || undefined,
+            updated.packageId,
+            updated.status
+          );
+        }
       }
     }
 

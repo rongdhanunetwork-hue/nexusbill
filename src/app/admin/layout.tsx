@@ -40,6 +40,7 @@ const navigation = [
   { name: "Package Requests", href: "/admin/package-requests", icon: TrendingUp },
   { name: "SMS Templates", href: "/admin/sms-templates", icon: MessageSquare },
   { name: "SMS Logs", href: "/admin/sms-log", icon: History },
+  { name: "Areas & Pole Boxes", href: "/admin/areas", icon: Layers },
   { name: "MikroTik", href: "/admin/mikrotik", icon: Router },
   { name: "Notice", href: "/admin/notices", icon: Megaphone },
   { name: "Support", href: "/admin/tickets", icon: LifeBuoy },

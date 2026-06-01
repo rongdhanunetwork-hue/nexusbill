@@ -30,11 +30,63 @@ export async function GET(req: NextRequest) {
     let expiredCount = 0;
     let smsCount = 0;
     let mikrotikCount = 0;
+    let renewedCount = 0;
     const errors: string[] = [];
 
     for (const customer of expiredCustomers) {
       try {
-        // Mark customer as expired
+        const pkgPrice = customer.package ? parseFloat(String(customer.package.price)) : 0;
+        const wallet = parseFloat(String(customer.walletBalance || "0"));
+
+        if (customer.autoRenew && pkgPrice > 0 && wallet >= pkgPrice) {
+          // Auto Renew logic
+          const newWalletBalance = wallet - pkgPrice;
+          
+          // Calculate new expire date based on package duration
+          const durationDays = customer.package?.durationDays || 30;
+          const newExpireDate = new Date(customer.expireDate || now);
+          newExpireDate.setDate(newExpireDate.getDate() + durationDays);
+
+          await db.update(users)
+            .set({ 
+              walletBalance: String(newWalletBalance),
+              expireDate: newExpireDate 
+            })
+            .where(eq(users.id, customer.id));
+
+          // Log payment/invoice
+          try {
+            const { invoices, payments } = await import("@/db/schema");
+            const [inv] = await db.insert(invoices).values({
+              userId: customer.id,
+              amount: String(pkgPrice),
+              dueAmount: "0",
+              paidAmount: String(pkgPrice),
+              status: "paid",
+              description: `Auto-renewal for ${customer.package?.name}`,
+              type: "monthly",
+              month: newExpireDate.toLocaleString("default", { month: "long" }),
+              year: newExpireDate.getFullYear(),
+              createdAt: now,
+            }).returning();
+
+            await db.insert(payments).values({
+              userId: customer.id,
+              invoiceId: inv.id,
+              amount: String(pkgPrice),
+              method: "wallet",
+              note: "Auto-deducted from wallet",
+              date: now,
+            });
+          } catch (e) {
+            errors.push(`Auto-renew invoice error for ${customer.name}: ${e}`);
+          }
+
+          renewedCount++;
+          continue; // Skip the expiration logic below
+        }
+
+        // Expiration Logic
         await db.update(users)
           .set({ status: "expired" })
           .where(eq(users.id, customer.id));
@@ -106,6 +158,7 @@ export async function GET(req: NextRequest) {
       success: true,
       timestamp: now.toISOString(),
       expired: expiredCount,
+      renewed: renewedCount,
       mikrotikDisabled: mikrotikCount,
       smsSent: smsCount,
       reminders: reminderCount,

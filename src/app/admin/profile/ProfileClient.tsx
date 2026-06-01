@@ -262,7 +262,7 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
                   <DetailItem label="Package Rate" value="৳2,000.00" />
                   <DetailItem label="Customer Limit" value="1,000 Users" />
                   <DetailItem label="Total Customer" value={`${totalCustomers} Users`} />
-                  <DetailItem label="Customer Type" value="PPPoE / Static / Hotspot" />
+                  <DetailItem label="Customer Type" value="PPPoE / Static" />
                   <DetailItem label="Payment status" value="Paid" badge="bg-neon-green/20 text-neon-green border-neon-green/30" />
                   <DetailItem label="Non Masking SMS Rate" value="৳0.30" />
                   <DetailItem label="Fixed Number SMS Rate" value="৳0.45" />

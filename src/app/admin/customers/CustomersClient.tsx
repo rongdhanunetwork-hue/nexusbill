@@ -41,6 +41,7 @@ export default function CustomersClient({
   activePppoeNames = [],
   activeSessions = [],
   initialStatus = "All Status",
+  resellers = [],
   role = "admin",
 }: {
   allCustomers: Customer[];
@@ -48,6 +49,7 @@ export default function CustomersClient({
   activePppoeNames?: string[];
   activeSessions?: any[];
   initialStatus?: string;
+  resellers?: {id: number, name: string}[];
   role?: "admin" | "reseller" | "employee";
 }) {
   const basePath = role === "reseller" ? "/reseller" : role === "employee" ? "/employee" : "/admin";
@@ -59,6 +61,7 @@ export default function CustomersClient({
   const [packagesList, setPackagesList] = useState<any[]>([]);
   const [selectedAreaId, setSelectedAreaId] = useState("All Areas");
   const [selectedPackageId, setSelectedPackageId] = useState("All Packages");
+  const [selectedResellerId, setSelectedResellerId] = useState("All Resellers");
 
   useEffect(() => {
     fetch("/api/admin/areas")
@@ -233,7 +236,16 @@ export default function CustomersClient({
       customer.phone.includes(searchTerm) ||
       (customer.pppoeUsername || "").toLowerCase().includes(searchTerm.toLowerCase());
 
-    const activeSession = customer.pppoeUsername
+    const samePppoeCustomers = customersList
+      .filter((c) => c.pppoeUsername && c.pppoeUsername.toLowerCase() === customer.pppoeUsername?.toLowerCase())
+      .sort((a: any, b: any) => {
+        if (!a.resellerId && b.resellerId) return -1;
+        if (a.resellerId && !b.resellerId) return 1;
+        return a.id - b.id;
+      });
+    const isPrimaryPppoeOwner = samePppoeCustomers.length > 0 ? samePppoeCustomers[0].id === customer.id : true;
+
+    const activeSession = customer.pppoeUsername && isPrimaryPppoeOwner
       ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
       : null;
     const daysLeft = getDaysLeft(customer.expireDate);
@@ -266,8 +278,9 @@ export default function CustomersClient({
 
     const matchesArea = selectedAreaId === "All Areas" || String(customer.areaId) === selectedAreaId;
     const matchesPackage = selectedPackageId === "All Packages" || String(customer.packageId) === selectedPackageId;
+    const matchesReseller = selectedResellerId === "All Resellers" || String((customer as any).resellerId) === selectedResellerId;
 
-    return matchesSearch && matchesStatus && matchesArea && matchesPackage;
+    return matchesSearch && matchesStatus && matchesArea && matchesPackage && matchesReseller;
   });
 
   // Calculate values for Recharge Modal
@@ -295,12 +308,15 @@ export default function CustomersClient({
     }
     calculatedAmount = monthlyPrice * durationVal;
   } else {
-    const daysVal = parseInt(rechargeDays) || 30;
+    const daysVal = parseInt(rechargeDays) || 1;
     durationVal = daysVal;
     const dailyRate = monthlyPrice / 30;
     calculatedAmount = Math.round(dailyRate * daysVal);
   }
 
+  // Use overrideCalculated if the user typed something, otherwise use the calculatedAmount
+  // But if calculatedAmount changes significantly (e.g. they change days or package), we might want to update.
+  // Actually, standard behavior: display calculatedAmount if overrideCalculated is empty.
   const displayCalculated = overrideCalculated !== "" ? overrideCalculated : String(calculatedAmount);
   const currentCalculatedVal = parseFloat(displayCalculated) || 0;
   const currentDiscountVal = parseFloat(discount) || 0;
@@ -319,12 +335,12 @@ export default function CustomersClient({
     displayDue = String(Math.max(0, finalAmount - paidVal));
   }
 
-  // Reset overrides when recharge configuration inputs change
+  // Reset overrides when recharge configuration inputs change, EXCEPT for customExpireDate which updates frequently
   useEffect(() => {
     setOverrideCalculated("");
     setOverridePaid("");
     setOverrideDue("");
-  }, [rechargeCustomer, billingType, selectedMonths, rechargeDays, discount, selectedNewPackageId, customBaseDate, customExpireDate]);
+  }, [rechargeCustomer, billingType, selectedMonths, rechargeDays, discount, selectedNewPackageId, customBaseDate]);
 
   // Reset new package selection and custom dates when modal opens for a different customer
   useEffect(() => {
@@ -431,6 +447,27 @@ export default function CustomersClient({
       const d = await res.json();
       if (res.ok) {
         alert(d.message || "Session disconnected successfully");
+        window.location.reload();
+      } else {
+        alert(d.error || "Action failed");
+      }
+    } catch {
+      alert("Network error");
+    }
+  };
+
+  // Suspend Customer (Change status to expired)
+  const triggerSuspend = async (customer: Customer) => {
+    if (!confirm(`Are you sure you want to suspend "${customer.name}"? This will disable their internet connection.`)) return;
+    try {
+      const res = await fetch(`/api/admin/customers/${customer.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "expired" }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        alert("Customer suspended successfully.");
         window.location.reload();
       } else {
         alert(d.error || "Action failed");
@@ -571,6 +608,9 @@ export default function CustomersClient({
         </div>
 
         <div className="flex flex-row flex-wrap items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-neon-blue/10 border border-neon-blue/20 rounded-lg text-neon-blue font-bold text-xs no-print">
+            Total: {filteredCustomers.length}
+          </div>
           <div className="flex gap-2">
             <button
               onClick={downloadPDF}
@@ -629,6 +669,22 @@ export default function CustomersClient({
               </option>
             ))}
           </select>
+
+          {role === "admin" && resellers.length > 0 && (
+            <select
+              value={selectedResellerId}
+              onChange={(e) => setSelectedResellerId(e.target.value)}
+              className="glass-input px-4 py-2 bg-slate-800 focus:ring-neon-blue focus:ring-2 cursor-pointer text-xs font-semibold text-white border border-white/10"
+            >
+              <option value="All Resellers" className="bg-slate-800">All Resellers</option>
+              <option value="null" className="bg-slate-800">My Customers (Admin)</option>
+              {resellers.map(reseller => (
+                <option key={reseller.id} value={String(reseller.id)} className="bg-slate-800">
+                  Reseller: {reseller.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -636,6 +692,7 @@ export default function CustomersClient({
         <table className="w-full text-left border-collapse min-w-[900px]">
           <thead>
             <tr className="border-b border-white/10 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-white/5">
+              <th className="p-5 w-16 text-center">#</th>
               <th className="p-5">মোবাইল/ঠিকানা (Customer Info)</th>
               <th className="p-5">প্যাকেজ (Connection/Package)</th>
               <th className="p-5">বিল/ব্যালেন্স (Bill / Balance)</th>
@@ -653,13 +710,13 @@ export default function CustomersClient({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  <td colSpan={7} className="p-12 text-center text-gray-500">
+                  <td colSpan={8} className="p-12 text-center text-gray-500">
                     <WifiOff size={40} className="mx-auto mb-3 text-gray-600" />
                     No customers found matching the criteria.
                   </td>
                 </motion.tr>
               ) : (
-                filteredCustomers.map((customer) => {
+                filteredCustomers.map((customer, index) => {
                   const daysLeft = getDaysLeft(customer.expireDate);
                   const activeSession = customer.pppoeUsername
                     ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
@@ -677,6 +734,11 @@ export default function CustomersClient({
                       transition={{ duration: 0.2 }}
                       className="hover:bg-white/5 transition-colors group"
                     >
+                      {/* Serial Number */}
+                      <td className="p-5 text-center text-gray-500 font-mono text-xs">
+                        {index + 1}
+                      </td>
+
                       {/* 1. Customer Info */}
                       <td className="p-5">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -684,6 +746,11 @@ export default function CustomersClient({
                             {customer.name}
                           </Link>
                           <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-gray-400 border border-white/5 uppercase font-mono">{customer.customerType || "pppoe"}</span>
+                          {role === "admin" && (customer as any).resellerId && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase">
+                              {resellers.find(r => r.id === (customer as any).resellerId)?.name || "Reseller"}
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-400">{customer.phone}</div>
                         <div className="text-xs text-gray-500 max-w-48 truncate">{customer.address || "No address"}</div>
@@ -905,15 +972,26 @@ export default function CustomersClient({
 
                               {/* 8. ডিসকানেক্ট দিন */}
                               {role !== "employee" && customer.pppoeUsername && (
-                                <button
-                                  onClick={() => {
-                                    triggerKick(customer.pppoeUsername!);
-                                    setActiveDropdownId(null);
-                                  }}
-                                  className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-orange-400 hover:bg-orange-500/10 transition-colors"
-                                >
-                                  <LogOut size={13} /> ডিসকানেক্ট দিন (Kick)
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      triggerKick(customer.pppoeUsername!);
+                                      setActiveDropdownId(null);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-orange-400 hover:bg-orange-500/10 transition-colors"
+                                  >
+                                    <LogOut size={13} /> ডিসকানেক্ট দিন (Kick)
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      triggerSuspend(customer);
+                                      setActiveDropdownId(null);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10 transition-colors"
+                                  >
+                                    <ShieldAlert size={13} /> Suspend (লাইন বন্ধ করুন)
+                                  </button>
+                                </>
                               )}
 
                               {/* 9. ওপেন সাপোর্ট টিকেট */}
@@ -1107,53 +1185,62 @@ export default function CustomersClient({
                 </div>
 
 
-                {/* Conditional Fields based on Billing Type */}
-                {billingType === "monthly" ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">রিচার্জ শুরুর তারিখ (Base Date)</label>
-                      <input 
-                        type="date"
-                        value={customBaseDate}
-                        onChange={(e) => {
-                          const newBase = e.target.value;
-                          setCustomBaseDate(newBase);
-                          
-                          // Recalculate expiry date automatically to 1 month from newBase
-                          if (newBase) {
-                            const expDateObj = new Date(newBase);
-                            expDateObj.setMonth(expDateObj.getMonth() + 1);
-                            const yyyy = expDateObj.getFullYear();
-                            const mm = String(expDateObj.getMonth() + 1).padStart(2, '0');
-                            const dd = String(expDateObj.getDate()).padStart(2, '0');
-                            let hh = "23";
-                            let min = "59";
-                            if (rechargeCustomer?.expireDate) {
-                              const origExp = new Date(rechargeCustomer.expireDate);
-                              if (!isNaN(origExp.getTime())) {
-                                hh = String(origExp.getHours()).padStart(2, '0');
-                                min = String(origExp.getMinutes()).padStart(2, '0');
-                              }
-                            }
-                            setCustomExpireDate(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
-                          }
-                        }}
-                        className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">মেয়াদ শেষ হওয়ার তারিখ (Expiry Date)</label>
-                      <input 
-                        type="datetime-local"
-                        value={customExpireDate}
-                        onChange={(e) => setCustomExpireDate(e.target.value)}
-                        className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
-                      />
-                    </div>
-                  </div>
-                ) : (
+                {/* Date Fields (Always visible now) */}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">দিন সংখ্যা (Number of Days)</label>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">রিচার্জ শুরুর তারিখ (Base Date)</label>
+                    <input 
+                      type="date"
+                      value={customBaseDate}
+                      onChange={(e) => {
+                        const newBase = e.target.value;
+                        setCustomBaseDate(newBase);
+                        
+                        // Recalculate expiry date automatically
+                        if (newBase) {
+                          const expDateObj = new Date(newBase);
+                          if (billingType === "monthly") {
+                            expDateObj.setMonth(expDateObj.getMonth() + 1);
+                          } else {
+                            expDateObj.setDate(expDateObj.getDate() + (parseInt(rechargeDays) || 1));
+                          }
+                          const yyyy = expDateObj.getFullYear();
+                          const mm = String(expDateObj.getMonth() + 1).padStart(2, '0');
+                          const dd = String(expDateObj.getDate()).padStart(2, '0');
+                          let hh = "23";
+                          let min = "59";
+                          if (rechargeCustomer?.expireDate) {
+                            const origExp = new Date(rechargeCustomer.expireDate);
+                            if (!isNaN(origExp.getTime())) {
+                              hh = String(origExp.getHours()).padStart(2, '0');
+                              min = String(origExp.getMinutes()).padStart(2, '0');
+                            }
+                          }
+                          setCustomExpireDate(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
+                        }
+                      }}
+                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">মেয়াদ শেষ হওয়ার তারিখ (Expiry Date)</label>
+                    <input 
+                      type="datetime-local"
+                      value={customExpireDate}
+                      onChange={(e) => setCustomExpireDate(e.target.value)}
+                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
+                    />
+                  </div>
+                </div>
+
+                {billingType === "daily" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+                      দিন সংখ্যা (Number of Days) 
+                      <span className="text-neon-blue ml-2 font-normal">
+                        (রেট: ৳{Math.round((parseFloat(selectedNewPkg?.price || rechargeCustomer?.package?.price || "0") / 30) * 100) / 100} / দিন)
+                      </span>
+                    </label>
                     <input 
                       type="text" 
                       value={rechargeDays} 
@@ -1181,7 +1268,8 @@ export default function CustomersClient({
                           setCustomExpireDate(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
                         }
                       }}
-                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
+                      className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white border border-neon-blue/30" 
+                      placeholder="e.g. 1"
                     />
                   </div>
                 )}

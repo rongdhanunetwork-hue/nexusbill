@@ -69,7 +69,7 @@ export async function POST(req: Request) {
       const numDuration = Number(duration) || 1;
 
       if (billingType === "monthly") {
-        newExpireDate.setDate(newExpireDate.getDate() + numDuration * 30);
+        newExpireDate.setMonth(newExpireDate.getMonth() + numDuration);
       } else {
         newExpireDate.setDate(newExpireDate.getDate() + numDuration);
       }

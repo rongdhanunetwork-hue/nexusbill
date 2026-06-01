@@ -96,8 +96,12 @@ export async function syncCustomerToMikrotik(
     });
     const finalRouterId = routerId || user?.mikrotikId || undefined;
 
-    // 2. Fetch package speed to map to router profile
-    let profile = "default";
+    // 2. Fetch secrets to check if this user already exists
+    const secrets = await getPppoeSecrets(finalRouterId);
+    const existingSecret = secrets.find(s => s.name.toLowerCase() === pppoeUsername.toLowerCase());
+
+    // 3. Fetch package speed to map to router profile
+    let profile = existingSecret ? existingSecret.profile : "default";
     if (packageId) {
       const pkg = await db.query.packages.findFirst({ where: eq(packages.id, Number(packageId)) });
       if (pkg) {
@@ -114,10 +118,6 @@ export async function syncCustomerToMikrotik(
         }
       }
     }
-
-    // 3. Fetch secrets to check if this user already exists
-    const secrets = await getPppoeSecrets(finalRouterId);
-    const existingSecret = secrets.find(s => s.name.toLowerCase() === pppoeUsername.toLowerCase());
 
     const isDisabled = status === "expired" || status === "suspended" ? "true" : "false";
 

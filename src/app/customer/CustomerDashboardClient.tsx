@@ -236,31 +236,33 @@ export default function CustomerDashboardClient({
             <span className="text-xs text-gray-400 no-print">
               {chartMode === "live" ? "Live Traffic Speed" : `Cumulative: Down ${totalDownload} GB / Up ${totalUpload} GB`}
             </span>
-            <div className="flex gap-1.5 bg-white/5 p-1 rounded-xl no-print border border-white/10">
-              <button
-                type="button"
-                onClick={() => setChartMode("history")}
-                className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all ${
-                  chartMode === "history"
-                    ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                Historical (GB)
-              </button>
-              <button
-                type="button"
-                onClick={() => setChartMode("live")}
-                className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                  chartMode === "live"
-                    ? "bg-neon-green/20 text-neon-green border border-neon-green/20"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full bg-neon-green ${chartMode === "live" ? "animate-pulse" : ""}`} />
-                Live Rate
-              </button>
-            </div>
+            {(status === "active" || status === "online" || dbTotalDownload > 0 || dbTotalUpload > 0) && (
+              <div className="flex gap-1.5 bg-white/5 p-1 rounded-xl no-print border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setChartMode("history")}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                    chartMode === "history"
+                      ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Historical (GB)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartMode("live")}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                    chartMode === "live"
+                      ? "bg-neon-green/20 text-neon-green border border-neon-green/20"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full bg-neon-green ${chartMode === "live" ? "animate-pulse" : ""}`} />
+                  Live Rate
+                </button>
+              </div>
+            )}
           </div>
         </h3>
 
@@ -361,8 +363,9 @@ export default function CustomerDashboardClient({
       </div>
 
       {/* Live RX/TX Interface Statistics Box */}
-      <div className="glass-card p-6 border border-teal-500/20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 to-transparent opacity-60" />
+      {(status === "active" || status === "online" || dbTotalDownload > 0 || dbTotalUpload > 0) && (
+        <div className="glass-card p-6 border border-teal-500/20 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 to-transparent opacity-60" />
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -394,7 +397,8 @@ export default function CustomerDashboardClient({
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       <div className="glass-card p-6 md:p-8">
         <h3 className="text-xl font-semibold text-white mb-6">Quick Actions</h3>

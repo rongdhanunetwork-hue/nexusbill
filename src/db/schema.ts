@@ -44,6 +44,7 @@ export const users = pgTable("users", {
   permissions: text("permissions").default("[]"),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorSecret: varchar("two_factor_secret", { length: 255 }),
+  autoRenew: boolean("auto_renew").default(true),
 });
 
 export const packages = pgTable("packages", {

@@ -33,15 +33,19 @@ interface Customer {
   promiseDate: string | null;
   note: string | null;
   balance: string | null;
+  autoRenew: boolean;
 }
 
 const toLocalDatetimeString = (dateInput: string | Date | null | undefined) => {
   if (!dateInput) return "";
   const d = new Date(dateInput);
   if (isNaN(d.getTime())) return "";
-  const offset = d.getTimezoneOffset();
-  const localDate = new Date(d.getTime() - offset * 60 * 1000);
-  return localDate.toISOString().slice(0, 16);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 };
 
 function getAreaLabel(item: any, list: any[]): string {
@@ -75,6 +79,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPwd, setShowPwd] = useState(false);
+  const [autoRenew, setAutoRenew] = useState(true);
 
   useEffect(() => {
     // Fetch packages
@@ -93,6 +98,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       .then((r) => r.json())
       .then((data) => {
         setCustomer(data);
+        setAutoRenew(data.autoRenew !== false);
         setLoading(false);
       })
       .catch(() => {
@@ -116,15 +122,16 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       nidNumber: String(form.get("nidNumber") || "").trim(),
       packageId: form.get("packageId") ? Number(form.get("packageId")) : null,
       status: String(form.get("status") || "active"),
-      createdAt: form.get("createdAt") ? new Date(String(form.get("createdAt"))).toISOString() : null,
-      expireDate: form.get("expireDate") ? new Date(String(form.get("expireDate"))).toISOString() : null,
-      dob: form.get("dob") ? new Date(String(form.get("dob"))).toISOString() : null,
+      createdAt: form.get("createdAt") ? String(form.get("createdAt")) : null,
+      expireDate: form.get("expireDate") ? String(form.get("expireDate")) : null,
+      dob: form.get("dob") ? String(form.get("dob")) : null,
       areaId: form.get("areaId") ? Number(form.get("areaId")) : null,
       customerType: String(form.get("customerType") || "pppoe"),
       connectionFee: String(form.get("connectionFee") || "0"),
       promiseDate: form.get("promiseDate") ? new Date(String(form.get("promiseDate"))).toISOString() : null,
       note: String(form.get("note") || "").trim(),
       balance: String(form.get("balance") || "0"),
+      autoRenew,
     };
 
     if (password) {
@@ -257,7 +264,6 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
             <select name="customerType" defaultValue={customer.customerType || "pppoe"} className="w-full glass-input px-4 py-3 bg-slate-800 text-white border border-white/10">
               <option value="pppoe" className="bg-slate-800">PPPoE Connection</option>
               <option value="static" className="bg-slate-800">Static IP Connection</option>
-              <option value="hotspot" className="bg-slate-800">Hotspot User</option>
             </select>
           </div>
 
@@ -288,6 +294,19 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
 
           <div className="md:col-span-2">
             <Field label="Customer Remarks / Notes" name="note" defaultValue={customer.note || ""} />
+          </div>
+
+          <div className="md:col-span-2 flex items-center gap-3 bg-white/5 p-4 rounded-xl border border-white/10">
+            <input
+              type="checkbox"
+              id="autoRenew"
+              checked={autoRenew}
+              onChange={(e) => setAutoRenew(e.target.checked)}
+              className="w-5 h-5 accent-neon-blue rounded cursor-pointer"
+            />
+            <label htmlFor="autoRenew" className="text-sm font-semibold text-gray-300 cursor-pointer">
+              Auto Renew (অটো রিচার্জ) <span className="text-xs text-gray-500 font-normal ml-1">- If checked, account will be auto-recharged based on available balance</span>
+            </label>
           </div>
         </div>
 

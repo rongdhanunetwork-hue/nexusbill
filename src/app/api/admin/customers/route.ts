@@ -46,16 +46,23 @@ export async function POST(req: Request) {
       pppoeUsername, packageId, mikrotikId,
       photoUrl, nidUrl, macAddress, ipAddress,
       nidNumber, createdAt, expireDate, dob, resellerId,
-      areaId, customerType, connectionFee, promiseDate, note
+      areaId, customerType, connectionFee, promiseDate, note, autoRenew
     } = body;
 
     if (!name || !phone || !password) {
       return NextResponse.json({ error: "Name, phone, password required" }, { status: 400 });
     }
 
-    const existing = await db.query.users.findFirst({ where: eq(users.phone, phone.trim()) });
-    if (existing) {
+    const existingPhone = await db.query.users.findFirst({ where: eq(users.phone, phone.trim()) });
+    if (existingPhone) {
       return NextResponse.json({ error: "Phone already registered" }, { status: 409 });
+    }
+
+    if (pppoeUsername?.trim()) {
+      const existingPPPoE = await db.query.users.findFirst({ where: eq(users.pppoeUsername, pppoeUsername.trim()) });
+      if (existingPPPoE) {
+        return NextResponse.json({ error: "PPPoE Username already exists. Please use a unique ID." }, { status: 409 });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -63,7 +70,7 @@ export async function POST(req: Request) {
     // Compute expiry: newly created customers are expired by default unless a custom future date is supplied
     let calculatedExpireDate: Date | null = null;
     if (expireDate) {
-      calculatedExpireDate = new Date(expireDate);
+      calculatedExpireDate = new Date(expireDate + (expireDate.includes('Z') ? '' : 'Z'));
     }
 
     const [customer] = await db.insert(users).values({
@@ -84,13 +91,14 @@ export async function POST(req: Request) {
       approvalStatus: "approved",
       status: "expired",
       expireDate: calculatedExpireDate,
-      dob: dob ? new Date(dob) : null,
-      createdAt: createdAt ? new Date(createdAt) : new Date(),
+      dob: dob ? new Date(dob + (dob.includes('Z') ? '' : 'Z')) : null,
+      createdAt: createdAt ? new Date(createdAt + (createdAt.includes('Z') ? '' : 'Z')) : new Date(),
       areaId: areaId ? Number(areaId) : null,
       customerType: customerType || "pppoe",
       connectionFee: connectionFee ? String(connectionFee) : "0",
-      promiseDate: promiseDate ? new Date(promiseDate) : null,
+      promiseDate: promiseDate ? new Date(promiseDate + (promiseDate.includes('Z') ? '' : 'Z')) : null,
       note: note || null,
+      autoRenew: autoRenew !== undefined ? Boolean(autoRenew) : true,
     }).returning();
 
     // Automatically sync customer PPPoE secret to MikroTik router (disabled by default)

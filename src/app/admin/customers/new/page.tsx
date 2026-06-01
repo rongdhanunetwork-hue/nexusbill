@@ -47,6 +47,7 @@ export default function AddCustomerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPwd, setShowPwd] = useState(false);
+  const [autoRenew, setAutoRenew] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/packages").then(r => r.json()).then(setPackages);
@@ -83,6 +84,7 @@ export default function AddCustomerPage() {
       connectionFee: String(form.get("connectionFee") || "0"),
       promiseDate: form.get("promiseDate") ? String(form.get("promiseDate")) : null,
       note: String(form.get("note") || "").trim(),
+      autoRenew: autoRenew,
     };
 
     if (!body.password || body.password.length < 6) {
@@ -174,7 +176,6 @@ export default function AddCustomerPage() {
               <select name="customerType" className="w-full glass-input px-4 py-3 bg-slate-800">
                 <option value="pppoe" className="bg-slate-800">PPPoE Connection</option>
                 <option value="static" className="bg-slate-800">Static IP Connection</option>
-                <option value="hotspot" className="bg-slate-800">Hotspot User</option>
               </select>
             </div>
             <div>
@@ -194,6 +195,18 @@ export default function AddCustomerPage() {
             <Field label="Expiration Date & Time (Expiry)" name="expireDate" type="datetime-local" />
             <div className="md:col-span-2">
               <Field label="Customer Remarks / Notes" name="note" placeholder="Any remarks or special instructions" />
+            </div>
+            <div className="md:col-span-2 flex items-center gap-3 bg-white/5 p-4 rounded-xl border border-white/10">
+              <input
+                type="checkbox"
+                id="autoRenew"
+                checked={autoRenew}
+                onChange={(e) => setAutoRenew(e.target.checked)}
+                className="w-5 h-5 accent-neon-blue rounded cursor-pointer"
+              />
+              <label htmlFor="autoRenew" className="text-sm font-semibold text-gray-300 cursor-pointer">
+                Auto Renew (অটো রিচার্জ) <span className="text-xs text-gray-500 font-normal ml-1">- If checked, account will be auto-recharged based on available balance</span>
+              </label>
             </div>
           </div>
         </section>

@@ -43,6 +43,11 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
     with: { package: true, mikrotik: true }
   });
 
+  const resellers = await db.query.users.findMany({
+    where: eq(users.role, "reseller"),
+    columns: { id: true, name: true }
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -58,6 +63,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         activePppoeNames={[]}
         activeSessions={[]}
         initialStatus={status}
+        resellers={resellers}
       />
     </div>
   );
