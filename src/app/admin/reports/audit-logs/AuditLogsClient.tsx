@@ -58,11 +58,11 @@ export default function AuditLogsClient({ initialLogs }: { initialLogs: AuditLog
           onChange={(e) => setFilterAction(e.target.value)}
           className="glass-input px-4 py-2 w-full sm:w-auto"
         >
-          <option value="">All Actions</option>
-          <option value="CREATE">Creates</option>
-          <option value="UPDATE">Updates</option>
-          <option value="DELETE">Deletes</option>
-          <option value="LOGIN">Logins</option>
+          <option value="" className="bg-slate-900 text-white">All Actions</option>
+          <option value="CREATE" className="bg-slate-900 text-white">Creates</option>
+          <option value="UPDATE" className="bg-slate-900 text-white">Updates</option>
+          <option value="DELETE" className="bg-slate-900 text-white">Deletes</option>
+          <option value="LOGIN" className="bg-slate-900 text-white">Logins</option>
         </select>
       </div>
 

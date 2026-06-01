@@ -45,6 +45,7 @@ const navigation = [
   { name: "Notice", href: "/admin/notices", icon: Megaphone },
   { name: "Support", href: "/admin/tickets", icon: LifeBuoy },
   { name: "Reports", href: "/admin/reports", icon: FileText },
+  { name: "Monthly Summary", href: "/admin/monthly-summary", icon: Layers },
   { name: "Audit Logs", href: "/admin/reports/audit-logs", icon: ShieldAlert },
   { name: "Expenses", href: "/admin/expenses", icon: TrendingDown },
   { name: "Settings", href: "/admin/settings", icon: Settings },
