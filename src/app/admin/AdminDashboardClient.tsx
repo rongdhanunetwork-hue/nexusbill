@@ -192,7 +192,7 @@ export default function AdminDashboardClient({
           <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-6 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
             <div className="absolute inset-0 bg-gradient-to-r from-neon-green/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
             <div className="relative z-10">
-              <p className="text-gray-400 font-medium mb-1 text-sm group-hover:text-green-300 transition-colors">Totalizer Collection</p>
+              <p className="text-gray-400 font-medium mb-1 text-sm group-hover:text-green-300 transition-colors">Total Collection (This Month)</p>
               <h2 className="text-3xl font-bold text-white tracking-wider"><AnimatedCounter value={props.totalizerCollection} prefix="৳" /></h2>
             </div>
             <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-neon-green shadow-[0_0_20px_rgba(57,255,20,0.25)] relative z-10 group-hover:scale-110 transition-transform">
@@ -205,7 +205,7 @@ export default function AdminDashboardClient({
           <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-6 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
             <div className="absolute inset-0 bg-gradient-to-r from-neon-red/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
             <div className="relative z-10">
-              <p className="text-gray-400 font-medium mb-1 text-sm group-hover:text-red-300 transition-colors">Due Amount</p>
+              <p className="text-gray-400 font-medium mb-1 text-sm group-hover:text-red-300 transition-colors">Due Amount (This Month)</p>
               <h2 className="text-3xl font-bold text-white tracking-wider"><AnimatedCounter value={props.dueAmount} prefix="৳" /></h2>
             </div>
             <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-neon-red shadow-[0_0_20px_rgba(255,7,58,0.25)] relative z-10 group-hover:scale-110 transition-transform">
@@ -218,7 +218,7 @@ export default function AdminDashboardClient({
           <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-6 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
             <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
             <div className="relative z-10">
-              <p className="text-gray-400 font-medium mb-1 text-sm group-hover:text-teal-300 transition-colors">Business Balance (Net)</p>
+              <p className="text-gray-400 font-medium mb-1 text-sm group-hover:text-teal-300 transition-colors">Business Balance (This Month)</p>
               <h2 className="text-3xl font-bold text-white tracking-wider"><AnimatedCounter value={businessBalance} prefix="৳" /></h2>
             </div>
             <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-teal-300 shadow-[0_0_20px_rgba(20,184,166,0.25)] relative z-10 group-hover:scale-110 transition-transform">
@@ -247,7 +247,7 @@ export default function AdminDashboardClient({
           <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-5 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
             <div className="absolute inset-0 bg-gradient-to-r from-pink-500/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
             <div className="relative z-10">
-              <p className="text-gray-400 font-medium mb-1 text-xs group-hover:text-pink-300 transition-colors">Today's Expenses</p>
+              <p className="text-gray-400 font-medium mb-1 text-xs group-hover:text-pink-300 transition-colors">Total Expenses (This Month)</p>
               <h2 className="text-2xl font-bold text-white tracking-wider"><AnimatedCounter value={totalExpense} prefix="৳" /></h2>
             </div>
             <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.2)] relative z-10 group-hover:scale-110 transition-transform">

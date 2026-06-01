@@ -23,6 +23,10 @@ export default async function ResellerDashboard() {
 
   const resellerId = session.userId;
 
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
   const [
     allDbCustomers,
     expired1Day,
@@ -48,10 +52,10 @@ export default async function ResellerDashboard() {
       .where(sql`${payments.method} = 'reseller_wallet' and ${payments.status} = 'approved' and ${payments.userId} in (select id from users where reseller_id = ${resellerId}) and ${payments.createdAt}::date = current_date`),
     db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` })
       .from(payments)
-      .where(and(eq(payments.status, "approved"), eq(payments.method, "reseller_wallet"), sql`${payments.userId} in (select id from users where reseller_id = ${resellerId})`)),
+      .where(and(eq(payments.status, "approved"), eq(payments.method, "reseller_wallet"), sql`${payments.userId} in (select id from users where reseller_id = ${resellerId})`, sql`${payments.createdAt} >= ${startOfMonth}`)),
     db.select({ sum: sql<number>`cast(coalesce(sum(${invoices.amount}), 0) as int)` })
       .from(invoices)
-      .where(and(sql`${invoices.status} in ('unpaid', 'due')`, sql`${invoices.userId} in (select id from users where reseller_id = ${resellerId})`)),
+      .where(and(sql`${invoices.status} in ('unpaid', 'due')`, sql`${invoices.userId} in (select id from users where reseller_id = ${resellerId})`, sql`${invoices.createdAt} >= ${startOfMonth}`)),
     db.select({ count: sql<number>`cast(count(*) as int)` }).from(mikrotiks),
     db.select({ count: sql<number>`cast(count(*) as int)` }).from(olts),
   ]);
@@ -69,9 +73,6 @@ export default async function ResellerDashboard() {
   }).length;
 
   // Running Month New Users
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
   const newCustomersThisMonth = allDbCustomers.filter(c => {
     if (!c.createdAt) return false;
     return new Date(c.createdAt) >= startOfMonth;

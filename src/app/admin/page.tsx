@@ -54,11 +54,11 @@ export default async function AdminDashboard() {
     countExpiredDays(4),
     db.select({ count: sql<number>`cast(count(*) as int)` }).from(payments).where(sql`${payments.status} = 'approved' and ${payments.createdAt}::date = current_date`),
     db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` }).from(payments).where(sql`${payments.status} = 'approved' and ${payments.createdAt}::date = current_date`),
-    db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` }).from(payments).where(eq(payments.status, "approved")),
-    db.select({ sum: sql<number>`cast(coalesce(sum(${invoices.amount}), 0) as int)` }).from(invoices).where(sql`${invoices.status} in ('unpaid', 'due')`),
+    db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` }).from(payments).where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${startOfMonth}`),
+    db.select({ sum: sql<number>`cast(coalesce(sum(${invoices.amount}), 0) as int)` }).from(invoices).where(sql`${invoices.status} in ('unpaid', 'due') and ${invoices.createdAt} >= ${startOfMonth}`),
     db.select({ count: sql<number>`cast(count(*) as int)` }).from(mikrotiks),
     db.select({ count: sql<number>`cast(count(*) as int)` }).from(olts),
-    db.select({ sum: sql<number>`cast(coalesce(sum(${expenses.amount}), 0) as int)` }).from(expenses),
+    db.select({ sum: sql<number>`cast(coalesce(sum(${expenses.amount}), 0) as int)` }).from(expenses).where(sql`${expenses.expenseDate} >= ${startOfMonth}`),
     db.select({ userId: payments.userId }).from(payments).where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${startOfMonth}`),
   ]);
 
