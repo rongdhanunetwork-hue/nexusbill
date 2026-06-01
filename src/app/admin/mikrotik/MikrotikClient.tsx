@@ -418,6 +418,25 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
     }
   }
 
+  async function handleToggleRouter(id: number, currentStatus: boolean) {
+    if (!confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this router?`)) return;
+    try {
+      const res = await fetch(`/api/admin/mikrotik/routers/${id}`, { 
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: !currentStatus })
+      });
+      if (res.ok) {
+        showToast(`Router ${currentStatus ? 'deactivated' : 'activated'}`, true);
+        fetchRouters();
+      } else {
+        showToast("Failed to toggle router status", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    }
+  }
+
   async function handleAddOlt(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -842,9 +861,17 @@ export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" 
                             </span>
                           </td>
                           {(role === "admin" || role === "reseller") && (
-                            <td className="p-4 text-right">
+                            <td className="p-4 text-right flex justify-end gap-2">
+                              <button
+                                onClick={() => handleToggleRouter(router.id, router.status)}
+                                title={router.status ? "Deactivate Router" : "Activate Router"}
+                                className={`p-1.5 rounded-lg border transition-colors ${router.status ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30" : "bg-neon-green/20 text-neon-green hover:bg-neon-green/30 border-neon-green/30"}`}
+                              >
+                                <Power size={15} />
+                              </button>
                               <button
                                 onClick={() => handleDeleteRouter(router.id)}
+                                title="Delete Router"
                                 className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors"
                               >
                                 <Trash size={15} />

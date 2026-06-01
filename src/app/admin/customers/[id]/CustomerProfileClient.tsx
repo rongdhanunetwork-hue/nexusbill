@@ -534,14 +534,18 @@ export default function CustomerProfileClient({
               </button>
               <button
                 type="button"
-                onClick={() => setChartMode("live")}
+                onClick={() => isOnline && setChartMode("live")}
+                disabled={!isOnline}
+                title={!isOnline ? "Customer is offline. Live rate unavailable." : "View Live Traffic"}
                 className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 ${
                   chartMode === "live"
                     ? "bg-neon-green/20 text-neon-green border border-neon-green/20"
+                    : !isOnline
+                    ? "text-gray-600 cursor-not-allowed"
                     : "text-gray-400 hover:text-white"
                 }`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full bg-neon-green ${chartMode === "live" ? "animate-pulse" : ""}`} />
+                <span className={`w-1.5 h-1.5 rounded-full ${!isOnline ? "bg-gray-600" : "bg-neon-green"} ${chartMode === "live" ? "animate-pulse" : ""}`} />
                 Live Rate
               </button>
             </div>

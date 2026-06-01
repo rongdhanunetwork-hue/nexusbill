@@ -60,23 +60,17 @@ export async function GET(req: NextRequest) {
             const [inv] = await db.insert(invoices).values({
               userId: customer.id,
               amount: String(pkgPrice),
-              dueAmount: "0",
-              paidAmount: String(pkgPrice),
               status: "paid",
-              description: `Auto-renewal for ${customer.package?.name}`,
-              type: "monthly",
-              month: newExpireDate.toLocaleString("default", { month: "long" }),
-              year: newExpireDate.getFullYear(),
+              dueDate: newExpireDate,
               createdAt: now,
             }).returning();
 
             await db.insert(payments).values({
               userId: customer.id,
-              invoiceId: inv.id,
               amount: String(pkgPrice),
               method: "wallet",
-              note: "Auto-deducted from wallet",
-              date: now,
+              status: "approved",
+              createdAt: now,
             });
           } catch (e) {
             errors.push(`Auto-renew invoice error for ${customer.name}: ${e}`);

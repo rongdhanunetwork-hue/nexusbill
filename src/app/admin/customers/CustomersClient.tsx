@@ -33,6 +33,7 @@ interface Customer {
   connectionFee?: string | null;
   promiseDate?: string | Date | null;
   note?: string | null;
+  autoRenew?: boolean | null;
 }
 
 export default function CustomersClient({
@@ -61,7 +62,7 @@ export default function CustomersClient({
   const [packagesList, setPackagesList] = useState<any[]>([]);
   const [selectedAreaId, setSelectedAreaId] = useState("All Areas");
   const [selectedPackageId, setSelectedPackageId] = useState("All Packages");
-  const [selectedResellerId, setSelectedResellerId] = useState("All Resellers");
+  const [selectedResellerId, setSelectedResellerId] = useState(role === "admin" ? "null" : "All Resellers");
 
   useEffect(() => {
     fetch("/api/admin/areas")
@@ -180,6 +181,7 @@ export default function CustomersClient({
   const [rechargeMethod, setRechargeMethod] = useState<string>("হ্যান্ড ক্যাশ");
   const [showNoteDate, setShowNoteDate] = useState(false);
   const [renewBack, setRenewBack] = useState(true);
+  const [modalAutoRenew, setModalAutoRenew] = useState(true);
   const [rechargeNote, setRechargeNote] = useState("");
   const [customBaseDate, setCustomBaseDate] = useState<string>("");
   const [customExpireDate, setCustomExpireDate] = useState<string>("");
@@ -328,11 +330,11 @@ export default function CustomersClient({
   if (overrideDue !== "") {
     const dueVal = parseFloat(overrideDue) || 0;
     displayDue = overrideDue;
-    displayPaid = String(Math.max(0, finalAmount - dueVal));
+    displayPaid = String(finalAmount - dueVal);
   } else if (overridePaid !== "") {
     const paidVal = parseFloat(overridePaid) || 0;
     displayPaid = overridePaid;
-    displayDue = String(Math.max(0, finalAmount - paidVal));
+    displayDue = String(finalAmount - paidVal);
   }
 
   // Reset overrides when recharge configuration inputs change, EXCEPT for customExpireDate which updates frequently
@@ -376,6 +378,7 @@ export default function CustomersClient({
         }
       }
       setCustomExpireDate(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
+      setModalAutoRenew(rechargeCustomer.autoRenew ?? true);
     } else {
       setCustomBaseDate("");
       setCustomExpireDate("");
@@ -402,6 +405,7 @@ export default function CustomersClient({
           discount: parseFloat(discount) || 0,
           note: showNoteDate ? rechargeNote : "",
           renewBack,
+          autoRenew: modalAutoRenew,
           newPackageId: selectedNewPackageId ? Number(selectedNewPackageId) : undefined,
           customBaseDate: customBaseDate ? customBaseDate : undefined,
           customExpireDate: customExpireDate ? customExpireDate : undefined,
@@ -670,14 +674,14 @@ export default function CustomersClient({
             ))}
           </select>
 
-          {role === "admin" && resellers.length > 0 && (
+          {role === "admin" && (
             <select
               value={selectedResellerId}
               onChange={(e) => setSelectedResellerId(e.target.value)}
               className="glass-input px-4 py-2 bg-slate-800 focus:ring-neon-blue focus:ring-2 cursor-pointer text-xs font-semibold text-white border border-white/10"
             >
-              <option value="All Resellers" className="bg-slate-800">All Resellers</option>
-              <option value="null" className="bg-slate-800">My Customers (Admin)</option>
+              <option value="All Resellers" className="bg-slate-800">All Customers</option>
+              <option value="null" className="bg-slate-800">Direct Customers (Admin)</option>
               {resellers.map(reseller => (
                 <option key={reseller.id} value={String(reseller.id)} className="bg-slate-800">
                   Reseller: {reseller.name}
@@ -1283,6 +1287,9 @@ export default function CustomersClient({
                   {parseFloat(displayDue) > 0 && (
                     <span className="text-gray-400">বকেয়া: <span className="text-rose-400 font-bold">৳{displayDue}</span></span>
                   )}
+                  {parseFloat(displayDue) < 0 && (
+                    <span className="text-gray-400">অ্যাডভান্স: <span className="text-emerald-400 font-bold">৳{Math.abs(parseFloat(displayDue))}</span></span>
+                  )}
                   <span className="text-gray-300">পরিশোধিত: <span className="text-neon-green font-bold text-sm">৳{displayPaid}</span></span>
                 </div>
 
@@ -1311,6 +1318,19 @@ export default function CustomersClient({
                     />
                     <label htmlFor="showNoteDate" className="text-xs font-semibold text-gray-300 cursor-pointer select-none">
                       নোট (Note)
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="modalAutoRenew" 
+                      checked={modalAutoRenew} 
+                      onChange={(e) => setModalAutoRenew(e.target.checked)}
+                      className="rounded bg-slate-800 border-white/10 text-neon-blue focus:ring-0" 
+                    />
+                    <label htmlFor="modalAutoRenew" className="text-xs font-semibold text-gray-300 cursor-pointer select-none">
+                      অটো রিনিউ (Auto Renew)
                     </label>
                   </div>
                 </div>

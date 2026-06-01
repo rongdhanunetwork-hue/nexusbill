@@ -107,6 +107,9 @@ export async function POST(req: Request) {
       status: "active",
       balance: String(newBalance.toFixed(2)),
     };
+    if (body.autoRenew !== undefined) {
+      updateFields.autoRenew = Boolean(body.autoRenew);
+    }
     // If admin selected a new package, change it
     if (newPackageId && session.role === "admin") {
       const newPkg = await db.query.packages.findFirst({
