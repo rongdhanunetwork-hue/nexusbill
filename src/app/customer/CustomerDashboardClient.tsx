@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Package, CreditCard, Clock, AlertTriangle, ChevronRight, Megaphone,
-  Download, Upload, Loader2, Activity
+  Download, Upload, Loader2, Activity, X
 } from "lucide-react";
 import Link from "next/link";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
+import { AnimatePresence } from "framer-motion";
 
 interface UsageDay {
   day: string;
@@ -25,9 +26,11 @@ export default function CustomerDashboardClient({
   dueAmount,
   noticeTitle,
   noticeMessage,
+  noticeImageUrl,
   status,
   usageData = [],
   pppoeUsername = null,
+  currentCredit,
 }: {
   customerName: string;
   packageName: string;
@@ -37,11 +40,30 @@ export default function CustomerDashboardClient({
   dueAmount: number;
   noticeTitle: string | null;
   noticeMessage: string | null;
+  noticeImageUrl: string | null;
   status: string;
   usageData?: UsageDay[];
   pppoeUsername?: string | null;
+  currentCredit: number;
 }) {
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
+  const [showNoticePopup, setShowNoticePopup] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (noticeTitle) {
+      const closedNotice = localStorage.getItem('closed_notice');
+      if (closedNotice !== noticeTitle) {
+        setShowNoticePopup(true);
+      }
+    }
+  }, [noticeTitle]);
+
+  const handleCloseNotice = () => {
+    setShowNoticePopup(false);
+    if (noticeTitle) {
+      localStorage.setItem('closed_notice', noticeTitle);
+    }
+  };
 
   useEffect(() => {
     if (expireDate) {
@@ -52,7 +74,7 @@ export default function CustomerDashboardClient({
 
   const cards = [
     { label: "Current Package", value: packageName, sub: `Speed: ${packageSpeed}`, icon: Package, color: "text-teal-400" },
-    { label: "Bill Status", value: billStatus, sub: billStatus === "Paid" ? "No unpaid bill" : "Please pay bill", icon: CreditCard, color: billStatus === "Paid" ? "text-neon-green" : "text-red-400" },
+    { label: "Credit Balance", value: `৳${currentCredit.toFixed(2)}`, sub: "Available account balance", icon: CreditCard, color: "text-neon-green" },
     { label: "Due Amount", value: `৳${dueAmount}`, sub: "Clear dues to avoid disconnect", icon: AlertTriangle, color: dueAmount > 0 ? "text-red-400" : "text-neon-green" },
     { label: "Expire Date", value: daysRemaining !== null ? `${daysRemaining} days` : "N/A", sub: expireDate ? new Date(expireDate).toLocaleDateString() : "N/A", icon: Clock, color: "text-orange-400" },
   ];
@@ -75,6 +97,7 @@ export default function CustomerDashboardClient({
   const [accumulatedDownloadBytes, setAccumulatedDownloadBytes] = useState<number>(0);
   const [accumulatedUploadBytes, setAccumulatedUploadBytes] = useState<number>(0);
   const [isOnline, setIsOnline] = useState<boolean>(status === "active" || status === "online");
+  const [sessionUptimeSeconds, setSessionUptimeSeconds] = useState<number>(0);
 
   const [liveData, setLiveData] = useState<{ name: string; download: number; upload: number }[]>(() => 
     Array.from({ length: 15 }).map((_, i) => ({
@@ -118,6 +141,11 @@ export default function CustomerDashboardClient({
       if (!active) return;
 
       setIsOnline(online);
+      if (online) {
+        setSessionUptimeSeconds(prev => prev + 1);
+      } else {
+        setSessionUptimeSeconds(0);
+      }
       setLiveDownloadRate(dl);
       setLiveUploadRate(ul);
 
@@ -179,8 +207,67 @@ export default function CustomerDashboardClient({
     return `${rateInMbps.toFixed(1)} Mbps`;
   }
 
+  function formatSpeedNumberOnly(val: number) {
+    if (isNaN(val) || val < 0) return "0.00";
+    return val.toFixed(2);
+  }
+
+  function formatUptime(seconds: number) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
+      {/* Notice Popup Overlay */}
+      <AnimatePresence>
+        {showNoticePopup && noticeTitle && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-slate-900 border border-neon-blue/30 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden relative"
+            >
+              <button
+                onClick={handleCloseNotice}
+                className="absolute top-4 right-4 p-2 bg-black/40 hover:bg-black/60 rounded-full text-white/70 hover:text-white transition-colors z-10"
+              >
+                <X size={20} />
+              </button>
+              
+              {noticeImageUrl && (
+                <div className="w-full h-48 sm:h-56 relative bg-black/50">
+                  <img src={noticeImageUrl} alt={noticeTitle} className="w-full h-full object-cover" />
+                </div>
+              )}
+              
+              <div className="p-6 md:p-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-neon-blue/20 flex items-center justify-center text-neon-blue shrink-0">
+                    <Megaphone size={20} />
+                  </div>
+                  <h3 className="text-xl font-bold text-white leading-tight">{noticeTitle}</h3>
+                </div>
+                
+                <p className="text-gray-300 text-sm md:text-base leading-relaxed whitespace-pre-wrap">
+                  {noticeMessage}
+                </p>
+                
+                <button
+                  onClick={handleCloseNotice}
+                  className="mt-6 w-full py-3 bg-neon-blue/20 hover:bg-neon-blue/30 border border-neon-blue/40 text-neon-blue rounded-xl font-bold text-sm tracking-wide transition-colors"
+                >
+                  Close & Continue
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <motion.div initial={false} animate={{ opacity: 1 }} className="relative overflow-hidden rounded-3xl p-8 shadow-2xl">
         <div className="absolute inset-0 bg-gradient-to-r from-neon-green/20 via-teal-500/20 to-blue-500/20 backdrop-blur-3xl" />
         <div className="relative z-10">
@@ -222,7 +309,23 @@ export default function CustomerDashboardClient({
         </div>
       )}
 
-      {noticeTitle && <div className="glass-card p-5 border-neon-blue/30"><div className="flex gap-3"><Megaphone className="text-neon-blue shrink-0" /><div><h3 className="font-bold text-white">{noticeTitle}</h3><p className="text-gray-400 text-sm mt-1">{noticeMessage}</p></div></div></div>}
+      {noticeTitle && (
+        <div className="glass-card p-5 border-neon-blue/30 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex gap-3 items-center">
+            <Megaphone className="text-neon-blue shrink-0" size={24} />
+            <div>
+              <h3 className="font-bold text-white">{noticeTitle}</h3>
+              <p className="text-gray-400 text-sm mt-0.5 line-clamp-1">{noticeMessage}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowNoticePopup(true)}
+            className="px-4 py-2 bg-neon-blue/10 text-neon-blue border border-neon-blue/30 rounded-lg text-xs font-bold hover:bg-neon-blue/20 transition-colors whitespace-nowrap"
+          >
+            View Notice
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {cards.map((card) => <motion.div key={card.label} initial={false} animate={{ opacity: 1 }} className="glass-card p-6 flex items-start gap-4"><div className={`w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center ${card.color} shadow-lg shrink-0`}><card.icon size={28} /></div><div><p className="text-gray-400 font-medium mb-1">{card.label}</p><h3 className="text-2xl font-bold text-white mb-1">{card.value}</h3><p className="text-sm text-gray-500">{card.sub}</p></div></motion.div>)}
@@ -234,53 +337,51 @@ export default function CustomerDashboardClient({
           <span>{chartMode === "live" ? "Real-time Traffic Monitor" : "Data Usage History"}</span>
           <div className="flex items-center gap-4">
             <span className="text-xs text-gray-400 no-print">
-              {chartMode === "live" ? "Live Traffic Speed" : `Cumulative: Down ${totalDownload} GB / Up ${totalUpload} GB`}
+              {chartMode === "live" ? "Live Traffic Speed" : `Cumulative: Down ${formatBytes((parseFloat(totalDownload) || 0) * 1024 * 1024 * 1024)} / Up ${formatBytes((parseFloat(totalUpload) || 0) * 1024 * 1024 * 1024)}`}
             </span>
-            {(status === "active" || status === "online" || dbTotalDownload > 0 || dbTotalUpload > 0) && (
-              <div className="flex gap-1.5 bg-white/5 p-1 rounded-xl no-print border border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setChartMode("history")}
-                  className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all ${
-                    chartMode === "history"
-                      ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
-                      : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  Historical (GB)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChartMode("live")}
-                  className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                    chartMode === "live"
-                      ? "bg-neon-green/20 text-neon-green border border-neon-green/20"
-                      : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full bg-neon-green ${chartMode === "live" ? "animate-pulse" : ""}`} />
-                  Live Rate
-                </button>
-              </div>
-            )}
+            <div className="flex gap-1.5 bg-white/5 p-1 rounded-xl no-print border border-white/10">
+              <button
+                type="button"
+                onClick={() => setChartMode("history")}
+                className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all ${
+                  chartMode === "history"
+                    ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/20"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                Historical (GB)
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartMode("live")}
+                className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                  chartMode === "live"
+                    ? "bg-neon-green/20 text-neon-green border border-neon-green/20"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full bg-neon-green ${chartMode === "live" ? "animate-pulse" : ""}`} />
+                Live Rate
+              </button>
+            </div>
           </div>
         </h3>
 
         {chartMode === "history" ? (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3">
-                <div className="text-neon-green"><Download size={20} /></div>
+            <div className="grid sm:grid-cols-2 gap-4 mb-6">
+              <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-red-500/20">
+                <div className="text-red-500"><Download size={24} /></div>
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider">Total Downloaded</p>
-                  <p className="text-xl font-bold text-white">{totalDownload} GB</p>
+                  <p className="text-2xl font-bold text-white font-mono">{formatBytes((parseFloat(totalDownload) || 0) * 1024 * 1024 * 1024)}</p>
                 </div>
               </div>
-              <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3">
-                <div className="text-neon-blue"><Upload size={20} /></div>
+              <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-green-500/20">
+                <div className="text-green-500"><Upload size={24} /></div>
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider">Total Uploaded</p>
-                  <p className="text-xl font-bold text-white">{totalUpload} GB</p>
+                  <p className="text-2xl font-bold text-white font-mono">{formatBytes((parseFloat(totalUpload) || 0) * 1024 * 1024 * 1024)}</p>
                 </div>
               </div>
             </div>
@@ -288,84 +389,113 @@ export default function CustomerDashboardClient({
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>
-                    <linearGradient id="downGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#39ff14" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#39ff14" stopOpacity={0}/>
+                    <linearGradient id="historyDownGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                     </linearGradient>
-                    <linearGradient id="upGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00f3ff" stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor="#00f3ff" stopOpacity={0}/>
+                    <linearGradient id="historyUpGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} />
                   <YAxis stroke="#9ca3af" fontSize={11} unit=" GB" />
-                  <Tooltip contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} />
-                  <Area type="monotone" dataKey="download" stroke="#39ff14" strokeWidth={2} fillOpacity={1} fill="url(#downGrad)" name="Download (GB)" />
-                  <Area type="monotone" dataKey="upload" stroke="#00f3ff" strokeWidth={2} fillOpacity={1} fill="url(#upGrad)" name="Upload (GB)" />
+                  <RechartsTooltip 
+                    contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} 
+                    formatter={(value: any, name: any) => [`${value} GB`, name === "download" ? "Download" : "Upload"]}
+                  />
+                  <Area type="monotone" dataKey="download" stroke="#ef4444" strokeWidth={2} activeDot={{ r: 4 }} fill="url(#historyDownGrad)" />
+                  <Area type="monotone" dataKey="upload" stroke="#22c55e" strokeWidth={2} activeDot={{ r: 4 }} fill="url(#historyUpGrad)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-neon-green/20 relative overflow-hidden">
-                <div className="absolute top-2 right-2 flex items-center gap-1.5 text-[9px] uppercase font-bold text-neon-green bg-neon-green/10 px-2 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-ping" />
-                  Live
+            <div className="glass-card p-6 mb-6">
+              <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                <Activity size={18} className="text-red-500" /> Live Traffic Monitoring
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-red-500/20 relative">
+                  <div className="absolute top-2 right-2 flex items-center gap-1 text-[9px] uppercase font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" /> Live
+                  </div>
+                  <div className="text-red-500"><Download size={24} /></div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Download Speed</p>
+                    <p className="text-2xl font-bold text-white font-mono">{formatSpeed(liveDownloadRate)}</p>
+                  </div>
                 </div>
-                <div className="text-neon-green"><Download size={20} /></div>
-                <div>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Download Speed</p>
-                  <p className="text-xl font-bold text-white font-mono">{formatSpeed(liveDownloadRate)}</p>
+                <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-green-500/20 relative">
+                  <div className="absolute top-2 right-2 flex items-center gap-1 text-[9px] uppercase font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping" /> Live
+                  </div>
+                  <div className="text-green-500"><Upload size={24} /></div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Upload Speed</p>
+                    <p className="text-2xl font-bold text-white font-mono">{formatSpeed(liveUploadRate)}</p>
+                  </div>
                 </div>
               </div>
-              <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-neon-blue/20 relative overflow-hidden">
-                <div className="absolute top-2 right-2 flex items-center gap-1.5 text-[9px] uppercase font-bold text-neon-blue bg-neon-blue/10 px-2 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-neon-blue animate-ping" />
-                  Live
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={liveData}>
+                    <defs>
+                      <linearGradient id="liveDownGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="liveUpGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} />
+                    <YAxis stroke="#9ca3af" fontSize={11} tickFormatter={formatSpeed} />
+                    <RechartsTooltip 
+                      contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }}
+                      formatter={(value: any, name: any) => [formatSpeed(Number(value)), name === "download" ? "Download" : "Upload"]}
+                    />
+                    <Area type="monotone" dataKey="download" stroke="#ef4444" strokeWidth={2} activeDot={{ r: 4 }} fill="url(#liveDownGrad)" />
+                    <Area type="monotone" dataKey="upload" stroke="#22c55e" strokeWidth={2} activeDot={{ r: 4 }} fill="url(#liveUpGrad)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Live Session Statistics */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-6 pt-6 border-t border-white/10">
+                <div className="bg-white/5 p-3 rounded-lg text-center">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Session ↓</p>
+                  <p className="text-sm text-red-400 font-mono font-bold">{formatBytes(liveBytesOut)}</p>
                 </div>
-                <div className="text-neon-blue"><Upload size={20} /></div>
-                <div>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Upload Speed</p>
-                  <p className="text-xl font-bold text-white font-mono">{formatSpeed(liveUploadRate)}</p>
+                <div className="bg-white/5 p-3 rounded-lg text-center">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Session ↑</p>
+                  <p className="text-sm text-green-400 font-mono font-bold">{formatBytes(liveBytesIn)}</p>
+                </div>
+                <div className="bg-white/10 p-3 rounded-lg text-center">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Session Total</p>
+                  <p className="text-sm text-white font-mono font-bold">{formatBytes(liveBytesIn + liveBytesOut)}</p>
+                </div>
+                <div className="bg-white/10 p-3 rounded-lg text-center">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Monthly Total</p>
+                  <p className="text-sm text-blue-400 font-mono font-bold">{formatBytes((parseFloat(totalDownload) + parseFloat(totalUpload)) * 1024 * 1024 * 1024)}</p>
+                </div>
+                <div className="bg-white/10 p-3 rounded-lg text-center col-span-2 md:col-span-1">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Session Uptime</p>
+                  <p className="text-sm text-white font-mono font-bold">{formatUptime(sessionUptimeSeconds)}</p>
                 </div>
               </div>
-            </div>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={liveData}>
-                  <defs>
-                    <linearGradient id="liveDownGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="liveUpGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
-                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} />
-                  <YAxis stroke="#9ca3af" fontSize={11} domain={[0, "auto"]} tickFormatter={formatSpeed} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }}
-                    formatter={(value: any, name: any) => [formatSpeed(Number(value)), name === "download" ? "Download" : "Upload"]}
-                  />
-                  <Area type="monotone" dataKey="download" stroke="#10b981" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} fillOpacity={1} fill="url(#liveDownGrad)" name="download" />
-                  <Area type="monotone" dataKey="upload" stroke="#06b6d4" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0 }} fillOpacity={1} fill="url(#liveUpGrad)" name="upload" />
-                </AreaChart>
-              </ResponsiveContainer>
             </div>
           </>
         )}
       </div>
 
       {/* Live RX/TX Interface Statistics Box */}
-      {(status === "active" || status === "online" || dbTotalDownload > 0 || dbTotalUpload > 0) && (
-        <div className="glass-card p-6 border border-teal-500/20 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 to-transparent opacity-60" />
+      <div className="glass-card p-6 border border-teal-500/20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 to-transparent opacity-60" />
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -384,22 +514,18 @@ export default function CustomerDashboardClient({
               <p className="text-base font-bold text-neon-green font-mono mt-1">{formatSpeed(liveDownloadRate)}</p>
             </div>
             <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 text-center min-w-[130px]">
-              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">RX Total (Upload)</span>
-              <p className="text-base font-bold text-teal-300 font-mono mt-1">
-                {formatBytes((dbTotalUpload * 1024 * 1024 * 1024) + liveBytesIn)}
-              </p>
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">MTU</span>
+              <p className="text-base font-bold text-white font-mono mt-1">{isOnline ? "1480" : "0"}</p>
             </div>
             <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 text-center min-w-[130px]">
-              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">TX Total (Download)</span>
-              <p className="text-base font-bold text-teal-300 font-mono mt-1">
-                {formatBytes((dbTotalDownload * 1024 * 1024 * 1024) + liveBytesOut)}
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Status</span>
+              <p className={`text-base font-bold font-mono mt-1 ${isOnline ? "text-teal-400" : "text-red-500"}`}>
+                {isOnline ? "Running" : "Offline"}
               </p>
             </div>
           </div>
         </div>
-        </div>
-      )}
-
+      </div>
       <div className="glass-card p-6 md:p-8">
         <h3 className="text-xl font-semibold text-white mb-6">Quick Actions</h3>
         <div className="grid sm:grid-cols-2 gap-4">

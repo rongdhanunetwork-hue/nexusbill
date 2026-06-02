@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { title, message, type } = await req.json();
+  const { title, message, type, imageUrl } = await req.json();
   if (!title || !message) {
     return NextResponse.json({ error: "Title and message required" }, { status: 400 });
   }
@@ -24,6 +24,7 @@ export async function POST(req: Request) {
     title: title.trim(),
     message: message.trim(),
     type: type || "general",
+    imageUrl: imageUrl || null,
   }).returning();
 
   return NextResponse.json(notice, { status: 201 });

@@ -19,6 +19,7 @@ import {
 import { useState, useEffect } from "react";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
+import NoticePopup from "./NoticePopup";
 
 const navigation = [
   { name: 'My Account', href: '/customer', icon: LayoutDashboard },
@@ -73,6 +74,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="min-h-screen flex text-slate-100">
+      <NoticePopup />
       <AnimatePresence>
         {sidebarOpen && (
           <motion.div 

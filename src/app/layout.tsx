@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import ProgressBarProvider from "./ProgressBarProvider";
+import { PopupProvider } from "@/components/ui/PopupProvider";
+
 const poppins = Poppins({
   weight: ["300", "400", "500", "600", "700"],
   subsets: ["latin"],
@@ -23,7 +25,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         style={{ backgroundColor: "#0f172a", color: "#f8fafc", minHeight: "100vh" }}
       >
         <ProgressBarProvider>
-          {children}
+          <PopupProvider>
+            {children}
+          </PopupProvider>
         </ProgressBarProvider>
       </body>
     </html>

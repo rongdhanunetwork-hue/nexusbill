@@ -5,16 +5,22 @@ import { useState } from "react";
 import { Calendar, DollarSign, Users, Trash2, ArrowLeft, TrendingUp, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePopup } from "@/components/ui/PopupProvider";
 
 export default function MonthlySummaryClient({ initialData }: { initialData: any[] }) {
   const router = useRouter();
   const [data, setData] = useState(initialData);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const { showConfirm, showAlert } = usePopup();
 
   const handleDelete = async (monthYear: string) => {
-    if (!confirm(`Are you sure you want to DELETE all records (Payments, Expenses, and Invoices) for ${monthYear}? This action CANNOT be undone and will permanently remove the data.`)) {
-      return;
-    }
+    const isConfirm = await showConfirm({
+      title: "Delete Records",
+      message: `Are you sure you want to DELETE all records (Payments, Expenses, and Invoices) for ${monthYear}? This action CANNOT be undone and will permanently remove the data.`,
+      danger: true,
+      confirmText: "Delete"
+    });
+    if (!isConfirm) return;
 
     setIsDeleting(monthYear);
     try {
@@ -28,10 +34,10 @@ export default function MonthlySummaryClient({ initialData }: { initialData: any
 
       setData(prev => prev.filter(m => m.monthYear !== monthYear));
       router.refresh();
-      alert(`Records for ${monthYear} deleted successfully.`);
+      await showAlert({ title: "Deleted", message: `Records for ${monthYear} deleted successfully.`, type: "success" });
     } catch (err) {
       console.error(err);
-      alert("Error deleting records. Please try again.");
+      await showAlert({ title: "Error", message: "Error deleting records. Please try again.", type: "error" });
     } finally {
       setIsDeleting(null);
     }

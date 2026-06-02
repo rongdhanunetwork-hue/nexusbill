@@ -73,6 +73,22 @@ export default async function CustomerDashboard() {
     };
   });
 
+  // Calculate current credit based on remaining days
+  let currentCredit = 0;
+  if (customer.expireDate && customer.package) {
+    const pkgPrice = parseFloat(String(customer.package.price || 0));
+    const pkgDuration = customer.package.durationDays || 30;
+    const dailyCost = pkgDuration > 0 ? pkgPrice / pkgDuration : 0;
+    
+    const now = new Date();
+    const expire = new Date(customer.expireDate);
+    const diffTime = expire.getTime() - now.getTime();
+    if (diffTime > 0) {
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      currentCredit = diffDays * dailyCost;
+    }
+  }
+
   return (
     <CustomerDashboardClient
       customerName={customer.name}
@@ -83,9 +99,11 @@ export default async function CustomerDashboard() {
       dueAmount={dueAmount}
       noticeTitle={latestNotice?.title || null}
       noticeMessage={latestNotice?.message || null}
+      noticeImageUrl={latestNotice?.imageUrl || null}
       status={customer.status || "active"}
       usageData={last7DaysUsage}
       pppoeUsername={customer.pppoeUsername || null}
+      currentCredit={currentCredit}
     />
   );
 }

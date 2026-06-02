@@ -17,6 +17,7 @@ import {
   Phone,
   User
 } from "lucide-react";
+import { usePopup } from "@/components/ui/PopupProvider";
 
 interface UserInfo {
   id: number;
@@ -51,6 +52,7 @@ export default function AdminPackageRequestsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const { showConfirm, showAlert } = usePopup();
 
   useEffect(() => {
     fetchRequests();
@@ -82,13 +84,13 @@ export default function AdminPackageRequestsPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        alert(`Request successfully ${action === "approve" ? "approved & synced" : "rejected"}!`);
+        await showAlert({ title: "Success", message: `Request successfully ${action === "approve" ? "approved & synced" : "rejected"}!`, type: "success" });
         fetchRequests();
       } else {
-        alert(data.error || "Failed to process request");
+        await showAlert({ title: "Failed", message: data.error || "Failed to process request", type: "error" });
       }
     } catch {
-      alert("Network error");
+      await showAlert({ title: "Error", message: "Network error", type: "error" });
     } finally {
       setProcessingId(null);
     }
@@ -289,8 +291,13 @@ export default function AdminPackageRequestsPage() {
                         {r.status === "pending" ? (
                           <div className="flex items-center justify-center gap-2">
                             <button
-                              onClick={() => {
-                                if (confirm("Are you sure you want to APPROVE this package change request?")) {
+                              onClick={async () => {
+                                const isConfirm = await showConfirm({
+                                  title: "Approve Request",
+                                  message: "Are you sure you want to APPROVE this package change request?",
+                                  confirmText: "Approve"
+                                });
+                                if (isConfirm) {
                                   handleAction(r.id, "approve");
                                 }
                               }}
@@ -301,8 +308,14 @@ export default function AdminPackageRequestsPage() {
                               <Check size={16} />
                             </button>
                             <button
-                              onClick={() => {
-                                if (confirm("Are you sure you want to DECLINE this package change request?")) {
+                              onClick={async () => {
+                                const isConfirm = await showConfirm({
+                                  title: "Decline Request",
+                                  message: "Are you sure you want to DECLINE this package change request?",
+                                  danger: true,
+                                  confirmText: "Decline"
+                                });
+                                if (isConfirm) {
                                   handleAction(r.id, "reject");
                                 }
                               }}

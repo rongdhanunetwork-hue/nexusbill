@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { User, Phone, MapPin, Wifi, Package, CreditCard } from "lucide-react";
 import Link from "next/link";
 import TwoFactorUI from "./TwoFactorUI";
+import AvatarImage from "@/components/ui/AvatarImage";
 
 export const dynamic = "force-dynamic";
 
@@ -31,11 +32,10 @@ export default async function CustomerProfile() {
       <div className="glass-card p-8">
         <div className="flex items-center gap-6 mb-8">
           <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-neon-green to-teal-500 flex items-center justify-center text-3xl font-bold text-white shadow-lg shadow-neon-green/30 overflow-hidden shrink-0">
-            {customer.photoUrl ? (
-              <img src={customer.photoUrl} alt={customer.name} className="w-full h-full object-cover" />
-            ) : (
-              customer.name.charAt(0).toUpperCase()
-            )}
+            <AvatarImage 
+              src={customer.photoUrl} 
+              fallbackText={customer.name.charAt(0).toUpperCase()} 
+            />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white">{customer.name}</h2>

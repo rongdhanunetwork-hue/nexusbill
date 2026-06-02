@@ -7,6 +7,7 @@ import {
   RefreshCw, CheckCircle2, AlertTriangle, Loader2, Server, Trash,
   Edit, LogOut
 } from "lucide-react";
+import { usePopup } from "@/components/ui/PopupProvider";
 
 interface PppoeSecret {
   ".id": string;
@@ -71,6 +72,7 @@ export default function ResellerMikrotikClient() {
 
   // Router selection state
   const [selectedRouterId, setSelectedRouterId] = useState<number | null>(null);
+  const { showConfirm, showAlert } = usePopup();
 
   // Live tab states
   const [liveData, setLiveData] = useState<MikrotikData | null>(null);
@@ -199,7 +201,13 @@ export default function ResellerMikrotikClient() {
   }
 
   async function handleRebootRouter() {
-    if (!confirm("Are you sure you want to reboot the MikroTik router? This will temporarily disconnect all PPPoE sessions.")) return;
+    const isConfirm = await showConfirm({
+      title: "Reboot Router",
+      message: "Are you sure you want to reboot the MikroTik router? This will temporarily disconnect all PPPoE sessions.",
+      danger: true,
+      confirmText: "Reboot"
+    });
+    if (!isConfirm) return;
     try {
       const res = await fetch("/api/admin/mikrotik/toggle", {
         method: "POST",
@@ -218,7 +226,13 @@ export default function ResellerMikrotikClient() {
   }
 
   async function handleDisconnectActive(id: string, name: string) {
-    if (!confirm(`Are you sure you want to terminate active session for customer "${name}"? This will force them to reconnect.`)) return;
+    const isConfirm = await showConfirm({
+      title: "Terminate Session",
+      message: `Are you sure you want to terminate active session for customer "${name}"? This will force them to reconnect.`,
+      danger: true,
+      confirmText: "Terminate"
+    });
+    if (!isConfirm) return;
     setActionLoading(id);
     try {
       const res = await fetch("/api/admin/mikrotik/toggle", {
@@ -281,7 +295,13 @@ export default function ResellerMikrotikClient() {
   }
 
   async function handleDeleteSecret(id: string, name: string) {
-    if (!confirm(`Are you sure you want to permanently delete PPPoE user "${name}" from the router? This action cannot be undone.`)) return;
+    const isConfirm = await showConfirm({
+      title: "Delete User",
+      message: `Are you sure you want to permanently delete PPPoE user "${name}" from the router? This action cannot be undone.`,
+      danger: true,
+      confirmText: "Delete"
+    });
+    if (!isConfirm) return;
     setActionLoading(id);
     try {
       const res = await fetch("/api/admin/mikrotik/toggle", {
@@ -343,7 +363,13 @@ export default function ResellerMikrotikClient() {
   }
 
   async function handleDeleteProfile(id: string, name: string) {
-    if (!confirm(`Are you sure you want to permanently delete speed profile "${name}"?`)) return;
+    const isConfirm = await showConfirm({
+      title: "Delete Speed Profile",
+      message: `Are you sure you want to permanently delete speed profile "${name}"?`,
+      danger: true,
+      confirmText: "Delete"
+    });
+    if (!isConfirm) return;
     setActionLoading(id);
     try {
       const res = await fetch("/api/admin/mikrotik/toggle", {
@@ -404,7 +430,13 @@ export default function ResellerMikrotikClient() {
   }
 
   async function handleDeleteRouter(id: number) {
-    if (!confirm("Are you sure you want to remove this router from system?")) return;
+    const isConfirm = await showConfirm({
+      title: "Remove Router",
+      message: "Are you sure you want to remove this router from system?",
+      danger: true,
+      confirmText: "Remove"
+    });
+    if (!isConfirm) return;
     try {
       const res = await fetch(`/api/admin/mikrotik/routers/${id}`, { method: "DELETE" });
       if (res.ok) {
@@ -456,7 +488,13 @@ export default function ResellerMikrotikClient() {
   }
 
   async function handleDeleteOlt(id: number) {
-    if (!confirm("Are you sure you want to delete this OLT device?")) return;
+    const isConfirm = await showConfirm({
+      title: "Delete OLT",
+      message: "Are you sure you want to delete this OLT device?",
+      danger: true,
+      confirmText: "Delete"
+    });
+    if (!isConfirm) return;
     try {
       const res = await fetch(`/api/admin/olts/${id}`, { method: "DELETE" });
       if (res.ok) {

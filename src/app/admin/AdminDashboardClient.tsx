@@ -344,7 +344,7 @@ export default function AdminDashboardClient({
         </div>
 
         <div className="glass-card p-6 min-w-0 overflow-hidden">
-          <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2"><Download size={18} className="text-neon-green" /> Customer Download / <Upload size={18} className="text-neon-blue" /> Upload Graph</h3>
+          <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2"><Download size={18} className="text-red-500" /> Customer Download / <Upload size={18} className="text-green-500" /> Upload Graph</h3>
           <div className="h-80 w-full">
             {mounted ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -356,8 +356,8 @@ export default function AdminDashboardClient({
                     contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} 
                     formatter={(value: any, name: any) => [`${value} GB`, name === "download" ? "Download" : "Upload"]}
                   />
-                  <Line type="monotone" dataKey="download" stroke="#39ff14" strokeWidth={3} dot={{ r: 4 }} name="download" />
-                  <Line type="monotone" dataKey="upload" stroke="#00f3ff" strokeWidth={3} dot={{ r: 4 }} name="upload" />
+                  <Line type="monotone" dataKey="download" stroke="#ef4444" strokeWidth={3} dot={{ r: 4 }} name="download" />
+                  <Line type="monotone" dataKey="upload" stroke="#22c55e" strokeWidth={3} dot={{ r: 4 }} name="upload" />
                 </LineChart>
               </ResponsiveContainer>
             ) : (

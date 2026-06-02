@@ -52,9 +52,7 @@ export default function PayBillClient({ bkashNumber, nagadNumber, rocketNumber }
   };
 
   const paymentMethods = [
-    { key: "bkash", label: "bKash Personal", number: bkashNumber, color: "#E2136E", textColor: "#FF4C9C" },
-    { key: "nagad", label: "Nagad", number: nagadNumber, color: "#ED1C24", textColor: "#FF5A60" },
-    { key: "rocket", label: "Rocket", number: rocketNumber, color: "#8B5CF6", textColor: "#A78BFA" },
+    { key: "bkash", label: "bKash Payment", number: bkashNumber, color: "#E2136E", textColor: "#FF4C9C" }
   ];
 
   return (
@@ -163,9 +161,7 @@ export default function PayBillClient({ bkashNumber, nagadNumber, rocketNumber }
                     required
                     className="w-full px-4 py-3 glass-input appearance-none bg-slate-800"
                   >
-                    <option value="bkash" className="bg-slate-800">bKash</option>
-                    <option value="nagad" className="bg-slate-800">Nagad</option>
-                    <option value="rocket" className="bg-slate-800">Rocket</option>
+                    <option value="bkash" className="bg-slate-800">bKash Payment</option>
                   </select>
                 </div>
                 <div>

@@ -17,6 +17,7 @@ import {
   Phone,
   User
 } from "lucide-react";
+import { usePopup } from "@/components/ui/PopupProvider";
 
 interface ResellerInfo {
   id: number;
@@ -46,6 +47,7 @@ export default function AdminWithdrawalsPage() {
   const [actionType, setActionType] = useState<"approve" | "reject" | null>(null);
   const [adminNote, setAdminNote] = useState("");
   const [showModalId, setShowModalId] = useState<number | null>(null);
+  const { showAlert } = usePopup();
 
   useEffect(() => {
     fetchRequests();
@@ -77,15 +79,15 @@ export default function AdminWithdrawalsPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        alert(`Withdrawal request successfully ${action === "approve" ? "approved" : "rejected"}!`);
+        await showAlert({ title: "Success", message: `Withdrawal request successfully ${action === "approve" ? "approved" : "rejected"}!`, type: "success" });
         setShowModalId(null);
         setAdminNote("");
         fetchRequests();
       } else {
-        alert(data.error || "Failed to process request");
+        await showAlert({ title: "Failed", message: data.error || "Failed to process request", type: "error" });
       }
     } catch {
-      alert("Network error");
+      await showAlert({ title: "Error", message: "Network error", type: "error" });
     } finally {
       setProcessingId(null);
     }

@@ -3,6 +3,7 @@
 import React, { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Compass, Box, Trash2, Plus, Layers, Search, ChevronRight, ChevronDown, List } from "lucide-react";
+import { usePopup } from "@/components/ui/PopupProvider";
 
 interface AreaItem {
   id: number;
@@ -22,6 +23,7 @@ export default function AreasClient({ initialAreas, createArea, deleteArea }: Ar
   const [areas, setAreas] = useState<AreaItem[]>(initialAreas);
   const [activeTab, setActiveTab] = useState<"tree" | "list">("tree");
   const [searchQuery, setSearchQuery] = useState("");
+  const { showConfirm, showAlert } = usePopup();
   
   // Form State
   const [name, setName] = useState("");
@@ -79,14 +81,18 @@ export default function AreasClient({ initialAreas, createArea, deleteArea }: Ar
 
   // Handle Delete
   const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure? Deleting an item will recursively delete all sub-items under it!")) {
-      return;
-    }
+    const isConfirm = await showConfirm({
+      title: "Delete Item",
+      message: "Are you sure? Deleting an item will recursively delete all sub-items under it!",
+      danger: true,
+      confirmText: "Delete"
+    });
+    if (!isConfirm) return;
 
     startTransition(async () => {
       const res = await deleteArea(id);
       if (res.error) {
-        alert(res.error);
+        await showAlert({ title: "Failed", message: res.error, type: "error" });
       } else {
         // Recursively remove deleted items from local state
         const getDescendants = (parentId: number): number[] => {

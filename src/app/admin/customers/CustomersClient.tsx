@@ -8,6 +8,7 @@ import {
   FileText, MessageSquare, ShieldAlert, LogOut, CheckCircle2, Download
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePopup } from "@/components/ui/PopupProvider";
 
 interface Customer {
   id: number;
@@ -56,6 +57,7 @@ export default function CustomersClient({
   const basePath = role === "reseller" ? "/reseller" : role === "employee" ? "/employee" : "/admin";
   const [searchTerm, setSearchTerm] = useState("");
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
+  const { showConfirm, showAlert } = usePopup();
   
   // Custom filters state
   const [areasList, setAreasList] = useState<any[]>([]);
@@ -418,18 +420,24 @@ export default function CustomersClient({
         setRechargeSuccessMessage(data.message || "Recharged successfully!");
         setRechargeCustomer(null);
       } else {
-        alert(data.error || "Failed to recharge");
+        await showAlert({ title: "Failed", message: data.error || "Failed to recharge", type: "error" });
       }
     } catch {
-      alert("Network error");
+      await showAlert({ title: "Error", message: "Network error", type: "error" });
     } finally {
       setRechargeLoading(false);
     }
   };
 
   // Trigger server delete action
-  const triggerDelete = (id: number, name: string) => {
-    if (confirm(`Are you sure you want to delete customer "${name}"?`)) {
+  const triggerDelete = async (id: number, name: string) => {
+    const isConfirm = await showConfirm({
+      title: "Delete Customer",
+      message: `Are you sure you want to delete customer "${name}"?`,
+      danger: true,
+      confirmText: "Delete"
+    });
+    if (isConfirm) {
       if (deleteCustomerAction) {
         const formData = new FormData();
         formData.append("id", String(id));
@@ -442,7 +450,14 @@ export default function CustomersClient({
 
   // Kick MikroTik active session
   const triggerKick = async (username: string) => {
-    if (!confirm(`Are you sure you want to terminate active session for "${username}"?`)) return;
+    const isConfirm = await showConfirm({
+      title: "Terminate Session",
+      message: `Are you sure you want to terminate active session for "${username}"?`,
+      danger: true,
+      confirmText: "Terminate"
+    });
+    if (!isConfirm) return;
+    
     try {
       const res = await fetch("/api/admin/mikrotik/toggle", {
         method: "POST",
@@ -451,19 +466,26 @@ export default function CustomersClient({
       });
       const d = await res.json();
       if (res.ok) {
-        alert(d.message || "Session disconnected successfully");
+        await showAlert({ title: "Success", message: d.message || "Session disconnected successfully", type: "success" });
         window.location.reload();
       } else {
-        alert(d.error || "Action failed");
+        await showAlert({ title: "Failed", message: d.error || "Action failed", type: "error" });
       }
     } catch {
-      alert("Network error");
+      await showAlert({ title: "Error", message: "Network error", type: "error" });
     }
   };
 
   // Suspend Customer (Change status to expired)
   const triggerSuspend = async (customer: Customer) => {
-    if (!confirm(`Are you sure you want to suspend "${customer.name}"? This will disable their internet connection.`)) return;
+    const isConfirm = await showConfirm({
+      title: "Suspend Customer",
+      message: `Are you sure you want to suspend "${customer.name}"? This will disable their internet connection.`,
+      danger: true,
+      confirmText: "Suspend"
+    });
+    if (!isConfirm) return;
+    
     try {
       const res = await fetch(`/api/admin/customers/${customer.id}`, {
         method: "PATCH",
@@ -472,13 +494,13 @@ export default function CustomersClient({
       });
       const d = await res.json();
       if (res.ok) {
-        alert("Customer suspended successfully.");
+        await showAlert({ title: "Suspended", message: "Customer suspended successfully.", type: "success" });
         window.location.reload();
       } else {
-        alert(d.error || "Action failed");
+        await showAlert({ title: "Failed", message: d.error || "Action failed", type: "error" });
       }
     } catch {
-      alert("Network error");
+      await showAlert({ title: "Error", message: "Network error", type: "error" });
     }
   };
 
@@ -495,12 +517,12 @@ export default function CustomersClient({
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert("SMS sent successfully!");
+        await showAlert({ title: "Sent", message: "SMS sent successfully!", type: "success" });
       } else {
-        alert(data.error || "Failed to send SMS");
+        await showAlert({ title: "Failed", message: data.error || "Failed to send SMS", type: "error" });
       }
     } catch {
-      alert("Network error while sending SMS");
+      await showAlert({ title: "Error", message: "Network error while sending SMS", type: "error" });
     }
   };
 
@@ -937,10 +959,10 @@ export default function CustomersClient({
                               {/* 5. নোট */}
                               {role !== "employee" && (
                                 <button
-                                  onClick={() => {
+                                  onClick={async () => {
                                     const n = prompt("কাস্টমার নোট এডিট করুন:", customer.address || "");
                                     if (n !== null) {
-                                      alert("নোট সংরক্ষিত হয়েছে!");
+                                      await showAlert({ title: "Success", message: "নোট সংরক্ষিত হয়েছে!", type: "success" });
                                     }
                                     setActiveDropdownId(null);
                                   }}

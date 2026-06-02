@@ -129,6 +129,7 @@ export const notices = pgTable("notices", {
   title: varchar("title", { length: 255 }).notNull(),
   message: text("message").notNull(),
   type: varchar("type", { length: 50 }).default("general"), // offer, maintenance, general
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
