@@ -44,7 +44,9 @@ export const users = pgTable("users", {
   permissions: text("permissions").default("[]"),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorSecret: varchar("two_factor_secret", { length: 255 }),
-  autoRenew: boolean("auto_renew").default(true),
+  autoRenew: boolean("auto_renew").default(false),
+  ponPort: varchar("pon_port", { length: 50 }),
+  onuMac: varchar("onu_mac", { length: 100 }),
 });
 
 export const packages = pgTable("packages", {

@@ -24,6 +24,7 @@ interface AdminUser {
   id: number;
   name: string;
   phone: string;
+  photoUrl: string | null;
   address: string | null;
   createdAt: string | null;
 }
@@ -67,8 +68,12 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
   const [companyName, setCompanyName] = useState(initialSettings.system_name || "NexusBill ISP");
   const [email, setEmail] = useState(initialSettings.admin_email || "admin@nexusbill.com");
   const [phone, setPhone] = useState(adminUser.phone);
+  const [photoUrl, setPhotoUrl] = useState(adminUser.photoUrl || "");
+  const [companyLogo, setCompanyLogo] = useState(initialSettings.company_logo || "");
   const [address, setAddress] = useState(adminUser.address || "");
   const [signature, setSignature] = useState(initialSettings.admin_signature || "NexusBill Team");
+  
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Control Panel Permissions state
   const [permissions, setPermissions] = useState<string[]>(() => {
@@ -90,23 +95,45 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
   const [pwdSuccess, setPwdSuccess] = useState<string | null>(null);
   const [savingPwd, setSavingPwd] = useState(false);
 
+  async function handleFileUpload(file: File): Promise<string | null> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: formData });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.url;
+  }
+
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setSaved(false);
 
     try {
-      const res = await fetch("/api/admin/settings", {
+      // Save global settings
+      await fetch("/api/admin/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           system_name: companyName,
           admin_email: email,
           admin_signature: signature,
+          company_logo: companyLogo,
         }),
       });
 
-      if (res.ok) {
+      // Save user profile details
+      const userRes = await fetch("/api/admin/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profileName,
+          phone,
+          photoUrl,
+        }),
+      });
+
+      if (userRes.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
       }
@@ -301,6 +328,62 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
                     />
                   </div>
                   <div>
+                    <label className="block text-sm text-gray-300 mb-2">Company Logo</label>
+                    <div className="flex gap-4 items-center">
+                      {companyLogo && (
+                        <img src={companyLogo} alt="Logo" className="w-12 h-12 object-cover rounded bg-white/10" />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setUploadingImage(true);
+                            const url = await handleFileUpload(e.target.files[0]);
+                            if (url) setCompanyLogo(url);
+                            setUploadingImage(false);
+                          }
+                        }}
+                        className="w-full glass-input px-4 py-2 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-neon-blue/20 file:text-neon-blue hover:file:bg-neon-blue/30"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-2">Mobile Number</label>
+                    <input
+                      type="text"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full glass-input px-4 py-3"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-2">Profile Image</label>
+                    <div className="flex gap-4 items-center">
+                      {photoUrl ? (
+                        <img src={photoUrl} alt="Avatar" className="w-12 h-12 rounded-full object-cover bg-white/10" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-neon-blue to-purple-500 flex items-center justify-center text-white font-bold shrink-0 text-xl">
+                          {profileName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setUploadingImage(true);
+                            const url = await handleFileUpload(e.target.files[0]);
+                            if (url) setPhotoUrl(url);
+                            setUploadingImage(false);
+                          }
+                        }}
+                        className="w-full glass-input px-4 py-2 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-purple-500/20 file:text-purple-300 hover:file:bg-purple-500/30"
+                      />
+                    </div>
+                  </div>
+                  <div>
                     <label className="block text-sm text-gray-300 mb-2">E-mail Address</label>
                     <input
                       type="email"
@@ -335,10 +418,10 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
 
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || uploadingImage}
                   className="flex items-center gap-2 px-6 py-3 rounded-xl bg-neon-blue/20 text-neon-blue border border-neon-blue/30 font-semibold hover:bg-neon-blue/30 transition disabled:opacity-50"
                 >
-                  {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  {(saving || uploadingImage) ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                   Update Profile
                 </button>
               </form>

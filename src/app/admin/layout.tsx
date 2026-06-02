@@ -61,6 +61,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
 
+  const [adminProfile, setAdminProfile] = useState<{name: string, photoUrl: string | null} | null>(null);
+
   // Global search states
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{ type: string; id: number; title: string; subtitle: string; url: string }[]>([]);
@@ -80,6 +82,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       })
       .catch(() => {});
   }, [pathname]);
+
+  useEffect(() => {
+    fetch("/api/admin/profile")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.name) {
+          setAdminProfile(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Global search effect with debounce
   useEffect(() => {
@@ -324,10 +337,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
 
               <Link href="/admin/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <span className="text-sm text-gray-400 hidden sm:block">Admin</span>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-neon-blue to-purple-500 flex items-center justify-center text-white font-bold shadow-lg shadow-neon-blue/20 cursor-pointer hover:scale-105 transition-transform">
-                  A
-                </div>
+                <span className="text-sm text-gray-400 hidden sm:block">
+                  {adminProfile?.name || "Admin"}
+                </span>
+                {adminProfile?.photoUrl ? (
+                  <img src={adminProfile.photoUrl} alt="Admin" className="w-10 h-10 rounded-full object-cover shadow-lg shadow-neon-blue/20 cursor-pointer hover:scale-105 transition-transform bg-white/10" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-neon-blue to-purple-500 flex items-center justify-center text-white font-bold shadow-lg shadow-neon-blue/20 cursor-pointer hover:scale-105 transition-transform">
+                    {adminProfile?.name ? adminProfile.name.charAt(0).toUpperCase() : "A"}
+                  </div>
+                )}
               </Link>
             </div>
           </div>

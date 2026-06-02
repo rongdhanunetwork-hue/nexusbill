@@ -181,7 +181,7 @@ export default function CustomersClient({
   const [rechargeMethod, setRechargeMethod] = useState<string>("হ্যান্ড ক্যাশ");
   const [showNoteDate, setShowNoteDate] = useState(false);
   const [renewBack, setRenewBack] = useState(true);
-  const [modalAutoRenew, setModalAutoRenew] = useState(true);
+  const [modalAutoRenew, setModalAutoRenew] = useState(false);
   const [rechargeNote, setRechargeNote] = useState("");
   const [customBaseDate, setCustomBaseDate] = useState<string>("");
   const [customExpireDate, setCustomExpireDate] = useState<string>("");
@@ -274,6 +274,7 @@ export default function CustomersClient({
       (statusFilter === "Offline" && displayStatus === "offline") ||
       (statusFilter === "Expired" && isExpired) ||
       (statusFilter === "Upcoming" && isUpcoming) ||
+      (statusFilter === "Auto Renew Enabled" && customer.autoRenew === true) ||
       (statusFilter === "New This Month" && !!isNewThisMonth) ||
       (statusFilter === "Paid (Month)" && customer.status === "active" && !isExpired) ||
       (statusFilter === "Unpaid (Month)" && isExpired);
@@ -378,7 +379,7 @@ export default function CustomersClient({
         }
       }
       setCustomExpireDate(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
-      setModalAutoRenew(rechargeCustomer.autoRenew ?? true);
+      setModalAutoRenew(false);
     } else {
       setCustomBaseDate("");
       setCustomExpireDate("");
@@ -643,6 +644,7 @@ export default function CustomersClient({
             <option value="Offline" className="bg-slate-800">Offline</option>
             <option value="Expired" className="bg-slate-800">Expired</option>
             <option value="Upcoming" className="bg-slate-800">Upcoming Expire (7 Days)</option>
+            <option value="Auto Renew Enabled" className="bg-slate-800">Auto Renew Enabled</option>
             <option value="New This Month" className="bg-slate-800">New This Month</option>
             <option value="Paid (Month)" className="bg-slate-800">Paid (Month)</option>
             <option value="Unpaid (Month)" className="bg-slate-800">Unpaid (Month)</option>

@@ -33,6 +33,10 @@ interface Customer {
   promiseDate?: string | Date | null;
   note?: string | null;
   balance?: string | null;
+  walletBalance?: string | null;
+  ponPort?: string | null;
+  onuMac?: string | null;
+  olt?: { name: string; ipAddress: string } | null;
 }
 
 const toLocalDatetimeString = (dateInput: string | Date | null | undefined) => {
@@ -378,6 +382,24 @@ export default function CustomerProfileClient({
               }
             })()}
           </div>
+          
+          <div className="mt-6 w-full flex flex-col gap-3">
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex justify-between items-center">
+              <span className="text-gray-400 text-sm font-semibold">Wallet Balance:</span>
+              <span className="text-white font-bold">৳ {parseFloat(customer.walletBalance || "0").toFixed(2)}</span>
+            </div>
+            {parseFloat(customer.balance || "0") < 0 ? (
+              <div className="p-3 rounded-xl bg-neon-green/10 border border-neon-green/30 flex justify-between items-center">
+                <span className="text-neon-green text-sm font-semibold">Advance (অ্যাডভান্স):</span>
+                <span className="text-neon-green font-bold">৳ {Math.abs(parseFloat(customer.balance || "0")).toFixed(2)}</span>
+              </div>
+            ) : parseFloat(customer.balance || "0") > 0 ? (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex justify-between items-center">
+                <span className="text-red-400 text-sm font-semibold">Due (বকেয়া):</span>
+                <span className="text-red-400 font-bold">৳ {parseFloat(customer.balance || "0").toFixed(2)}</span>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {/* Details Grid */}
@@ -478,7 +500,12 @@ export default function CustomerProfileClient({
                   </button>
                 )}
               </div>
+              <Info icon={<Wifi size={18} />} label="Connection Type" value={customer.customerType ? customer.customerType.toUpperCase() : "PPPOE"} />
               <Info icon={<Wifi size={18} />} label="MAC Address" value={customer.macAddress || "Not set"} />
+              <Info icon={<Wifi size={18} />} label="OLT" value={customer.olt ? `${customer.olt.name} (${customer.olt.ipAddress})` : "Not assigned"} />
+              <Info icon={<Wifi size={18} />} label="PON Port" value={customer.ponPort || "Not set"} />
+              <Info icon={<Wifi size={18} />} label="ONU MAC" value={customer.onuMac || "Not set"} />
+              
               <Info icon={<IdCard size={18} />} label="NID Number" value={displayNidNumber || "Not set"} />
               <Info icon={<Clock size={18} />} label="Date of Birth (জন্ম তারিখ)" value={displayDob ? displayDob.toLocaleDateString() : "Not set"} />
               <Info icon={<Package size={18} />} label="Package" value={`${customer.package?.name || "None"} ${customer.package?.speed ? `(${customer.package.speed})` : ""}`} />
@@ -488,7 +515,6 @@ export default function CustomerProfileClient({
               <Info icon={<Clock size={18} />} label="Profile Age (কত দিন হলো)" value={getProfileAge()} />
               <Info icon={<IdCard size={18} />} label="NID Document" value={customer.nidUrl ? "Uploaded" : "Not uploaded"} />
               <Info icon={<MapPin size={18} />} label="Assigned Area" value={areas.find(a => a.id === customer.areaId)?.name || "Not set"} />
-              <Info icon={<Wifi size={18} />} label="Connection Type" value={customer.customerType ? customer.customerType.toUpperCase() : "PPPOE"} />
               <Info icon={<CreditCard size={18} />} label="Connection Fee" value={customer.connectionFee ? `৳${customer.connectionFee}` : "৳0"} />
               <Info icon={<CreditCard size={18} />} label="Current Balance" value={customer.balance ? `৳${customer.balance}` : "৳0"} />
               <Info icon={<Clock size={18} />} label="Promise Date" value={customer.promiseDate ? new Date(customer.promiseDate).toLocaleDateString() : "None"} />

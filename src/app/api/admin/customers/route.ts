@@ -46,7 +46,8 @@ export async function POST(req: Request) {
       pppoeUsername, packageId, mikrotikId,
       photoUrl, nidUrl, macAddress, ipAddress,
       nidNumber, createdAt, expireDate, dob, resellerId,
-      areaId, customerType, connectionFee, promiseDate, note, autoRenew
+      areaId, customerType, connectionFee, promiseDate, note, autoRenew,
+      oltId, ponPort, onuMac
     } = body;
 
     if (!name || !phone || !password) {
@@ -98,7 +99,10 @@ export async function POST(req: Request) {
       connectionFee: connectionFee ? String(connectionFee) : "0",
       promiseDate: promiseDate ? new Date(promiseDate + (promiseDate.includes('Z') ? '' : 'Z')) : null,
       note: note || null,
-      autoRenew: autoRenew !== undefined ? Boolean(autoRenew) : true,
+      autoRenew: autoRenew !== undefined ? Boolean(autoRenew) : false,
+      oltId: oltId ? Number(oltId) : null,
+      ponPort: ponPort?.trim() || null,
+      onuMac: onuMac?.trim() || null,
     }).returning();
 
     // Automatically sync customer PPPoE secret to MikroTik router (disabled by default)

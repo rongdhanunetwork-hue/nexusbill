@@ -20,6 +20,12 @@ interface MikroTik {
   ipAddress: string;
 }
 
+interface OLT {
+  id: number;
+  name: string;
+  ipAddress: string;
+}
+
 function getAreaLabel(item: any, list: any[]): string {
   if (item.type === "area") return `📍 ${item.name}`;
   if (item.type === "subarea") {
@@ -43,17 +49,20 @@ export default function AddCustomerPage() {
   const router = useRouter();
   const [packages, setPackages] = useState<Package[]>([]);
   const [routers, setRouters] = useState<MikroTik[]>([]);
+  const [oltsList, setOltsList] = useState<OLT[]>([]);
   const [areas, setAreas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPwd, setShowPwd] = useState(false);
-  const [autoRenew, setAutoRenew] = useState(true);
+  const [autoRenew, setAutoRenew] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/packages").then(r => r.json()).then(setPackages);
-    // Inline fetch routers from DB via a small API
     fetch("/api/admin/mikrotik/routers").then(r => r.json()).then(data => {
       if (Array.isArray(data)) setRouters(data);
+    }).catch(() => {});
+    fetch("/api/admin/olts").then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setOltsList(data);
     }).catch(() => {});
     fetch("/api/admin/areas").then(r => r.json()).then(data => {
       if (Array.isArray(data)) setAreas(data);
@@ -85,6 +94,9 @@ export default function AddCustomerPage() {
       promiseDate: form.get("promiseDate") ? String(form.get("promiseDate")) : null,
       note: String(form.get("note") || "").trim(),
       autoRenew: autoRenew,
+      oltId: form.get("oltId") ? Number(form.get("oltId")) : null,
+      ponPort: String(form.get("ponPort") || "").trim(),
+      onuMac: String(form.get("onuMac") || "").trim(),
     };
 
     if (!body.password || body.password.length < 6) {
@@ -170,6 +182,28 @@ export default function AddCustomerPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            
+            <div className="md:col-span-2 grid md:grid-cols-3 gap-5 bg-white/5 p-4 rounded-xl border border-white/10 mt-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">OLT</label>
+                <select name="oltId" className="w-full glass-input px-4 py-3 bg-slate-800">
+                  <option value="" className="bg-slate-800">No OLT assigned</option>
+                  {oltsList.map(olt => (
+                    <option key={olt.id} value={olt.id} className="bg-slate-800">
+                      {olt.name} ({olt.ipAddress})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">PON Port</label>
+                <input type="text" name="ponPort" placeholder="e.g. PON-1" className="w-full glass-input px-4 py-3 bg-slate-800" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">ONU MAC</label>
+                <input type="text" name="onuMac" placeholder="AA:BB:CC:DD:EE:FF" className="w-full glass-input px-4 py-3 bg-slate-800" />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Customer Connection Type</label>

@@ -13,6 +13,12 @@ interface Package {
   price: string;
 }
 
+interface OLT {
+  id: number;
+  name: string;
+  ipAddress: string;
+}
+
 interface Customer {
   id: number;
   name: string;
@@ -34,6 +40,9 @@ interface Customer {
   note: string | null;
   balance: string | null;
   autoRenew: boolean;
+  oltId: number | null;
+  ponPort: string | null;
+  onuMac: string | null;
 }
 
 const toLocalDatetimeString = (dateInput: string | Date | null | undefined) => {
@@ -74,6 +83,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
+  const [oltsList, setOltsList] = useState<OLT[]>([]);
   const [areas, setAreas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -82,29 +92,25 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   const [autoRenew, setAutoRenew] = useState(true);
 
   useEffect(() => {
-    // Fetch packages
-    fetch("/api/admin/packages")
-      .then((r) => r.json())
-      .then(setPackages);
-
-    // Fetch areas
-    fetch("/api/admin/areas")
-      .then((r) => r.json())
-      .then(setAreas)
-      .catch(() => {});
-
-    // Fetch customer details
-    fetch(`/api/admin/customers/${customerId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setCustomer(data);
-        setAutoRenew(data.autoRenew !== false);
-        setLoading(false);
+    Promise.all([
+      fetch("/api/admin/packages").then((r) => r.json()),
+      fetch("/api/admin/areas").then((r) => r.json()).catch(() => []),
+      fetch("/api/admin/olts").then((r) => r.json()).catch(() => []),
+      fetch(`/api/admin/customers/${customerId}`).then((r) => {
+        if (!r.ok) throw new Error("Failed to load customer");
+        return r.json();
       })
-      .catch(() => {
-        setError("Failed to load customer details");
-        setLoading(false);
-      });
+    ]).then(([packagesData, areasData, oltsData, customerData]) => {
+      setPackages(packagesData);
+      setAreas(areasData);
+      if (Array.isArray(oltsData)) setOltsList(oltsData);
+      setCustomer(customerData);
+      setAutoRenew(customerData.autoRenew !== false);
+      setLoading(false);
+    }).catch(() => {
+      setError("Failed to load details");
+      setLoading(false);
+    });
   }, [customerId]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -132,6 +138,9 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       note: String(form.get("note") || "").trim(),
       balance: String(form.get("balance") || "0"),
       autoRenew,
+      oltId: form.get("oltId") ? Number(form.get("oltId")) : null,
+      ponPort: String(form.get("ponPort") || "").trim(),
+      onuMac: String(form.get("onuMac") || "").trim(),
     };
 
     if (password) {
@@ -258,7 +267,27 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
               className="w-full glass-input px-4 py-3 bg-slate-800 text-white border border-white/10"
             />
           </div>
-
+          <div className="md:col-span-2 grid md:grid-cols-3 gap-5 bg-white/5 p-4 rounded-xl border border-white/10 mt-2 mb-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">OLT</label>
+              <select name="oltId" defaultValue={customer.oltId || ""} className="w-full glass-input px-4 py-3 bg-slate-800 text-white">
+                <option value="" className="bg-slate-800">No OLT assigned</option>
+                {oltsList.map(olt => (
+                  <option key={olt.id} value={olt.id} className="bg-slate-800">
+                    {olt.name} ({olt.ipAddress})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">PON Port</label>
+              <input type="text" name="ponPort" defaultValue={customer.ponPort || ""} placeholder="e.g. PON-1" className="w-full glass-input px-4 py-3 bg-slate-800 text-white" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">ONU MAC</label>
+              <input type="text" name="onuMac" defaultValue={customer.onuMac || ""} placeholder="AA:BB:CC:DD:EE:FF" className="w-full glass-input px-4 py-3 bg-slate-800 text-white" />
+            </div>
+          </div>
           <div>
             <label className="block text-sm text-gray-300 mb-2">Customer Connection Type</label>
             <select name="customerType" defaultValue={customer.customerType || "pppoe"} className="w-full glass-input px-4 py-3 bg-slate-800 text-white border border-white/10">

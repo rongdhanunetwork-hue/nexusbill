@@ -69,6 +69,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.note !== undefined) updateData.note = body.note || null;
     if (body.balance !== undefined) updateData.balance = body.balance ? String(body.balance) : "0";
     if (body.autoRenew !== undefined) updateData.autoRenew = Boolean(body.autoRenew);
+    if (body.oltId !== undefined) updateData.oltId = body.oltId ? Number(body.oltId) : null;
+    if (body.ponPort !== undefined) updateData.ponPort = body.ponPort?.trim() || null;
+    if (body.onuMac !== undefined) updateData.onuMac = body.onuMac?.trim() || null;
 
     // Package change
     if (body.packageId !== undefined) {
@@ -157,7 +160,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const customer = await db.query.users.findFirst({
     where: eq(users.id, Number(id)),
-    with: { package: true, mikrotik: true, payments: true, invoices: true },
+    with: { package: true, mikrotik: true, payments: true, invoices: true, olt: true },
   });
 
   if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 });
