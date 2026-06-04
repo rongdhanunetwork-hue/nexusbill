@@ -1,17 +1,21 @@
 import { db } from "@/db";
 import { payments, users, invoices, packages, transactions } from "@/db/schema";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { CheckCircle, Clock, DollarSign, FileText, AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
 import RollbackButton from "./RollbackButton";
 import PaymentHistoryTable from "./PaymentHistoryTable";
-
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 async function approvePayment(formData: FormData) {
   "use server";
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) return;
+
   const paymentId = Number(formData.get("paymentId"));
   const userId = Number(formData.get("userId"));
   const amount = String(formData.get("amount") || "0");
@@ -21,7 +25,12 @@ async function approvePayment(formData: FormData) {
     where: eq(users.id, userId),
     with: { package: true },
   });
-  if (!user) return;
+  if (!user || user.adminId !== session.userId) return;
+
+  const payment = await db.query.payments.findFirst({
+    where: and(eq(payments.id, paymentId), eq(payments.userId, userId))
+  });
+  if (!payment) return;
 
   // Mark payment as approved
   await db.update(payments).set({ status: "approved" }).where(eq(payments.id, paymentId));
@@ -63,7 +72,7 @@ async function approvePayment(formData: FormData) {
 
     if (user.pppoeUsername) {
       const { syncCustomerToMikrotik } = await import("@/lib/sync");
-      await syncCustomerToMikrotik(user.pppoeUsername, undefined, user.packageId, "active");
+      await syncCustomerToMikrotik(user.pppoeUsername, undefined, user.packageId, "active", user.mikrotikId);
     }
 
     // SMS to customer
@@ -79,13 +88,27 @@ async function approvePayment(formData: FormData) {
 
 async function rejectPayment(formData: FormData) {
   "use server";
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) return;
+
   const paymentId = Number(formData.get("paymentId"));
-  if (paymentId) await db.update(payments).set({ status: "rejected" }).where(eq(payments.id, paymentId));
+  if (paymentId) {
+    const payment = await db.query.payments.findFirst({
+      where: eq(payments.id, paymentId),
+      with: { user: true }
+    });
+    if (!payment || payment.user?.adminId !== session.userId) return;
+
+    await db.update(payments).set({ status: "rejected" }).where(eq(payments.id, paymentId));
+  }
   revalidatePath("/admin/billing");
 }
 
 async function rollbackPayment(formData: FormData) {
   "use server";
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) return;
+
   const paymentId = Number(formData.get("paymentId"));
   if (!paymentId) return;
 
@@ -98,7 +121,7 @@ async function rollbackPayment(formData: FormData) {
     const customer = await db.query.users.findFirst({
       where: eq(users.id, payment.userId),
     });
-    if (!customer) return;
+    if (!customer || customer.adminId !== session.userId) return;
 
     let durationDays = 30;
     if (customer.packageId) {
@@ -173,7 +196,8 @@ async function rollbackPayment(formData: FormData) {
         customer.pppoeUsername,
         undefined,
         customer.packageId,
-        newStatus
+        newStatus,
+        customer.mikrotikId
       );
     }
   } catch (err) {
@@ -185,6 +209,9 @@ async function rollbackPayment(formData: FormData) {
 
 async function addResellerCredit(formData: FormData) {
   "use server";
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) return;
+
   const resellerId = Number(formData.get("resellerId"));
   const amount = Number(formData.get("amount"));
   if (!resellerId || !amount) return;
@@ -192,7 +219,7 @@ async function addResellerCredit(formData: FormData) {
   const reseller = await db.query.users.findFirst({
     where: and(eq(users.id, resellerId), eq(users.role, "reseller")),
   });
-  if (!reseller) return;
+  if (!reseller || reseller.adminId !== session.userId) return;
 
   const currentBalance = Number(reseller.walletBalance || 0);
   await db.update(users)
@@ -211,7 +238,13 @@ async function addResellerCredit(formData: FormData) {
 
 async function generateMonthlyBills() {
   "use server";
-  const customers = await db.query.users.findMany({ where: eq(users.role, "customer"), with: { package: true } });
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) return;
+
+  const customers = await db.query.users.findMany({ 
+    where: and(eq(users.role, "customer"), eq(users.adminId, session.userId)), 
+    with: { package: true } 
+  });
   for (const customer of customers) {
     if (customer.package?.price) {
       await db.insert(invoices).values({ userId: customer.id, amount: customer.package.price, status: "unpaid", dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
@@ -221,13 +254,42 @@ async function generateMonthlyBills() {
 }
 
 export default async function BillingPage() {
-  const pendingPayments = await db.query.payments.findMany({ where: eq(payments.status, "pending"), orderBy: [desc(payments.createdAt)], with: { user: true } });
-  const paymentHistory = await db.query.payments.findMany({ orderBy: [desc(payments.createdAt)], limit: 200, with: { user: true } });
-  const dueInvoices = await db.query.invoices.findMany({ where: sql`${invoices.status} in ('unpaid','due')`, orderBy: [desc(invoices.createdAt)], with: { user: true } });
-  const [dueTotal] = await db.select({ sum: sql<number>`cast(coalesce(sum(${invoices.amount}),0) as int)` }).from(invoices).where(sql`${invoices.status} in ('unpaid','due')`);
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) {
+    redirect("/login/admin");
+  }
+
+  // Get all user IDs (customers and resellers) belonging to this admin
+  const adminUsers = await db.select({ id: users.id }).from(users).where(eq(users.adminId, session.userId));
+  const adminUserIds = adminUsers.map(u => u.id);
+  const userFilter = inArray(payments.userId, adminUserIds.length > 0 ? adminUserIds : [-1]);
+  const invoiceUserFilter = inArray(invoices.userId, adminUserIds.length > 0 ? adminUserIds : [-1]);
+
+  const pendingPayments = await db.query.payments.findMany({ 
+    where: and(eq(payments.status, "pending"), userFilter), 
+    orderBy: [desc(payments.createdAt)], 
+    with: { user: true } 
+  });
+  
+  const paymentHistory = await db.query.payments.findMany({ 
+    where: userFilter,
+    orderBy: [desc(payments.createdAt)], 
+    limit: 200, 
+    with: { user: true } 
+  });
+
+  const dueInvoices = await db.query.invoices.findMany({ 
+    where: and(sql`${invoices.status} in ('unpaid','due')`, invoiceUserFilter), 
+    orderBy: [desc(invoices.createdAt)], 
+    with: { user: true } 
+  });
+
+  const [dueTotal] = await db.select({ sum: sql<number>`cast(coalesce(sum(${invoices.amount}),0) as int)` })
+    .from(invoices)
+    .where(and(sql`${invoices.status} in ('unpaid','due')`, invoiceUserFilter));
 
   const resellersList = await db.query.users.findMany({
-    where: eq(users.role, "reseller"),
+    where: and(eq(users.role, "reseller"), eq(users.adminId, session.userId)),
     orderBy: [desc(users.id)],
   });
 

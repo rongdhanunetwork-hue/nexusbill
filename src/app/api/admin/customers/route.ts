@@ -14,16 +14,25 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let adminId = session.userId;
+  if (session.role === "reseller" || session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
+
   let customers;
   if (session.role === "reseller") {
     customers = await db.query.users.findMany({
-      where: and(eq(users.role, "customer"), eq(users.resellerId, session.userId)),
+      where: and(eq(users.role, "customer"), eq(users.resellerId, session.userId), eq(users.adminId, adminId)),
       orderBy: [asc(users.name)],
       with: { package: true },
     });
   } else {
     customers = await db.query.users.findMany({
-      where: eq(users.role, "customer"),
+      where: and(eq(users.role, "customer"), eq(users.adminId, adminId)),
       orderBy: [asc(users.name)],
       with: { package: true },
     });
@@ -37,6 +46,15 @@ export async function POST(req: Request) {
   const session = await getSession();
   if (!session || (session.role !== "admin" && session.role !== "reseller")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let adminId = session.userId;
+  if (session.role === "reseller") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
   }
 
   try {
@@ -103,11 +121,12 @@ export async function POST(req: Request) {
       oltId: oltId ? Number(oltId) : null,
       ponPort: ponPort?.trim() || null,
       onuMac: onuMac?.trim() || null,
+      adminId,
     }).returning();
 
     // Automatically sync customer PPPoE secret to MikroTik router (disabled by default)
     if (pppoeUsername?.trim()) {
-      await syncCustomerToMikrotik(pppoeUsername.trim(), password, packageId, "expired");
+      await syncCustomerToMikrotik(pppoeUsername.trim(), password, packageId, "expired", mikrotikId ? Number(mikrotikId) : null);
     }
 
     await insertAuditLog(session.userId, "CREATE_CUSTOMER", `Created customer ${customer.name} (Phone: ${customer.phone})`);

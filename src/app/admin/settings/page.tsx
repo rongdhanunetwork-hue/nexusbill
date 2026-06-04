@@ -6,8 +6,8 @@ import { Save, Shield, Globe, Phone, Loader2, CheckCircle2, Eye, EyeOff, Message
 
 interface SettingsMap {
   bkash_number?: string;
-  nagad_number?: string;
-  rocket_number?: string;
+  bkash_number_2?: string;
+
   system_name?: string;
   website_logo?: string;
   sms_provider?: string;
@@ -138,23 +138,18 @@ export default function SettingsPage() {
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             <Field
-              label="bKash Personal Number"
+              label="bKash Number 1"
               name="bkash_number"
               defaultValue={settings.bkash_number || ""}
               placeholder="e.g. 01712345678"
             />
             <Field
-              label="Nagad Number"
-              name="nagad_number"
-              defaultValue={settings.nagad_number || ""}
-              placeholder="e.g. 01812345678"
+              label="bKash Number 2"
+              name="bkash_number_2"
+              defaultValue={settings.bkash_number_2 || ""}
+              placeholder="e.g. 01712345678"
             />
-            <Field
-              label="Rocket Number"
-              name="rocket_number"
-              defaultValue={settings.rocket_number || ""}
-              placeholder="e.g. 01912345678"
-            />
+
           </div>
           <p className="text-xs text-gray-500">
             এই নম্বরগুলো Customer Pay Bill পেজে দেখাবে।

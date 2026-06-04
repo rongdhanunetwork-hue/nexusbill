@@ -1,11 +1,19 @@
 import { db } from "@/db";
 import { payments, expenses, users } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import MonthlySummaryClient from "./MonthlySummaryClient";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function MonthlySummaryPage() {
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) {
+    redirect("/login");
+  }
+  const adminId = session.userId;
+
   // Group payments by month
   const monthlyIncomes = await db
     .select({
@@ -13,7 +21,8 @@ export default async function MonthlySummaryPage() {
       totalIncome: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)`
     })
     .from(payments)
-    .where(eq(payments.status, "approved"))
+    .innerJoin(users, eq(payments.userId, users.id))
+    .where(and(eq(payments.status, "approved"), eq(users.adminId, adminId)))
     .groupBy(sql`to_char(${payments.createdAt}, 'YYYY-MM')`);
 
   // Group expenses by month
@@ -23,6 +32,7 @@ export default async function MonthlySummaryPage() {
       totalExpense: sql<number>`cast(coalesce(sum(${expenses.amount}), 0) as int)`
     })
     .from(expenses)
+    .where(eq(expenses.adminId, adminId))
     .groupBy(sql`to_char(${expenses.createdAt}, 'YYYY-MM')`);
 
   // Group new customers by month
@@ -32,7 +42,7 @@ export default async function MonthlySummaryPage() {
       totalCustomers: sql<number>`cast(count(*) as int)`
     })
     .from(users)
-    .where(eq(users.role, "customer"))
+    .where(and(eq(users.role, "customer"), eq(users.adminId, adminId)))
     .groupBy(sql`to_char(${users.createdAt}, 'YYYY-MM')`);
 
   // Merge all data by monthYear

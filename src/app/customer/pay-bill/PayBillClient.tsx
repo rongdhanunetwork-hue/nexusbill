@@ -6,11 +6,10 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
   bkashNumber: string;
-  nagadNumber: string;
-  rocketNumber: string;
+  bkashNumber2: string;
 }
 
-export default function PayBillClient({ bkashNumber, nagadNumber, rocketNumber }: Props) {
+export default function PayBillClient({ bkashNumber, bkashNumber2 }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +51,14 @@ export default function PayBillClient({ bkashNumber, nagadNumber, rocketNumber }
   };
 
   const paymentMethods = [
-    { key: "bkash", label: "bKash Payment", number: bkashNumber, color: "#E2136E", textColor: "#FF4C9C" }
+    { key: "bkash", label: "bKash Payment 1", number: bkashNumber, color: "#E2136E", textColor: "#FF4C9C" }
   ];
+
+  if (bkashNumber2) {
+    paymentMethods.push({ key: "bkash2", label: "bKash Payment 2", number: bkashNumber2, color: "#E2136E", textColor: "#FF4C9C" });
+  }
+
+
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -159,9 +164,13 @@ export default function PayBillClient({ bkashNumber, nagadNumber, rocketNumber }
                   <select
                     name="method"
                     required
-                    className="w-full px-4 py-3 glass-input appearance-none bg-slate-800"
+                    className="w-full px-4 py-3 glass-input appearance-none bg-slate-800 text-white"
                   >
-                    <option value="bkash" className="bg-slate-800">bKash Payment</option>
+                    {paymentMethods.map((m) => (
+                      <option key={m.key} value={m.key} className="bg-slate-800">
+                        {m.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>

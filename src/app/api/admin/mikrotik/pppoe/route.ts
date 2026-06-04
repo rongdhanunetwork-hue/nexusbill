@@ -73,7 +73,7 @@ export async function GET(req: Request) {
 
     // Automatically import any new router secrets into database using the fetched secrets (no extra connection)
     if (details.secrets && details.secrets.length > 0) {
-      await syncMikrotikSecrets(details.secrets);
+      await syncMikrotikSecrets(details.secrets, routerId);
     }
 
     // Update lastSeen for online users in DB

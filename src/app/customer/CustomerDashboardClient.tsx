@@ -31,6 +31,8 @@ export default function CustomerDashboardClient({
   usageData = [],
   pppoeUsername = null,
   currentCredit,
+  monthlyDownloadGb = 0,
+  monthlyUploadGb = 0,
 }: {
   customerName: string;
   packageName: string;
@@ -45,6 +47,8 @@ export default function CustomerDashboardClient({
   usageData?: UsageDay[];
   pppoeUsername?: string | null;
   currentCredit: number;
+  monthlyDownloadGb?: number;
+  monthlyUploadGb?: number;
 }) {
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
   const [showNoticePopup, setShowNoticePopup] = useState<boolean>(false);
@@ -154,16 +158,16 @@ export default function CustomerDashboardClient({
       setAccumulatedDownloadBytes((prev) => prev + dlBytes);
       setAccumulatedUploadBytes((prev) => prev + ulBytes);
 
-      if (bIn > 0) {
-        setLiveBytesIn(bIn);
+      if (bOut > 0) {
+        setLiveBytesIn(bOut);  // bytesOut from router = bytes sent to client = client download
       } else {
-        setLiveBytesIn((prev) => prev + ulBytes);
+        setLiveBytesIn((prev) => prev + dlBytes);
       }
 
-      if (bOut > 0) {
-        setLiveBytesOut(bOut);
+      if (bIn > 0) {
+        setLiveBytesOut(bIn);  // bytesIn from router = bytes received from client = client upload
       } else {
-        setLiveBytesOut((prev) => prev + dlBytes);
+        setLiveBytesOut((prev) => prev + ulBytes);
       }
 
       setLiveData((prev) => {
@@ -182,11 +186,9 @@ export default function CustomerDashboardClient({
     };
   }, [status]);
 
-  const accumulatedDownloadGb = accumulatedDownloadBytes / (1024 * 1024 * 1024);
-  const accumulatedUploadGb = accumulatedUploadBytes / (1024 * 1024 * 1024);
-
-  const totalDownload = (dbTotalDownload + accumulatedDownloadGb).toFixed(4);
-  const totalUpload = (dbTotalUpload + accumulatedUploadGb).toFixed(4);
+  // Keep values as exact numbers (no toFixed rounding until display formatting)
+  const totalDownloadBytes = (monthlyDownloadGb * (1024 ** 3)) + accumulatedDownloadBytes;
+  const totalUploadBytes = (monthlyUploadGb * (1024 ** 3)) + accumulatedUploadBytes;
 
   function formatBytes(bytes: number) {
     if (bytes === 0) return "0 Bytes";
@@ -337,7 +339,7 @@ export default function CustomerDashboardClient({
           <span>{chartMode === "live" ? "Real-time Traffic Monitor" : "Data Usage History"}</span>
           <div className="flex items-center gap-4">
             <span className="text-xs text-gray-400 no-print">
-              {chartMode === "live" ? "Live Traffic Speed" : `Cumulative: Down ${formatBytes((parseFloat(totalDownload) || 0) * 1024 * 1024 * 1024)} / Up ${formatBytes((parseFloat(totalUpload) || 0) * 1024 * 1024 * 1024)}`}
+              {chartMode === "live" ? "Live Traffic Speed" : `Cumulative: Down ${formatBytes(totalDownloadBytes)} / Up ${formatBytes(totalUploadBytes)}`}
             </span>
             <div className="flex gap-1.5 bg-white/5 p-1 rounded-xl no-print border border-white/10">
               <button
@@ -374,14 +376,14 @@ export default function CustomerDashboardClient({
                 <div className="text-red-500"><Download size={24} /></div>
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider">Total Downloaded</p>
-                  <p className="text-2xl font-bold text-white font-mono">{formatBytes((parseFloat(totalDownload) || 0) * 1024 * 1024 * 1024)}</p>
+                  <p className="text-2xl font-bold text-white font-mono">{formatBytes(totalDownloadBytes)}</p>
                 </div>
               </div>
               <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-green-500/20">
                 <div className="text-green-500"><Upload size={24} /></div>
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider">Total Uploaded</p>
-                  <p className="text-2xl font-bold text-white font-mono">{formatBytes((parseFloat(totalUpload) || 0) * 1024 * 1024 * 1024)}</p>
+                  <p className="text-2xl font-bold text-white font-mono">{formatBytes(totalUploadBytes)}</p>
                 </div>
               </div>
             </div>
@@ -418,24 +420,30 @@ export default function CustomerDashboardClient({
                 <Activity size={18} className="text-red-500" /> Live Traffic Monitoring
               </h3>
               <div className="grid sm:grid-cols-2 gap-4 mb-6">
-                <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-red-500/20 relative">
+                <div className="p-4 bg-white/5 rounded-xl border border-red-500/20 relative">
                   <div className="absolute top-2 right-2 flex items-center gap-1 text-[9px] uppercase font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" /> Live
                   </div>
-                  <div className="text-red-500"><Download size={24} /></div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Download Speed</p>
-                    <p className="text-2xl font-bold text-white font-mono">{formatSpeed(liveDownloadRate)}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-red-500"><Download size={24} /></div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider">Download Speed</p>
+                      <p className="text-2xl font-bold text-white font-mono">{formatSpeed(liveDownloadRate)}</p>
+                      <p className="text-xs text-gray-400 mt-1">Session: <span className="text-red-400 font-semibold">{formatBytes(liveBytesIn)}</span></p>
+                    </div>
                   </div>
                 </div>
-                <div className="p-4 bg-white/5 rounded-xl flex items-center gap-3 border border-green-500/20 relative">
+                <div className="p-4 bg-white/5 rounded-xl border border-green-500/20 relative">
                   <div className="absolute top-2 right-2 flex items-center gap-1 text-[9px] uppercase font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping" /> Live
                   </div>
-                  <div className="text-green-500"><Upload size={24} /></div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Upload Speed</p>
-                    <p className="text-2xl font-bold text-white font-mono">{formatSpeed(liveUploadRate)}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-green-500"><Upload size={24} /></div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider">Upload Speed</p>
+                      <p className="text-2xl font-bold text-white font-mono">{formatSpeed(liveUploadRate)}</p>
+                      <p className="text-xs text-gray-400 mt-1">Session: <span className="text-green-400 font-semibold">{formatBytes(liveBytesOut)}</span></p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -469,23 +477,28 @@ export default function CustomerDashboardClient({
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-6 pt-6 border-t border-white/10">
                 <div className="bg-white/5 p-3 rounded-lg text-center">
                   <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Session ↓</p>
-                  <p className="text-sm text-red-400 font-mono font-bold">{formatBytes(liveBytesOut)}</p>
+                  <p className="text-sm text-red-400 font-mono font-bold">{formatBytes(liveBytesIn)}</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">MikroTik Actual</p>
                 </div>
                 <div className="bg-white/5 p-3 rounded-lg text-center">
                   <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Session ↑</p>
-                  <p className="text-sm text-green-400 font-mono font-bold">{formatBytes(liveBytesIn)}</p>
+                  <p className="text-sm text-green-400 font-mono font-bold">{formatBytes(liveBytesOut)}</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">MikroTik Actual</p>
                 </div>
                 <div className="bg-white/10 p-3 rounded-lg text-center">
                   <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Session Total</p>
                   <p className="text-sm text-white font-mono font-bold">{formatBytes(liveBytesIn + liveBytesOut)}</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">↓+↑ Combined</p>
                 </div>
                 <div className="bg-white/10 p-3 rounded-lg text-center">
                   <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Monthly Total</p>
-                  <p className="text-sm text-blue-400 font-mono font-bold">{formatBytes((parseFloat(totalDownload) + parseFloat(totalUpload)) * 1024 * 1024 * 1024)}</p>
+                  <p className="text-sm text-blue-400 font-mono font-bold">{formatBytes(totalDownloadBytes + totalUploadBytes)}</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">DB Record</p>
                 </div>
                 <div className="bg-white/10 p-3 rounded-lg text-center col-span-2 md:col-span-1">
                   <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Session Uptime</p>
                   <p className="text-sm text-white font-mono font-bold">{formatUptime(sessionUptimeSeconds)}</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">Active Time</p>
                 </div>
               </div>
             </div>

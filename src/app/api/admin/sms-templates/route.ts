@@ -4,10 +4,10 @@ import { smsTemplates } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 
-// GET /api/admin/sms-templates — fetch all SMS templates
+// GET /api/admin/sms-templates — fetch all SMS templates globally
 export async function GET() {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -15,10 +15,10 @@ export async function GET() {
   return NextResponse.json(rows);
 }
 
-// POST /api/admin/sms-templates — update or create an SMS template
+// POST /api/admin/sms-templates — update or create an SMS template globally
 export async function POST(req: Request) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -29,7 +29,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Key and template content are required" }, { status: 400 });
     }
 
-    const existing = await db.query.smsTemplates.findFirst({ where: eq(smsTemplates.key, key) });
+    const existing = await db.query.smsTemplates.findFirst({
+      where: eq(smsTemplates.key, key)
+    });
     if (existing) {
       await db.update(smsTemplates)
         .set({ template, description })

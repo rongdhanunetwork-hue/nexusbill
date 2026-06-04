@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { olts } from "@/db/schema";
-import { desc, eq, isNull } from "drizzle-orm";
+import { olts, users } from "@/db/schema";
+import { desc, eq, isNull, and } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -12,15 +12,24 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let adminId = session.userId;
+  if (session.role === "reseller" || session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
+
   let allOlts;
   if (session.role === "reseller") {
     allOlts = await db.query.olts.findMany({
-      where: eq(olts.resellerId, session.userId),
+      where: and(eq(olts.resellerId, session.userId), eq(olts.adminId, adminId)),
       orderBy: [desc(olts.createdAt)],
     });
   } else {
     allOlts = await db.query.olts.findMany({
-      where: isNull(olts.resellerId),
+      where: and(isNull(olts.resellerId), eq(olts.adminId, adminId)),
       orderBy: [desc(olts.createdAt)],
     });
   }
@@ -31,6 +40,15 @@ export async function POST(req: Request) {
   const session = await getSession();
   if (!session || (session.role !== "admin" && session.role !== "reseller")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let adminId = session.userId;
+  if (session.role === "reseller") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
   }
 
   try {
@@ -48,6 +66,7 @@ export async function POST(req: Request) {
       connectionPort: Number(connectionPort) || 23,
       status: true,
       resellerId: session.role === "reseller" ? session.userId : null,
+      adminId,
     }).returning();
 
     return NextResponse.json(olt, { status: 201 });

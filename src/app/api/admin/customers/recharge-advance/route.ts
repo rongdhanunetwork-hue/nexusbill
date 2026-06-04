@@ -147,7 +147,8 @@ export async function POST(req: Request) {
         customer.pppoeUsername,
         undefined, // password stays same
         customer.packageId,
-        "active"
+        "active",
+        customer.mikrotikId
       );
     }
 

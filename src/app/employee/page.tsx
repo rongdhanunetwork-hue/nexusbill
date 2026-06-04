@@ -111,8 +111,8 @@ export default async function EmployeeDashboard() {
   const dailyUsageResult = await db
     .select({
       dayDate: sql<string>`to_char(${dataUsage.recordedAt}, 'YYYY-MM-DD')`,
-      downloadSum: sql<number>`cast(coalesce(sum(${dataUsage.downloadGb}), 0) as int)`,
-      uploadSum: sql<number>`cast(coalesce(sum(${dataUsage.uploadGb}), 0) as int)`
+      downloadSum: sql<number>`cast(coalesce(sum(${dataUsage.downloadGb}), 0) as float)`,
+      uploadSum: sql<number>`cast(coalesce(sum(${dataUsage.uploadGb}), 0) as float)`
     })
     .from(dataUsage)
     .where(sql`${dataUsage.recordedAt} >= current_date - interval '7 days'`)

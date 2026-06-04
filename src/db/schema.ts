@@ -13,7 +13,7 @@ import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  role: varchar("role", { length: 20 }).notNull().default("customer"), // admin, customer
+  role: varchar("role", { length: 20 }).notNull().default("customer"), // superadmin, admin, reseller, employee, customer
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 50 }).notNull().unique(),
   password: text("password").notNull(),
@@ -47,6 +47,8 @@ export const users = pgTable("users", {
   autoRenew: boolean("auto_renew").default(false),
   ponPort: varchar("pon_port", { length: 50 }),
   onuMac: varchar("onu_mac", { length: 100 }),
+  routerModel: varchar("router_model", { length: 255 }),
+  adminId: integer("admin_id"),
 });
 
 export const packages = pgTable("packages", {
@@ -57,6 +59,7 @@ export const packages = pgTable("packages", {
   durationDays: integer("duration_days").default(30),
   dataLimitGb: integer("data_limit_gb"), // null means unlimited
   createdAt: timestamp("created_at").defaultNow(),
+  adminId: integer("admin_id"),
 });
 
 export const mikrotiks = pgTable("mikrotiks", {
@@ -68,6 +71,7 @@ export const mikrotiks = pgTable("mikrotiks", {
   password: text("password").notNull(),
   status: boolean("status").default(true),
   resellerId: integer("reseller_id"),
+  adminId: integer("admin_id"),
 });
 
 export const olts = pgTable("olts", {
@@ -79,13 +83,14 @@ export const olts = pgTable("olts", {
   status: boolean("status").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   resellerId: integer("reseller_id"),
+  adminId: integer("admin_id"),
 });
 
 export const dataUsage = pgTable("data_usage", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  downloadGb: decimal("download_gb", { precision: 10, scale: 2 }).notNull().default("0"),
-  uploadGb: decimal("upload_gb", { precision: 10, scale: 2 }).notNull().default("0"),
+  downloadGb: decimal("download_gb", { precision: 20, scale: 9 }).notNull().default("0"),
+  uploadGb: decimal("upload_gb", { precision: 20, scale: 9 }).notNull().default("0"),
   recordedAt: timestamp("recorded_at").defaultNow(),
 });
 
@@ -120,8 +125,9 @@ export const tickets = pgTable("tickets", {
 
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
-  key: varchar("key", { length: 100 }).notNull().unique(),
+  key: varchar("key", { length: 100 }).notNull(),
   value: text("value"),
+  adminId: integer("admin_id"),
 });
 
 export const notices = pgTable("notices", {
@@ -131,6 +137,7 @@ export const notices = pgTable("notices", {
   type: varchar("type", { length: 50 }).default("general"), // offer, maintenance, general
   imageUrl: text("image_url"),
   createdAt: timestamp("created_at").defaultNow(),
+  adminId: integer("admin_id"),
 });
 
 export const ticketReplies = pgTable("ticket_replies", {
@@ -157,6 +164,7 @@ export const expenses = pgTable("expenses", {
   note: text("note"),
   expenseDate: date("expense_date").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  adminId: integer("admin_id"),
 });
 
 // Relations
@@ -255,6 +263,7 @@ export const areas = pgTable("areas", {
   type: varchar("type", { length: 20 }).notNull(), // 'area', 'subarea', 'polebox'
   parentId: integer("parent_id"), // null for area, area_id for subarea, subarea_id for polebox
   createdAt: timestamp("created_at").defaultNow(),
+  adminId: integer("admin_id"),
 });
 
 export const areasRelations = relations(areas, ({ one, many }) => ({
@@ -280,9 +289,10 @@ export const smsLogs = pgTable("sms_logs", {
 
 export const smsTemplates = pgTable("sms_templates", {
   id: serial("id").primaryKey(),
-  key: varchar("key", { length: 100 }).unique().notNull(),
+  key: varchar("key", { length: 100 }).notNull(),
   template: text("template").notNull(),
   description: varchar("description", { length: 255 }),
+  adminId: integer("admin_id"),
 });
 
 export const packageChangeRequests = pgTable("package_change_requests", {
@@ -337,6 +347,7 @@ export const inventory = pgTable("inventory", {
   branchId: integer("branch_id"),
   note: text("note"),
   createdAt: timestamp("created_at").defaultNow(),
+  adminId: integer("admin_id"),
 });
 
 export const inventoryRelations = relations(inventory, ({ one }) => ({

@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Loader2, Eye, EyeOff, AlertCircle, Upload } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
+import ImageUploadField from "@/components/ui/ImageUploadField";
 
 interface Package {
   id: number;
@@ -210,64 +211,6 @@ function Field({ label, name, required, placeholder, type = "text" }: {
         placeholder={placeholder}
         className="w-full glass-input px-4 py-3 bg-slate-800"
       />
-    </div>
-  );
-}
-
-function ImageUploadField({ label, name, defaultValue, onChange }: { label: string; name: string; defaultValue?: string; onChange?: (val: string) => void }) {
-  const [value, setValue] = useState(defaultValue || "");
-  const [uploading, setUploading] = useState(false);
-
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.url) {
-        setValue(data.url);
-        if (onChange) onChange(data.url);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-      <div className="flex gap-3 items-center">
-        <input type="hidden" name={name} value={value} />
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className="hidden"
-          id={`file-upload-${name}`}
-        />
-        <label
-          htmlFor={`file-upload-${name}`}
-          className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm text-gray-300 font-semibold cursor-pointer flex items-center gap-2"
-        >
-          {uploading ? <Loader2 size={16} className="animate-spin text-neon-blue" /> : <Upload size={16} />} Select Image
-        </label>
-        {value && (
-          <div className="flex items-center gap-2">
-            <img src={value} alt="Preview" className="w-10 h-10 object-cover rounded-lg border border-white/10" />
-            <span className="text-xs text-gray-400 truncate max-w-40">{value.split("/").pop()}</span>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

@@ -524,7 +524,7 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
                 {CONTROL_PANEL_FEATURES.map((feat) => {
                   const isChecked = permissions.includes(feat);
                   return (
-                    <label
+                    <div
                       key={feat}
                       onClick={() => togglePermission(feat)}
                       className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer select-none transition-all ${
@@ -540,7 +540,7 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
                         readOnly
                         className="rounded bg-slate-900 border-white/10 text-neon-blue focus:ring-0 shrink-0 pointer-events-none"
                       />
-                    </label>
+                    </div>
                   );
                 })}
               </div>

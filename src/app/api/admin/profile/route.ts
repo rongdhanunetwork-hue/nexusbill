@@ -7,16 +7,19 @@ import { getSession } from "@/lib/auth";
 export async function GET() {
   try {
     const session = await getSession();
-    if (!session || session.role !== "admin") {
+    if (!session || (session.role !== "admin" && session.role !== "superadmin")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const admin = await db.query.users.findFirst({
       where: eq(users.id, session.userId),
-      columns: { name: true, photoUrl: true }
+      columns: { name: true, photoUrl: true, role: true }
     });
 
-    return NextResponse.json(admin);
+    return NextResponse.json({
+      ...admin,
+      impersonatorId: session.impersonatorId || null
+    });
   } catch (err) {
     return NextResponse.json({ error: "Server Error" }, { status: 500 });
   }
@@ -25,7 +28,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await getSession();
-    if (!session || session.role !== "admin") {
+    if (!session || (session.role !== "admin" && session.role !== "superadmin")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

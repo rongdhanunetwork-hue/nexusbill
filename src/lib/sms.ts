@@ -5,8 +5,8 @@
  */
 
 import { db } from "@/db";
-import { settings, smsLogs, smsTemplates as dbSmsTemplates } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { settings, smsLogs, smsTemplates as dbSmsTemplates, users } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 
 interface SMSResult {
   success: boolean;
@@ -14,9 +14,11 @@ interface SMSResult {
   error?: string;
 }
 
-async function getSetting(key: string): Promise<string | null> {
+async function getSetting(key: string, adminId: number): Promise<string | null> {
   try {
-    const row = await db.query.settings.findFirst({ where: eq(settings.key, key) });
+    const row = await db.query.settings.findFirst({
+      where: and(eq(settings.key, key), eq(settings.adminId, adminId))
+    });
     return row?.value || null;
   } catch {
     return null;
@@ -107,15 +109,23 @@ async function sendViaBdBulkSms(
  * Main SMS send function — reads provider config from DB settings
  * Usage: await sendSMS("01700000000", "Your message here");
  */
-export async function sendSMS(phone: string, message: string, type: string = "manual"): Promise<SMSResult> {
+export async function sendSMS(
+  phone: string,
+  message: string,
+  type: string = "manual",
+  adminId?: number
+): Promise<SMSResult> {
   if (!phone || !message) {
     return { success: false, error: "Phone or message is empty" };
   }
 
   try {
-    const provider = await getSetting("sms_provider");
-    const apiKey = await getSetting("sms_api_key");
-    const senderId = await getSetting("sms_sender_id");
+    // Always use adminId = 1 for global SMS settings (shared system)
+    const targetAdminId = 1;
+
+    const provider = await getSetting("sms_provider", targetAdminId);
+    const apiKey = await getSetting("sms_api_key", targetAdminId);
+    const senderId = await getSetting("sms_sender_id", targetAdminId);
 
     // If not configured, log and return (non-blocking)
     if (!apiKey || !senderId || !provider) {
@@ -173,12 +183,17 @@ export async function sendSMS(phone: string, message: string, type: string = "ma
 /**
  * Send SMS to multiple phones at once
  */
-export async function sendBulkSMS(phones: string[], message: string, type: string = "bulk"): Promise<{ sent: number; failed: number }> {
+export async function sendBulkSMS(
+  phones: string[],
+  message: string,
+  type: string = "bulk",
+  adminId?: number
+): Promise<{ sent: number; failed: number }> {
   let sent = 0;
   let failed = 0;
 
   for (const phone of phones) {
-    const result = await sendSMS(phone, message, type);
+    const result = await sendSMS(phone, message, type, adminId);
     if (result.success) sent++;
     else failed++;
     // Small delay to avoid API rate limits
@@ -193,7 +208,8 @@ export async function sendBulkSMS(phones: string[], message: string, type: strin
  */
 export async function getFormattedTemplate(
   key: string,
-  replacements: Record<string, string>
+  replacements: Record<string, string>,
+  adminId?: number
 ): Promise<string> {
   try {
     const row = await db.query.smsTemplates.findFirst({

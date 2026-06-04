@@ -77,7 +77,8 @@ export async function GET(req: Request) {
         customer.pppoeUsername,
         undefined,
         customer.packageId,
-        "active"
+        "active",
+        customer.mikrotikId
       );
     }
 

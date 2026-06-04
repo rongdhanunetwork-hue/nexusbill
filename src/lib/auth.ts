@@ -12,6 +12,7 @@ export interface SessionPayload {
   role: string;
   name: string;
   phone: string;
+  impersonatorId?: number;
 }
 
 export async function createSession(payload: SessionPayload, rememberMe?: boolean): Promise<string> {

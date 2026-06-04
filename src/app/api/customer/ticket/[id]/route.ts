@@ -22,6 +22,27 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   let isAuthorized = false;
+  let userAdminId: number | null = null;
+  const loggedInUser = await db.query.users.findFirst({
+    where: eq(users.id, session.userId),
+    columns: { adminId: true, role: true }
+  });
+  if (!loggedInUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+  userAdminId = (loggedInUser.role === "admin" || loggedInUser.role === "superadmin")
+    ? session.userId
+    : loggedInUser.adminId;
+
+  const ticketOwner = await db.query.users.findFirst({
+    where: eq(users.id, ticket.userId),
+    columns: { adminId: true }
+  });
+
+  if (!ticketOwner || ticketOwner.adminId !== userAdminId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   if (session.role === "admin" || session.role === "employee") {
     isAuthorized = true;
   } else if (session.role === "customer" && ticket.userId === session.userId) {
@@ -73,7 +94,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   let isAuthorized = false;
-  if (session.role === "admin") {
+  let userAdminId: number | null = null;
+  const loggedInUser = await db.query.users.findFirst({
+    where: eq(users.id, session.userId),
+    columns: { adminId: true, role: true }
+  });
+  if (!loggedInUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+  userAdminId = (loggedInUser.role === "admin" || loggedInUser.role === "superadmin")
+    ? session.userId
+    : loggedInUser.adminId;
+
+  const ticketOwner = await db.query.users.findFirst({
+    where: eq(users.id, ticket.userId),
+    columns: { adminId: true }
+  });
+
+  if (!ticketOwner || ticketOwner.adminId !== userAdminId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  if (session.role === "admin" || session.role === "employee") {
     isAuthorized = true;
   } else if (session.role === "customer" && ticket.userId === session.userId) {
     isAuthorized = true;

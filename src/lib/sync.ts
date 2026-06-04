@@ -1,6 +1,8 @@
 import { db } from "@/db";
 import { users, mikrotiks, packages, dataUsage } from "@/db/schema";
-import { eq, and, lte, gte } from "drizzle-orm";
+import { eq, and, lte, gte, isNull } from "drizzle-orm";
+import fs from "fs";
+import path from "path";
 import { 
   getPppoeSecrets, 
   getPppoeActive, 
@@ -8,27 +10,55 @@ import {
   updatePppoeSecret, 
   deletePppoeSecret, 
   getPppoeProfiles,
+  getPppoeInterfaces,
   PppoeSecret,
   suspendUsers,
   disconnectPppoeActive
 } from "./mikrotik";
 
-export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerId?: number) {
+export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerId?: number | null) {
   try {
+    if (routerId === undefined && !passedSecrets) {
+      // Run for all active routers in the database!
+      const activeRouters = await db.select({ id: mikrotiks.id }).from(mikrotiks).where(eq(mikrotiks.status, true));
+      for (const router of activeRouters) {
+        await syncMikrotikSecrets(undefined, router.id).catch((err) => {
+          console.error(`Error syncing secrets for router ${router.id}:`, err);
+        });
+      }
+      // Also run for default router (routerId = null)
+      await syncMikrotikSecrets(undefined, null).catch((err) => {
+        console.error("Error syncing default router secrets:", err);
+      });
+      return;
+    }
+
     // 1. Fetch secrets from MikroTik
-    const secrets = passedSecrets || await getPppoeSecrets(routerId);
+    const secrets = passedSecrets || await getPppoeSecrets(routerId || undefined);
     
-    // 2. Fetch customers from DB
+    // 2. Fetch customers from DB for this router specifically
     const dbCustomers = await db
       .select()
       .from(users)
-      .where(eq(users.role, "customer"));
+      .where(
+        and(
+          eq(users.role, "customer"),
+          routerId ? eq(users.mikrotikId, routerId) : isNull(users.mikrotikId)
+        )
+      );
 
-    // 3. Use passed routerId, or find first registered router id to link the new customers to
-    let finalRouterId = routerId;
-    if (!finalRouterId) {
-      const firstRouter = await db.select({ id: mikrotiks.id }).from(mikrotiks).limit(1);
-      finalRouterId = firstRouter[0]?.id || 1;
+    const finalRouterId = routerId || null;
+
+    // Get the adminId of the router
+    let routerAdminId = 1;
+    if (routerId) {
+      const routerRow = await db.query.mikrotiks.findFirst({
+        where: eq(mikrotiks.id, routerId),
+        columns: { adminId: true }
+      });
+      routerAdminId = routerRow?.adminId || 1;
+    } else {
+      routerAdminId = 1;
     }
 
     const defaultHashedPassword =
@@ -54,7 +84,8 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
       } else {
         // If not registered, automatically import it
         // Ensure a unique phone number (use the secret name or append random suffix)
-        const phoneExists = dbCustomers.some(
+        const allDbCustomers = await db.select({ phone: users.phone }).from(users).where(eq(users.role, "customer"));
+        const phoneExists = allDbCustomers.some(
           (c) => c.phone.toLowerCase() === secret.name.toLowerCase()
         );
         const uniquePhone = phoneExists 
@@ -70,6 +101,7 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
           role: "customer",
           approvalStatus: "approved",
           mikrotikId: finalRouterId,
+          adminId: routerAdminId,
         });
       }
     }
@@ -161,23 +193,19 @@ export async function syncCustomerToMikrotik(
   }
 }
 
-/**
- * Deletes a customer's PPPoE secret from the MikroTik router.
- */
-export async function syncDeleteCustomerFromMikrotik(pppoeUsername: string) {
+export async function syncDeleteCustomerFromMikrotik(pppoeUsername: string, routerId?: number | null) {
   try {
-    const user = await db.query.users.findFirst({
+    const finalRouterId = routerId !== undefined ? (routerId || undefined) : (await db.query.users.findFirst({
       where: eq(users.pppoeUsername, pppoeUsername),
       columns: { mikrotikId: true }
-    });
-    const routerId = user?.mikrotikId || undefined;
+    }))?.mikrotikId || undefined;
 
-    const secrets = await getPppoeSecrets(routerId);
+    const secrets = await getPppoeSecrets(finalRouterId);
     const existingSecret = secrets.find(s => s.name.toLowerCase() === pppoeUsername.toLowerCase());
     
     if (existingSecret) {
-      await deletePppoeSecret(existingSecret[".id"], routerId);
-      console.log(`Successfully deleted MikroTik secret for "${pppoeUsername}" on router ${routerId}`);
+      await deletePppoeSecret(existingSecret[".id"], finalRouterId);
+      console.log(`Successfully deleted MikroTik secret for "${pppoeUsername}" on router ${finalRouterId}`);
     }
   } catch (err) {
     console.error(`Failed to delete MikroTik secret for "${pppoeUsername}":`, err);
@@ -237,7 +265,31 @@ export async function checkAndSuspendExpiredUsers() {
   }
 }
 
-const lastSessionTraffic = new Map<string, { bytesIn: number; bytesOut: number; uptime: string }>();
+const CACHE_FILE = path.resolve(process.cwd(), "session_traffic_cache.json");
+
+function loadSessionCache(): Map<string, { bytesIn: number; bytesOut: number; uptime: string }> {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const data = fs.readFileSync(CACHE_FILE, "utf-8");
+      const parsed = JSON.parse(data);
+      return new Map(Object.entries(parsed));
+    }
+  } catch (err) {
+    console.error("Failed to load session traffic cache:", err);
+  }
+  return new Map();
+}
+
+function saveSessionCache(cache: Map<string, { bytesIn: number; bytesOut: number; uptime: string }>) {
+  try {
+    const obj = Object.fromEntries(cache.entries());
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(obj, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Failed to save session traffic cache:", err);
+  }
+}
+
+const lastSessionTraffic = loadSessionCache();
 
 function parseUptimeToSeconds(uptime: string): number {
   if (!uptime) return 0;
@@ -268,14 +320,16 @@ function parseUptimeToSeconds(uptime: string): number {
 export async function trackCustomerDataUsage() {
   try {
     const routers = await db.select().from(mikrotiks).where(eq(mikrotiks.status, true));
-    if (routers.length === 0) {
-      // Fallback to default if no routers in DB yet
-      await trackRouterUsage(undefined);
-      return;
-    }
-
     for (const router of routers) {
       await trackRouterUsage(router.id);
+    }
+    
+    // Also track the default router (undefined routerId) if there are customers assigned to it
+    const hasDefaultCustomers = await db.query.users.findFirst({
+      where: and(eq(users.role, "customer"), isNull(users.mikrotikId))
+    });
+    if (hasDefaultCustomers) {
+      await trackRouterUsage(undefined);
     }
   } catch (err) {
     console.error("trackCustomerDataUsage error:", err);
@@ -287,6 +341,15 @@ async function trackRouterUsage(routerId?: number) {
     const activeSessions = await getPppoeActive(routerId);
     if (!activeSessions || activeSessions.length === 0) return;
 
+    // Fetch interfaces to get actual traffic bytes
+    const interfaces = await getPppoeInterfaces(routerId);
+    const ifaceMap = new Map<string, any>();
+    for (const iface of interfaces) {
+      if (iface.name) {
+        ifaceMap.set(iface.name.toLowerCase(), iface);
+      }
+    }
+
     // Fetch customers assigned to this router
     const dbCustomers = await db
       .select({ id: users.id, pppoeUsername: users.pppoeUsername })
@@ -294,7 +357,7 @@ async function trackRouterUsage(routerId?: number) {
       .where(
         and(
           eq(users.role, "customer"),
-          routerId ? eq(users.mikrotikId, routerId) : undefined
+          routerId ? eq(users.mikrotikId, routerId) : isNull(users.mikrotikId)
         )
       );
 
@@ -316,8 +379,11 @@ async function trackRouterUsage(routerId?: number) {
       const userId = usernameToUserId.get(username.toLowerCase());
       if (!userId) continue;
 
-      const currentBytesIn = parseInt((session as any)["bytes-in"] || "0");
-      const currentBytesOut = parseInt((session as any)["bytes-out"] || "0");
+      const ifaceName = `<pppoe-${username}>`.toLowerCase();
+      const iface = ifaceMap.get(ifaceName) || ifaceMap.get(`pppoe-${username.toLowerCase()}`);
+      
+      const currentBytesIn = parseInt((iface && iface["rx-byte"]) ? iface["rx-byte"] : "0");
+      const currentBytesOut = parseInt((iface && iface["tx-byte"]) ? iface["tx-byte"] : "0");
       const currentUptime = session.uptime || "";
 
       // Differentiate sessions on different routers if usernames ever collide
@@ -339,8 +405,16 @@ async function trackRouterUsage(routerId?: number) {
           deltaOut = currentBytesOut - prev.bytesOut;
         }
       } else {
-        deltaIn = 0;
-        deltaOut = 0;
+        // If this is the first time we see this session, and it just started (uptime < 60s),
+        // we can count its current bytes as the delta because it's a brand new session.
+        const currentUptimeSecs = parseUptimeToSeconds(currentUptime);
+        if (currentUptimeSecs < 60) {
+          deltaIn = currentBytesIn;
+          deltaOut = currentBytesOut;
+        } else {
+          deltaIn = 0;
+          deltaOut = 0;
+        }
       }
 
       lastSessionTraffic.set(trafficKey, {
@@ -367,19 +441,22 @@ async function trackRouterUsage(routerId?: number) {
           await db
             .update(dataUsage)
             .set({
-              downloadGb: (prevDlGb + deltaDlGb).toFixed(4),
-              uploadGb: (prevUlGb + deltaUlGb).toFixed(4),
+              downloadGb: (prevDlGb + deltaDlGb).toFixed(9),
+              uploadGb: (prevUlGb + deltaUlGb).toFixed(9),
             })
             .where(eq(dataUsage.id, existing.id));
         } else {
           await db.insert(dataUsage).values({
             userId,
-            downloadGb: deltaDlGb.toFixed(4),
-            uploadGb: deltaUlGb.toFixed(4),
+            downloadGb: deltaDlGb.toFixed(9),
+            uploadGb: deltaUlGb.toFixed(9),
             recordedAt: new Date(),
           });
         }
       }
+    }
+    if (activeSessions.length > 0) {
+      saveSessionCache(lastSessionTraffic);
     }
   } catch (err) {
     console.error(`trackRouterUsage error for router ${routerId}:`, err);

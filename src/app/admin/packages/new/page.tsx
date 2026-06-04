@@ -1,11 +1,25 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { db } from "@/db";
-import { packages } from "@/db/schema";
+import { packages, users } from "@/db/schema";
 import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth";
+import { eq } from "drizzle-orm";
 
 async function createPackage(formData: FormData) {
   "use server";
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin" && session.role !== "employee")) redirect("/login");
+
+  let adminId = session.userId;
+  if (session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
+
   const selectedSpeed = String(formData.get("speed_preset") || "");
   const customSpeed = String(formData.get("speed_custom") || "").trim();
   // If user entered a custom speed, use it; otherwise use the preset
@@ -19,11 +33,14 @@ async function createPackage(formData: FormData) {
     price: String(formData.get("price") || "0"),
     durationDays: Number(formData.get("durationDays")) || 30,
     dataLimitGb,
+    adminId,
   });
   redirect("/admin/packages");
 }
 
-export default function CreatePackagePage() {
+export default async function CreatePackagePage() {
+  const session = await getSession();
+  if (!session) redirect("/login");
   return (
     <div className="max-w-2xl space-y-6">
       <div className="flex items-center gap-3">

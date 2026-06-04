@@ -34,7 +34,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       where: eq(users.oltId, oltId),
     });
 
-    const onus = [];
+    const onus: any[] = [];
     const portsCount = olt.portCount || 8;
 
     // 1. Generate ONUs for real customers
@@ -50,19 +50,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       let distance = "—";
 
       if (isUserOnline) {
-        const powerVal = -18.0 - ((c.id * 1.7) % 9.5);
+        // Use a realistic deterministic value for power based on user ID
+        const powerVal = -19.0 - ((c.id * 0.7) % 5.5);
         rxPower = powerVal.toFixed(1);
         status = "online";
-        temp = (30 + ((c.id * 2.3) % 15)).toFixed(1) + "°C";
+        temp = (30 + ((c.id * 1.3) % 10)).toFixed(1) + "°C";
         distance = (200 + ((c.id * 150) % 2500)) + "m";
         
-        const uptimeDays = (c.id % 7) + 1;
-        const uptimeHours = (c.id * 3) % 24;
+        const uptimeDays = (c.id % 14) + 1;
+        const uptimeHours = (c.id * 5) % 24;
         uptime = `${uptimeDays}d ${uptimeHours}h`;
       }
 
       onus.push({
-        id: `real-${c.id}`,
+        id: `onu-${c.id}`,
         port: `PON-${portNum}`,
         macAddress: c.macAddress || `ONU${c.id.toString(16).padStart(8, "0").toUpperCase()}`,
         username: c.pppoeUsername || c.name,
@@ -74,41 +75,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         distance,
       });
     });
-
-    // 2. Generate dummy ONUs
-    const dummyCount = Math.max(10, portsCount * 3 - onus.length);
-    for (let i = 0; i < dummyCount; i++) {
-      const portNum = (i % portsCount) + 1;
-      const status = i % 6 === 0 ? "offline" : "online";
-      
-      let rxPower = "-35.0";
-      let temp = "—";
-      let distance = "—";
-      let uptime = "—";
-
-      if (status === "online") {
-        const powerVal = -17.5 - ((i * 2.9) % 11.2);
-        rxPower = powerVal.toFixed(1);
-        temp = (32 + ((i * 1.7) % 12)).toFixed(1) + "°C";
-        distance = (0.3 + ((i * 0.4) % 3.2)).toFixed(2) + " km";
-        uptime = `${(i % 12) + 1}d ${(i * 5) % 24}h`;
-      }
-
-      const macHex = (0x544543000000 + i * 257).toString(16).toUpperCase();
-
-      onus.push({
-        id: `dummy-${i}`,
-        port: `PON-${portNum}`,
-        macAddress: `FHTT${macHex.slice(-8)}`,
-        username: `unassigned_onu_${i + 1}`,
-        customerName: "Unassigned ONU",
-        rxPower,
-        status,
-        uptime,
-        temperature: temp,
-        distance,
-      });
-    }
 
     // Sort onus by PON port, then online first, then MAC
     onus.sort((a, b) => {

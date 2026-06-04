@@ -49,7 +49,8 @@ export async function GET(req: NextRequest) {
               customer.pppoeUsername,
               undefined,
               undefined,
-              "fup" // Assuming your MikroTik has a 'fup' profile for reduced speed
+              "fup", // Assuming your MikroTik has a 'fup' profile for reduced speed
+              customer.mikrotikId
             );
             
             // Mark customer note to avoid re-applying unnecessarily

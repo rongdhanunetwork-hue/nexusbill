@@ -72,7 +72,8 @@ export async function POST(req: Request) {
         customer.pppoeUsername,
         undefined,
         customer.packageId,
-        "active"
+        "active",
+        customer.mikrotikId
       );
     }
 

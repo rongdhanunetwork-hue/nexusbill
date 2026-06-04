@@ -95,7 +95,8 @@ export async function GET(req: NextRequest) {
               customer.pppoeUsername,
               undefined,
               customer.packageId,
-              "expired"
+              "expired",
+              customer.mikrotikId
             );
             mikrotikCount++;
           } catch (e) {
@@ -148,6 +149,21 @@ export async function GET(req: NextRequest) {
       }
     }
 
+
+
+    // Cleanup old notices (older than 30 days)
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const { notices } = await import("@/db/schema");
+    let deletedNoticesCount = 0;
+    try {
+      const deleted = await db.delete(notices)
+        .where(lt(notices.createdAt, thirtyDaysAgo))
+        .returning({ id: notices.id });
+      deletedNoticesCount = deleted.length;
+    } catch (e) {
+      errors.push(`Error deleting old notices: ${e}`);
+    }
+
     return NextResponse.json({
       success: true,
       timestamp: now.toISOString(),
@@ -156,6 +172,7 @@ export async function GET(req: NextRequest) {
       mikrotikDisabled: mikrotikCount,
       smsSent: smsCount,
       reminders: reminderCount,
+      deletedNotices: deletedNoticesCount,
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error) {

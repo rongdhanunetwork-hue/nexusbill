@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, payments, invoices, dataUsage } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getRouterDetails } from "@/lib/mikrotik";
 import CustomerProfileClient from "./CustomerProfileClient";
@@ -72,8 +72,30 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
     };
   });
 
+  // Fetch real monthly total usage from DB (current calendar month)
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const [monthlyUsageResult] = await db
+    .select({
+      downloadSum: sql<number>`cast(coalesce(sum(${dataUsage.downloadGb}), 0) as float)`,
+      uploadSum: sql<number>`cast(coalesce(sum(${dataUsage.uploadGb}), 0) as float)`
+    })
+    .from(dataUsage)
+    .where(
+      and(
+        eq(dataUsage.userId, customerId),
+        gte(dataUsage.recordedAt, startOfMonth)
+      )
+    );
+  
+  const monthlyDownloadGb = monthlyUsageResult?.downloadSum || 0;
+  const monthlyUploadGb = monthlyUsageResult?.uploadSum || 0;
+
   // Calculate current credit based on remaining days
   let currentCredit = 0;
+  let remainingDays = 0;
   if (customer.expireDate && customer.package) {
     const pkgPrice = parseFloat(String(customer.package.price || 0));
     const pkgDuration = customer.package.durationDays || 30;
@@ -83,8 +105,8 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
     const expire = new Date(customer.expireDate);
     const diffTime = expire.getTime() - now.getTime();
     if (diffTime > 0) {
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      currentCredit = diffDays * dailyCost;
+      remainingDays = diffTime / (1000 * 60 * 60 * 24);
+      currentCredit = remainingDays * dailyCost;
     }
   }
 
@@ -98,6 +120,9 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
       activeSession={activeSession}
       plainTextPassword={plainTextPassword}
       currentCredit={currentCredit}
+      remainingDays={remainingDays}
+      monthlyDownloadGb={monthlyDownloadGb}
+      monthlyUploadGb={monthlyUploadGb}
     />
   );
 }

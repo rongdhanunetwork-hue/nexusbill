@@ -94,7 +94,8 @@ export async function PATCH(req: NextRequest) {
             customer.pppoeUsername,
             undefined, // keep existing password
             requestedPkgId,
-            customer.status || "active"
+            customer.status || "active",
+            customer.mikrotikId
           );
         } catch (syncErr) {
           console.error("[MikroTik Sync Error]:", syncErr);

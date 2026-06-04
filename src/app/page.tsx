@@ -24,6 +24,13 @@ export default function HomePage() {
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 w-full max-w-7xl relative z-10">
         {portals.map((portal, index) => <motion.div key={portal.title} initial={false} animate={{ opacity: 1 }} transition={{ delay: index * 0.05 }} className="glass-card p-7 group relative overflow-hidden"><div className={`absolute inset-0 bg-gradient-to-br ${portal.gradient} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500`} /><div className="relative z-10"><div className={`w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mb-6 ${portal.iconClass} group-hover:scale-110 transition-transform duration-500`}><portal.icon size={30} /></div><h2 className="text-2xl font-bold text-white mb-3">{portal.title}</h2><p className="text-gray-400 mb-8 min-h-24 leading-relaxed text-sm">{portal.desc}</p><Link href={portal.href} className={`flex items-center justify-between w-full glass-button px-5 py-3 font-semibold text-white ${portal.hover}`}>{portal.cta} <ArrowRight className="group-hover:translate-x-2 transition-transform" /></Link></div></motion.div>)}
       </div>
+      
+      {/* Discreet Super Admin portal link */}
+      <div className="mt-12 text-center relative z-10">
+        <Link href="/login/superadmin" className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-yellow-400/30 text-xs font-bold text-gray-400 hover:text-yellow-400 transition-all shadow-lg hover:shadow-yellow-400/10 backdrop-blur-sm">
+          <span>★</span> System Administration Portal (Super Admin)
+        </Link>
+      </div>
     </div>
   );
 }

@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { packages } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
-  const pkgs = await db.query.packages.findMany({ orderBy: [desc(packages.createdAt)] });
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const pkgs = await db.query.packages.findMany({
+    where: eq(packages.adminId, session.userId),
+    orderBy: [desc(packages.createdAt)]
+  });
   return NextResponse.json(pkgs);
 }
 
@@ -27,6 +35,7 @@ export async function POST(req: Request) {
     speed: speed.trim(),
     price: String(price),
     durationDays: Number(durationDays) || 30,
+    adminId: session.userId,
   }).returning();
 
   return NextResponse.json(pkg, { status: 201 });

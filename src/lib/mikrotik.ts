@@ -204,6 +204,19 @@ export async function getPppoeActive(routerId?: number): Promise<PppoeActive[]> 
   }
 }
 
+export async function getPppoeInterfaces(routerId?: number): Promise<any[]> {
+  const client = await getClient(routerId);
+  try {
+    await client.connect();
+    const data = await client.write(["/interface/print", "?type=pppoe-in"]);
+    return data as any[];
+  } finally {
+    try {
+      await client.close();
+    } catch {}
+  }
+}
+
 // ───── PPPoE Profiles ──────────────────────────────────────
 
 export interface PppoeProfile {
@@ -327,19 +340,23 @@ export async function getPppoeTraffic(username: string, routerId?: number): Prom
   const client = await getClient(routerId);
   try {
     await client.connect();
-    const actives = await client.write("/ppp/active/print");
-    const activeSession = (actives as any[]).find(
-      (s) => s.name.toLowerCase() === username.toLowerCase()
-    );
-    if (!activeSession) return null;
-
-    const bytesIn = parseInt(activeSession["bytes-in"] || "0");
-    const bytesOut = parseInt(activeSession["bytes-out"] || "0");
-    const interfaceName = activeSession.interface || `<pppoe-${username}>`;
+    
+    // First, get the interface stats to get bytes
+    const ifaceName = `<pppoe-${username}>`;
+    const ifaces = await client.write([
+      "/interface/print",
+      `?name=${ifaceName}`
+    ]);
+    
+    if (!ifaces || ifaces.length === 0) return null;
+    
+    const iface = ifaces[0] as any;
+    const bytesIn = parseInt(iface["rx-byte"] || "0");  // Router RX = Client Upload
+    const bytesOut = parseInt(iface["tx-byte"] || "0"); // Router TX = Client Download
 
     const stats = await client.write([
       "/interface/monitor-traffic",
-      `=interface=${interfaceName}`,
+      `=interface=${ifaceName}`,
       "=once=",
     ]);
     const s = stats[0] as any;

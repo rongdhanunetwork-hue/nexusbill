@@ -72,6 +72,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.oltId !== undefined) updateData.oltId = body.oltId ? Number(body.oltId) : null;
     if (body.ponPort !== undefined) updateData.ponPort = body.ponPort?.trim() || null;
     if (body.onuMac !== undefined) updateData.onuMac = body.onuMac?.trim() || null;
+    if (body.routerModel !== undefined) updateData.routerModel = body.routerModel?.trim() || null;
 
     // Package change
     if (body.packageId !== undefined) {
@@ -92,7 +93,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
       if (oldUsername && oldUsername !== newUsername) {
         // Username changed or removed. Delete the old secret.
-        await syncDeleteCustomerFromMikrotik(oldUsername);
+        await syncDeleteCustomerFromMikrotik(oldUsername, oldCustomer.mikrotikId);
       }
 
       if (newUsername) {
@@ -109,7 +110,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             newUsername,
             body.password || undefined,
             updated.packageId,
-            updated.status
+            updated.status,
+            updated.mikrotikId
           );
         }
       }
@@ -143,7 +145,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
   if (customer.pppoeUsername) {
     // Delete secret from MikroTik
-    await syncDeleteCustomerFromMikrotik(customer.pppoeUsername);
+    await syncDeleteCustomerFromMikrotik(customer.pppoeUsername, customer.mikrotikId);
   }
 
   await db.delete(users).where(eq(users.id, customerId));

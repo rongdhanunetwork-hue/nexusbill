@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { payments, expenses, invoices } from "@/db/schema";
-import { sql, and } from "drizzle-orm";
+import { payments, expenses, invoices, users } from "@/db/schema";
+import { sql, and, eq, inArray } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import { insertAuditLog } from "@/lib/audit";
 
 // DELETE /api/admin/monthly-summary/[monthYear] - Deletes all records for a specific month
 export async function DELETE(req: Request, { params }: { params: Promise<{ monthYear: string }> }) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -20,17 +20,37 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ month
       return NextResponse.json({ error: "Invalid month format. Expected YYYY-MM." }, { status: 400 });
     }
 
-    // Delete Payments
-    await db.delete(payments)
-      .where(sql`to_char(${payments.createdAt}, 'YYYY-MM') = ${monthYear}`);
+    const adminId = session.userId;
+
+    // Get all user IDs belonging to this admin
+    const adminUserRows = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.adminId, adminId));
+    const adminUserIds = adminUserRows.map(u => u.id);
+
+    if (adminUserIds.length > 0) {
+      // Delete Payments
+      await db.delete(payments)
+        .where(and(
+          inArray(payments.userId, adminUserIds),
+          sql`to_char(${payments.createdAt}, 'YYYY-MM') = ${monthYear}`
+        ));
+
+      // Delete Invoices
+      await db.delete(invoices)
+        .where(and(
+          inArray(invoices.userId, adminUserIds),
+          sql`to_char(${invoices.createdAt}, 'YYYY-MM') = ${monthYear}`
+        ));
+    }
 
     // Delete Expenses
     await db.delete(expenses)
-      .where(sql`to_char(${expenses.createdAt}, 'YYYY-MM') = ${monthYear}`);
-
-    // Delete Invoices
-    await db.delete(invoices)
-      .where(sql`to_char(${invoices.createdAt}, 'YYYY-MM') = ${monthYear}`);
+      .where(and(
+        eq(expenses.adminId, adminId),
+        sql`to_char(${expenses.createdAt}, 'YYYY-MM') = ${monthYear}`
+      ));
 
     await insertAuditLog(
       session.userId,

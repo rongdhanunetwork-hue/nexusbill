@@ -1,21 +1,57 @@
 import { db } from "@/db";
-import { packages } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { packages, users } from "@/db/schema";
+import { desc, eq, and } from "drizzle-orm";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { Plus, Trash, Zap } from "lucide-react";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 async function deletePackage(formData: FormData) {
   "use server";
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "employee" && session.role !== "superadmin")) return;
+
+  let adminId = session.userId;
+  if (session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
+
   const id = Number(formData.get("id"));
-  if (id) await db.delete(packages).where(eq(packages.id, id));
+  if (id) {
+    const pkg = await db.query.packages.findFirst({
+      where: eq(packages.id, id),
+    });
+    if (pkg && pkg.adminId === adminId) {
+      await db.delete(packages).where(eq(packages.id, id));
+    }
+  }
   revalidatePath("/admin/packages");
 }
 
 export default async function PackagesPage() {
-  const allPackages = await db.query.packages.findMany({ orderBy: [desc(packages.createdAt)] });
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "employee" && session.role !== "superadmin")) redirect("/login");
+
+  let adminId = session.userId;
+  if (session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
+
+  const allPackages = await db.query.packages.findMany({ 
+    where: eq(packages.adminId, adminId),
+    orderBy: [desc(packages.createdAt)] 
+  });
 
   return (
     <div className="space-y-6">

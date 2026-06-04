@@ -1,10 +1,12 @@
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { users, mikrotiks } from "@/db/schema";
+import { eq, asc, and } from "drizzle-orm";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { Plus } from "lucide-react";
 import CustomersClient from "./CustomersClient";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 import { syncMikrotikSecrets, syncDeleteCustomerFromMikrotik } from "@/lib/sync";
 
@@ -12,13 +14,18 @@ export const dynamic = "force-dynamic";
 
 async function deleteCustomer(formData: FormData) {
   "use server";
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) return;
+
   const id = Number(formData.get("id"));
   if (id) {
     // Fetch customer first to get PPPoE username for MikroTik cleanup
     const customer = await db.query.users.findFirst({ where: eq(users.id, id) });
+    if (!customer || customer.adminId !== session.userId) return;
+
     if (customer?.pppoeUsername) {
       try {
-        await syncDeleteCustomerFromMikrotik(customer.pppoeUsername);
+        await syncDeleteCustomerFromMikrotik(customer.pppoeUsername, customer.mikrotikId);
       } catch (err) {
         console.error("Failed to remove customer from MikroTik on delete:", err);
       }
@@ -29,22 +36,43 @@ async function deleteCustomer(formData: FormData) {
 }
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) {
+    redirect("/login/admin");
+  }
+
   const { status } = await searchParams;
 
-  // Sync MikroTik secrets to DB in the background
-  syncMikrotikSecrets().catch((err) => {
-    console.error("Background MikroTik sync error on customers page:", err);
-  });
+  // Sync MikroTik secrets for this admin's routers in the background
+  db.select({ id: mikrotiks.id })
+    .from(mikrotiks)
+    .where(and(eq(mikrotiks.status, true), eq(mikrotiks.adminId, session.userId)))
+    .then((routers) => {
+      for (const r of routers) {
+        syncMikrotikSecrets(undefined, r.id).catch((err) => {
+          console.error(`Background MikroTik sync error on router ${r.id}:`, err);
+        });
+      }
+      // If admin is default admin (adminId = 1), also sync the default router (null)
+      if (session.userId === 1) {
+        syncMikrotikSecrets(undefined, null).catch((err) => {
+          console.error("Background MikroTik sync error on default router:", err);
+        });
+      }
+    })
+    .catch((err) => {
+      console.error("Failed to fetch routers for background sync:", err);
+    });
 
-  // Fetch database customers only to load page instantly
+  // Fetch database customers only to load page instantly, filtered by adminId
   const allCustomers = await db.query.users.findMany({
-    where: eq(users.role, "customer"),
+    where: and(eq(users.role, "customer"), eq(users.adminId, session.userId)),
     orderBy: [asc(users.name)],
     with: { package: true, mikrotik: true }
   });
 
   const resellers = await db.query.users.findMany({
-    where: eq(users.role, "reseller"),
+    where: and(eq(users.role, "reseller"), eq(users.adminId, session.userId)),
     columns: { id: true, name: true }
   });
 

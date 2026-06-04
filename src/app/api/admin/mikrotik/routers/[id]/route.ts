@@ -1,8 +1,20 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { mikrotiks } from "@/db/schema";
+import { mikrotiks, users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
+
+async function getAdminId(session: any): Promise<number> {
+  let adminId = session.userId;
+  if (session.role === "reseller" || session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
+  return adminId;
+}
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -10,9 +22,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const adminId = await getAdminId(session);
   const { id } = await params;
   const router = await db.query.mikrotiks.findFirst({ where: eq(mikrotiks.id, Number(id)) });
   if (!router) return NextResponse.json({ error: "Router not found" }, { status: 404 });
+
+  // Admin isolation check
+  if (router.adminId !== adminId) {
+    return NextResponse.json({ error: "Forbidden: Not your router" }, { status: 403 });
+  }
 
   // Reseller check
   if (session.role === "reseller" && router.resellerId !== session.userId) {
@@ -29,11 +47,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   try {
+    const adminId = await getAdminId(session);
     const { id } = await params;
     const routerId = Number(id);
 
     const existing = await db.query.mikrotiks.findFirst({ where: eq(mikrotiks.id, routerId) });
     if (!existing) return NextResponse.json({ error: "Router not found" }, { status: 404 });
+
+    // Admin isolation check
+    if (existing.adminId !== adminId) {
+      return NextResponse.json({ error: "Forbidden: Not your router" }, { status: 403 });
+    }
 
     // Reseller check
     if (session.role === "reseller" && existing.resellerId !== session.userId) {
@@ -64,11 +88,17 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const adminId = await getAdminId(session);
   const { id } = await params;
   const routerId = Number(id);
 
   const existing = await db.query.mikrotiks.findFirst({ where: eq(mikrotiks.id, routerId) });
   if (!existing) return NextResponse.json({ error: "Router not found" }, { status: 404 });
+
+  // Admin isolation check
+  if (existing.adminId !== adminId) {
+    return NextResponse.json({ error: "Forbidden: Not your router" }, { status: 403 });
+  }
 
   // Reseller check
   if (session.role === "reseller" && existing.resellerId !== session.userId) {

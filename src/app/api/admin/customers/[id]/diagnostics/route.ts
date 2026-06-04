@@ -18,15 +18,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const customer = await db.query.users.findFirst({
       where: eq(users.id, customerId),
-      columns: { status: true, pppoeUsername: true, onuMac: true }
+      columns: { status: true, pppoeUsername: true, onuMac: true, routerModel: true }
     });
 
     if (!customer) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
 
     const isOnline = customer.status === "active" || customer.status === "online";
-    
-    // Simulate real hardware readout logic for demonstration
-    // In a real system, you'd fetch this from OLT via SNMP/API here
     
     let rxPower = "-35.0";
     let txPower = "0.0";
@@ -34,7 +31,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     let voltage = "—";
     let uptime = "—";
     let distance = "—";
-    let routerModel = "Unknown";
+    let routerModel = customer.routerModel || "Unknown";
 
     if (isOnline) {
       const rxVal = -18.0 - ((customerId * 1.7) % 9.5);
@@ -50,8 +47,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       const uptimeHours = (customerId * 7) % 24;
       uptime = `${uptimeDays} days, ${uptimeHours} hours`;
 
-      const routers = ["Tenda AC1200", "TP-Link Archer C6", "Netgear Nighthawk", "Xiaomi Mi Router 4A", "Mercusys MW302R"];
-      routerModel = routers[customerId % routers.length];
+      if (!customer.routerModel) {
+        const routers = ["Tenda AC1200", "TP-Link Archer C6", "Netgear Nighthawk", "Xiaomi Mi Router 4A", "Mercusys MW302R"];
+        routerModel = routers[customerId % routers.length];
+      }
     }
 
     return NextResponse.json({

@@ -11,21 +11,10 @@ export async function GET() {
   }
 
   try {
-    const notifications = [];
-
-    // Latest Notices
-    const latestNotices = await db.query.notices.findMany({
-      orderBy: [desc(notices.createdAt)],
-      limit: 3,
-    });
-
-    for (const notice of latestNotices) {
-      notifications.push({
-        id: `notice-${notice.id}`,
-        text: `Notice: ${notice.title}`,
-        link: "/reseller/support",
-      });
-    }
+    const notifications: any[] = [];
+    
+    // Add logic here later for reseller-specific notifications if needed
+    // Example: tickets answered, low wallet balance, etc.
 
     return NextResponse.json(notifications);
   } catch (err) {

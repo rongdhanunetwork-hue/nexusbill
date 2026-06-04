@@ -1,8 +1,20 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { olts } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { olts, users } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
+
+async function getAdminId(session: any): Promise<number> {
+  let adminId = session.userId;
+  if (session.role === "reseller" || session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
+  return adminId;
+}
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -10,9 +22,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const adminId = await getAdminId(session);
   const { id } = await params;
   const olt = await db.query.olts.findFirst({ where: eq(olts.id, Number(id)) });
   if (!olt) return NextResponse.json({ error: "OLT not found" }, { status: 404 });
+
+  // Admin isolation check
+  if (olt.adminId !== adminId) {
+    return NextResponse.json({ error: "Forbidden: Not your OLT" }, { status: 403 });
+  }
 
   // Reseller check
   if (session.role === "reseller" && olt.resellerId !== session.userId) {
@@ -29,11 +47,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   try {
+    const adminId = await getAdminId(session);
     const { id } = await params;
     const oltId = Number(id);
 
     const existing = await db.query.olts.findFirst({ where: eq(olts.id, oltId) });
     if (!existing) return NextResponse.json({ error: "OLT not found" }, { status: 404 });
+
+    // Admin isolation check
+    if (existing.adminId !== adminId) {
+      return NextResponse.json({ error: "Forbidden: Not your OLT" }, { status: 403 });
+    }
 
     // Reseller check
     if (session.role === "reseller" && existing.resellerId !== session.userId) {
@@ -62,11 +86,17 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const adminId = await getAdminId(session);
   const { id } = await params;
   const oltId = Number(id);
 
   const existing = await db.query.olts.findFirst({ where: eq(olts.id, oltId) });
   if (!existing) return NextResponse.json({ error: "OLT not found" }, { status: 404 });
+
+  // Admin isolation check
+  if (existing.adminId !== adminId) {
+    return NextResponse.json({ error: "Forbidden: Not your OLT" }, { status: 403 });
+  }
 
   // Reseller check
   if (session.role === "reseller" && existing.resellerId !== session.userId) {

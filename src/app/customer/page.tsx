@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, invoices, notices, dataUsage } from "@/db/schema";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq, sql, and, gte } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import CustomerDashboardClient from "./CustomerDashboardClient";
@@ -73,6 +73,27 @@ export default async function CustomerDashboard() {
     };
   });
 
+  // Fetch real monthly total usage from DB (current calendar month)
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const [monthlyUsageResult] = await db
+    .select({
+      downloadSum: sql<number>`cast(coalesce(sum(${dataUsage.downloadGb}), 0) as float)`,
+      uploadSum: sql<number>`cast(coalesce(sum(${dataUsage.uploadGb}), 0) as float)`
+    })
+    .from(dataUsage)
+    .where(
+      and(
+        eq(dataUsage.userId, customer.id),
+        gte(dataUsage.recordedAt, startOfMonth)
+      )
+    );
+  
+  const monthlyDownloadGb = monthlyUsageResult?.downloadSum || 0;
+  const monthlyUploadGb = monthlyUsageResult?.uploadSum || 0;
+
   // Calculate current credit based on remaining days
   let currentCredit = 0;
   if (customer.expireDate && customer.package) {
@@ -104,6 +125,8 @@ export default async function CustomerDashboard() {
       usageData={last7DaysUsage}
       pppoeUsername={customer.pppoeUsername || null}
       currentCredit={currentCredit}
+      monthlyDownloadGb={monthlyDownloadGb}
+      monthlyUploadGb={monthlyUploadGb}
     />
   );
 }

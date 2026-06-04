@@ -14,23 +14,32 @@ export async function GET() {
   }
 
   try {
+    let adminId = session.userId;
+    if (session.role === "reseller" || session.role === "employee") {
+      const u = await db.query.users.findFirst({
+        where: eq(users.id, session.userId),
+        columns: { adminId: true }
+      });
+      adminId = u?.adminId || 1;
+    }
+
     let customerQuery = db
       .select({ pppoeUsername: users.pppoeUsername, status: users.status, resellerId: users.resellerId })
       .from(users);
 
     let whereClause;
     if (session.role === "reseller") {
-      whereClause = and(eq(users.role, "customer"), eq(users.resellerId, session.userId));
+      whereClause = and(eq(users.role, "customer"), eq(users.resellerId, session.userId), eq(users.adminId, adminId));
     } else {
-      whereClause = eq(users.role, "customer");
+      whereClause = and(eq(users.role, "customer"), eq(users.adminId, adminId));
     }
 
     const [allDbCustomers, routers] = await Promise.all([
       customerQuery.where(whereClause),
       db.select().from(mikrotiks).where(
         session.role === "reseller"
-          ? and(eq(mikrotiks.resellerId, session.userId), eq(mikrotiks.status, true))
-          : and(isNull(mikrotiks.resellerId), eq(mikrotiks.status, true))
+          ? and(eq(mikrotiks.resellerId, session.userId), eq(mikrotiks.status, true), eq(mikrotiks.adminId, adminId))
+          : and(isNull(mikrotiks.resellerId), eq(mikrotiks.status, true), eq(mikrotiks.adminId, adminId))
       )
     ]);
 

@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq, desc, or } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
@@ -13,6 +13,15 @@ async function createUser(formData: FormData) {
   "use server";
   const session = await getSession();
   if (!session || (session.role !== "admin" && session.role !== "employee")) redirect("/login");
+
+  let adminId = session.userId;
+  if (session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
 
   const name = String(formData.get("name") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
@@ -43,6 +52,7 @@ async function createUser(formData: FormData) {
     status: "active",
     walletBalance: "0",
     permissions,
+    adminId,
   });
 
   revalidatePath("/admin/users");
@@ -53,7 +63,24 @@ async function updateUser(formData: FormData) {
   const session = await getSession();
   if (!session || (session.role !== "admin" && session.role !== "employee")) redirect("/login");
 
+  let adminId = session.userId;
+  if (session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
+
   const id = Number(formData.get("id"));
+  if (!id) return;
+
+  const targetUser = await db.query.users.findFirst({
+    where: eq(users.id, id),
+    columns: { adminId: true }
+  });
+  if (!targetUser || targetUser.adminId !== adminId) return;
+
   const name = String(formData.get("name") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
   const address = String(formData.get("address") || "").trim();
@@ -61,7 +88,7 @@ async function updateUser(formData: FormData) {
   const status = String(formData.get("status") || "active");
   const permissions = String(formData.get("permissions") || "[]");
 
-  if (!id || !name || !phone) return;
+  if (!name || !phone) return;
 
   const updateData: Record<string, any> = { name, phone, address: address || null, status, permissions };
   if (newPassword && newPassword.length >= 6) {
@@ -77,11 +104,26 @@ async function deleteUser(formData: FormData) {
   const session = await getSession();
   if (!session || (session.role !== "admin" && session.role !== "employee")) redirect("/login");
 
+  let adminId = session.userId;
+  if (session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
+
   const id = Number(formData.get("id"));
   if (!id) return;
 
   // Don't allow deleting the admin themselves
   if (id === session.userId) return;
+
+  const targetUser = await db.query.users.findFirst({
+    where: eq(users.id, id),
+    columns: { adminId: true }
+  });
+  if (!targetUser || targetUser.adminId !== adminId) return;
 
   await db.delete(users).where(eq(users.id, id));
   revalidatePath("/admin/users");
@@ -92,9 +134,24 @@ async function resetWallet(formData: FormData) {
   const session = await getSession();
   if (!session || (session.role !== "admin" && session.role !== "employee")) redirect("/login");
 
+  let adminId = session.userId;
+  if (session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
+
   const id = Number(formData.get("id"));
   const amount = String(formData.get("walletBalance") || "0");
   if (!id) return;
+
+  const targetUser = await db.query.users.findFirst({
+    where: eq(users.id, id),
+    columns: { adminId: true }
+  });
+  if (!targetUser || targetUser.adminId !== adminId) return;
 
   if (session.role === "employee") {
     const { hasPermission } = await import("@/lib/permissions");
@@ -108,21 +165,22 @@ async function resetWallet(formData: FormData) {
 
 export default async function UserManagementPage() {
   const session = await getSession();
-  if (!session || session.role !== "admin") redirect("/login");
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) redirect("/login");
+  const adminId = session.userId;
 
   const resellers = await db.query.users.findMany({
-    where: eq(users.role, "reseller"),
+    where: and(eq(users.role, "reseller"), eq(users.adminId, adminId)),
     orderBy: [desc(users.createdAt)],
   });
 
   const employees = await db.query.users.findMany({
-    where: eq(users.role, "employee"),
+    where: and(eq(users.role, "employee"), eq(users.adminId, adminId)),
     orderBy: [desc(users.createdAt)],
   });
 
   // Count customers per reseller
   const allCustomers = await db.query.users.findMany({
-    where: eq(users.role, "customer"),
+    where: and(eq(users.role, "customer"), eq(users.adminId, adminId)),
   });
 
   const customerCountByReseller: Record<number, number> = {};

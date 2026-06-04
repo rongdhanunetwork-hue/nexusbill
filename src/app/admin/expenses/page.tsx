@@ -1,9 +1,10 @@
 import { db } from "@/db";
 import { expenses } from "@/db/schema";
-import { desc, sql } from "drizzle-orm";
+import { desc, sql, eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
 import { PlusCircle, Trash2, TrendingDown, Calendar } from "lucide-react";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,12 @@ const CATEGORIES = [
 
 async function addExpense(formData: FormData) {
   "use server";
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) {
+    return;
+  }
+  const adminId = session.userId;
+
   const category = String(formData.get("category") || "other");
   const amount = String(formData.get("amount") || "0");
   const note = String(formData.get("note") || "");
@@ -30,6 +37,7 @@ async function addExpense(formData: FormData) {
     amount,
     note: note || null,
     expenseDate,
+    adminId,
   });
 
   revalidatePath("/admin/expenses");
@@ -37,14 +45,27 @@ async function addExpense(formData: FormData) {
 
 async function deleteExpense(formData: FormData) {
   "use server";
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) {
+    return;
+  }
+  const adminId = session.userId;
+
   const id = Number(formData.get("id"));
   if (!id) return;
-  await db.delete(expenses).where(eq(expenses.id, id));
+  await db.delete(expenses).where(and(eq(expenses.id, id), eq(expenses.adminId, adminId)));
   revalidatePath("/admin/expenses");
 }
 
 export default async function ExpensesPage() {
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "superadmin")) {
+    redirect("/login");
+  }
+  const adminId = session.userId;
+
   const allExpenses = await db.query.expenses.findMany({
+    where: eq(expenses.adminId, adminId),
     orderBy: [desc(expenses.createdAt)],
   });
 

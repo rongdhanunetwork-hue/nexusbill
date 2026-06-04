@@ -67,8 +67,8 @@ interface OltDb {
   status: boolean;
 }
 
-export default function MikrotikPageClient({ role = "admin" }: { role?: "admin" | "reseller" | "employee" }) {
-  const [activeTab, setActiveTab] = useState<"live" | "routers" | "olts" | "profiles">("live");
+export default function MikrotikPageClient({ role = "admin", initialTab = "live" }: { role?: "admin" | "reseller" | "employee"; initialTab?: "live" | "routers" | "olts" | "profiles" }) {
+  const [activeTab, setActiveTab] = useState<"live" | "routers" | "olts" | "profiles">(initialTab);
 
   // Router selection state
   const [selectedRouterId, setSelectedRouterId] = useState<number | null>(null);

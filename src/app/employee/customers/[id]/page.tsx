@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, payments, invoices, dataUsage } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getRouterDetails } from "@/lib/mikrotik";
 import CustomerProfileClient from "@/app/admin/customers/[id]/CustomerProfileClient";
@@ -72,6 +72,27 @@ export default async function EmployeeCustomerProfilePage({ params }: { params: 
     };
   });
 
+  // Fetch real monthly total usage from DB (current calendar month)
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const [monthlyUsageResult] = await db
+    .select({
+      downloadSum: sql<number>`cast(coalesce(sum(${dataUsage.downloadGb}), 0) as float)`,
+      uploadSum: sql<number>`cast(coalesce(sum(${dataUsage.uploadGb}), 0) as float)`
+    })
+    .from(dataUsage)
+    .where(
+      and(
+        eq(dataUsage.userId, customerId),
+        gte(dataUsage.recordedAt, startOfMonth)
+      )
+    );
+  
+  const monthlyDownloadGb = monthlyUsageResult?.downloadSum || 0;
+  const monthlyUploadGb = monthlyUsageResult?.uploadSum || 0;
+
   return (
     <CustomerProfileClient
       customer={customer as any}
@@ -82,6 +103,8 @@ export default async function EmployeeCustomerProfilePage({ params }: { params: 
       activeSession={activeSession}
       plainTextPassword={plainTextPassword}
       role="employee"
+      monthlyDownloadGb={monthlyDownloadGb}
+      monthlyUploadGb={monthlyUploadGb}
     />
   );
 }

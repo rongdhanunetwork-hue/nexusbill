@@ -22,6 +22,14 @@ async function seed() {
   const hashed = await bcrypt.hash("password123", 12);
   const usersToSeed = [
     {
+      name: "Super Admin",
+      phone: "01800000000",
+      role: "superadmin",
+      password: hashed,
+      approvalStatus: "approved",
+      status: "active",
+    },
+    {
       name: "Admin",
       phone: "01700000000",
       role: "admin",
@@ -139,10 +147,11 @@ async function seed() {
   }
 
   console.log("\n🎉 Seed / Password Reset complete!");
-  console.log("   Admin Portal:      phone=01700000000, password=password123");
-  console.log("   Customer Portal:   phone=01618721061, password=password123 (Pronoy Saha)");
-  console.log("   Reseller Portal:   phone=01900000000, password=password123");
-  console.log("   Employee Portal:   phone=01600000000, password=password123");
+  console.log("   Super Admin Portal: phone=01800000000, password=password123");
+  console.log("   Admin Portal:       phone=01700000000, password=password123");
+  console.log("   Customer Portal:    phone=01618721061, password=password123 (Pronoy Saha)");
+  console.log("   Reseller Portal:    phone=01900000000, password=password123");
+  console.log("   Employee Portal:    phone=01600000000, password=password123");
   process.exit(0);
 }
 
