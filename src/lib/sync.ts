@@ -36,20 +36,7 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
     // 1. Fetch secrets from MikroTik
     const secrets = passedSecrets || await getPppoeSecrets(routerId || undefined);
     
-    // 2. Fetch customers from DB for this router specifically
-    const dbCustomers = await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.role, "customer"),
-          routerId ? eq(users.mikrotikId, routerId) : isNull(users.mikrotikId)
-        )
-      );
-
-    const finalRouterId = routerId || null;
-
-    // Get the adminId of the router
+    // 2. Get the adminId of the router
     let routerAdminId = 1;
     if (routerId) {
       const routerRow = await db.query.mikrotiks.findFirst({
@@ -57,9 +44,20 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
         columns: { adminId: true }
       });
       routerAdminId = routerRow?.adminId || 1;
-    } else {
-      routerAdminId = 1;
     }
+
+    // 3. Fetch customers from DB for this Admin to prevent duplicates
+    const dbCustomers = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.role, "customer"),
+          eq(users.adminId, routerAdminId)
+        )
+      );
+
+    const finalRouterId = routerId || null;
 
     const defaultHashedPassword =
       "$2b$12$9mgzlniYFoY0qfZF1Xyx0OXTPULdCMzpvV4ha2334CDP1ZVxbOwKm"; // password123
@@ -75,10 +73,13 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
         const routerExpired = secret.disabled === "true";
         const currentExpired = exists.status === "expired";
         
-        if (routerExpired !== currentExpired) {
+        if (routerExpired !== currentExpired || exists.mikrotikId !== finalRouterId) {
           await db
             .update(users)
-            .set({ status: routerExpired ? "expired" : "active" })
+            .set({ 
+              status: routerExpired ? "expired" : "active",
+              mikrotikId: finalRouterId
+            })
             .where(eq(users.id, exists.id));
         }
       } else {
@@ -121,12 +122,17 @@ export async function syncCustomerToMikrotik(
   routerId?: number | null
 ) {
   try {
-    // 1. Fetch user from DB to find routerId if not passed
+    // 1. Fetch user from DB to find routerId and adminId if not passed
     const user = await db.query.users.findFirst({
       where: eq(users.pppoeUsername, pppoeUsername),
-      columns: { mikrotikId: true }
+      columns: { mikrotikId: true, adminId: true }
     });
     const finalRouterId = routerId || user?.mikrotikId || undefined;
+
+    if (finalRouterId === undefined && user?.adminId && user.adminId !== 1) {
+      console.log(`Skipping Mikrotik sync for "${pppoeUsername}" because adminId ${user.adminId} has no assigned router and is not allowed to use the default router.`);
+      return;
+    }
 
     // 2. Fetch secrets to check if this user already exists
     const secrets = await getPppoeSecrets(finalRouterId);
@@ -195,10 +201,17 @@ export async function syncCustomerToMikrotik(
 
 export async function syncDeleteCustomerFromMikrotik(pppoeUsername: string, routerId?: number | null) {
   try {
-    const finalRouterId = routerId !== undefined ? (routerId || undefined) : (await db.query.users.findFirst({
+    const user = await db.query.users.findFirst({
       where: eq(users.pppoeUsername, pppoeUsername),
-      columns: { mikrotikId: true }
-    }))?.mikrotikId || undefined;
+      columns: { mikrotikId: true, adminId: true }
+    });
+    
+    const finalRouterId = routerId !== undefined ? (routerId || undefined) : user?.mikrotikId || undefined;
+
+    if (finalRouterId === undefined && user?.adminId && user.adminId !== 1) {
+      console.log(`Skipping Mikrotik delete sync for "${pppoeUsername}" because adminId ${user.adminId} has no assigned router and is not allowed to use the default router.`);
+      return;
+    }
 
     const secrets = await getPppoeSecrets(finalRouterId);
     const existingSecret = secrets.find(s => s.name.toLowerCase() === pppoeUsername.toLowerCase());
@@ -357,7 +370,9 @@ async function trackRouterUsage(routerId?: number) {
       .where(
         and(
           eq(users.role, "customer"),
-          routerId ? eq(users.mikrotikId, routerId) : isNull(users.mikrotikId)
+          routerId 
+            ? eq(users.mikrotikId, routerId) 
+            : and(isNull(users.mikrotikId), eq(users.adminId, 1))
         )
       );
 

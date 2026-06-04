@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, mikrotiks } from "@/db/schema";
-import { eq, asc, and } from "drizzle-orm";
+import { eq, asc, and, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { Plus } from "lucide-react";
@@ -64,9 +64,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       console.error("Failed to fetch routers for background sync:", err);
     });
 
-  // Fetch database customers only to load page instantly, filtered by adminId
   const allCustomers = await db.query.users.findMany({
-    where: and(eq(users.role, "customer"), eq(users.adminId, session.userId)),
+    where: and(eq(users.role, "customer"), eq(users.adminId, session.userId), isNull(users.resellerId)),
     orderBy: [asc(users.name)],
     with: { package: true, mikrotik: true }
   });

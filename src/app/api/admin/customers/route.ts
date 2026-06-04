@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, packages } from "@/db/schema";
-import { eq, asc, and } from "drizzle-orm";
+import { eq, asc, and, isNull } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { syncCustomerToMikrotik } from "@/lib/sync";
@@ -32,7 +32,7 @@ export async function GET() {
     });
   } else {
     customers = await db.query.users.findMany({
-      where: and(eq(users.role, "customer"), eq(users.adminId, adminId)),
+      where: and(eq(users.role, "customer"), eq(users.adminId, adminId), isNull(users.resellerId)),
       orderBy: [asc(users.name)],
       with: { package: true },
     });

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { packages } from "@/db/schema";
-import { and, eq, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
+import { users } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
@@ -10,8 +11,17 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let adminId = session.userId;
+  if (session.role === "reseller" || session.role === "employee") {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    adminId = u?.adminId || 1;
+  }
+
   const pkgs = await db.query.packages.findMany({
-    where: eq(packages.adminId, session.userId),
+    where: eq(packages.adminId, adminId),
     orderBy: [desc(packages.createdAt)]
   });
   return NextResponse.json(pkgs);

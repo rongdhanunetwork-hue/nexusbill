@@ -83,6 +83,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No router configured. Please add a router in 'Routers List' first." }, { status: 400 });
     }
 
+    if (session.role === "admin" && session.userId !== 1 && !routerId) {
+      return NextResponse.json({ error: "No router selected or configured." }, { status: 400 });
+    }
+
     switch (action) {
       case "enable":
         await enablePppoeSecret(id, routerId);

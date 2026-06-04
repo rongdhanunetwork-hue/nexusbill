@@ -185,27 +185,7 @@ export default function AddCustomerPage() {
               </select>
             </div>
             
-            <div className="md:col-span-2 grid md:grid-cols-3 gap-5 bg-white/5 p-4 rounded-xl border border-white/10 mt-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">OLT</label>
-                <select name="oltId" className="w-full glass-input px-4 py-3 bg-slate-800">
-                  <option value="" className="bg-slate-800">No OLT assigned</option>
-                  {oltsList.map(olt => (
-                    <option key={olt.id} value={olt.id} className="bg-slate-800">
-                      {olt.name} ({olt.ipAddress})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">PON Port</label>
-                <input type="text" name="ponPort" placeholder="e.g. PON-1" className="w-full glass-input px-4 py-3 bg-slate-800" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">ONU MAC</label>
-                <input type="text" name="onuMac" placeholder="AA:BB:CC:DD:EE:FF" className="w-full glass-input px-4 py-3 bg-slate-800" />
-              </div>
-            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Customer Connection Type</label>
               <select name="customerType" className="w-full glass-input px-4 py-3 bg-slate-800">

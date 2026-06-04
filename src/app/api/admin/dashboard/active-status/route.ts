@@ -31,7 +31,7 @@ export async function GET() {
     if (session.role === "reseller") {
       whereClause = and(eq(users.role, "customer"), eq(users.resellerId, session.userId), eq(users.adminId, adminId));
     } else {
-      whereClause = and(eq(users.role, "customer"), eq(users.adminId, adminId));
+      whereClause = and(eq(users.role, "customer"), eq(users.adminId, adminId), isNull(users.resellerId));
     }
 
     const [allDbCustomers, routers] = await Promise.all([
@@ -44,14 +44,23 @@ export async function GET() {
     ]);
 
     // Fetch active sessions from all relevant routers in parallel
-    const activeSessionsLists = await Promise.all(
-      routers.map((r) => 
-        getPppoeActive(r.id).catch((err) => {
-          console.error(`Failed to fetch active sessions from router ${r.id}:`, err);
+    const activeSessionsPromises = routers.map((r) => 
+      getPppoeActive(r.id).catch((err) => {
+        console.error(`Failed to fetch active sessions from router ${r.id}:`, err);
+        return [];
+      })
+    );
+
+    if (adminId === 1) {
+      activeSessionsPromises.push(
+        getPppoeActive(undefined).catch((err) => {
+          console.error(`Failed to fetch active sessions from default router:`, err);
           return [];
         })
-      )
-    );
+      );
+    }
+
+    const activeSessionsLists = await Promise.all(activeSessionsPromises);
 
     // Combine all active session names
     const activePppoeNames = new Set<string>();
@@ -63,13 +72,11 @@ export async function GET() {
       }
     }
 
-    const activeCustomers = allDbCustomers.filter(c => c.status === "active");
-
-    const onlineCustomers = activeCustomers.filter(c => {
+    const onlineCustomers = allDbCustomers.filter(c => {
       return c.pppoeUsername && activePppoeNames.has(c.pppoeUsername.toLowerCase());
     }).length;
 
-    const offlineCustomers = Math.max(0, activeCustomers.length - onlineCustomers);
+    const offlineCustomers = Math.max(0, allDbCustomers.length - onlineCustomers);
 
     return NextResponse.json({ onlineCustomers, offlineCustomers });
   } catch (err) {

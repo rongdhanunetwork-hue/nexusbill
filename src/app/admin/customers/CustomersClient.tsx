@@ -64,7 +64,6 @@ export default function CustomersClient({
   const [packagesList, setPackagesList] = useState<any[]>([]);
   const [selectedAreaId, setSelectedAreaId] = useState("All Areas");
   const [selectedPackageId, setSelectedPackageId] = useState("All Packages");
-  const [selectedResellerId, setSelectedResellerId] = useState(role === "admin" ? "null" : "All Resellers");
 
   useEffect(() => {
     fetch("/api/admin/areas")
@@ -283,9 +282,8 @@ export default function CustomersClient({
 
     const matchesArea = selectedAreaId === "All Areas" || String(customer.areaId) === selectedAreaId;
     const matchesPackage = selectedPackageId === "All Packages" || String(customer.packageId) === selectedPackageId;
-    const matchesReseller = selectedResellerId === "All Resellers" || String((customer as any).resellerId) === selectedResellerId;
 
-    return matchesSearch && matchesStatus && matchesArea && matchesPackage && matchesReseller;
+    return matchesSearch && matchesStatus && matchesArea && matchesPackage;
   });
 
   // Calculate values for Recharge Modal
@@ -698,21 +696,6 @@ export default function CustomersClient({
             ))}
           </select>
 
-          {role === "admin" && (
-            <select
-              value={selectedResellerId}
-              onChange={(e) => setSelectedResellerId(e.target.value)}
-              className="glass-input px-4 py-2 bg-slate-800 focus:ring-neon-blue focus:ring-2 cursor-pointer text-xs font-semibold text-white border border-white/10"
-            >
-              <option value="All Resellers" className="bg-slate-800">All Customers</option>
-              <option value="null" className="bg-slate-800">Direct Customers (Admin)</option>
-              {resellers.map(reseller => (
-                <option key={reseller.id} value={String(reseller.id)} className="bg-slate-800">
-                  Reseller: {reseller.name}
-                </option>
-              ))}
-            </select>
-          )}
         </div>
       </div>
 
@@ -774,11 +757,6 @@ export default function CustomersClient({
                             {customer.name}
                           </Link>
                           <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-gray-400 border border-white/5 uppercase font-mono">{customer.customerType || "pppoe"}</span>
-                          {role === "admin" && (customer as any).resellerId && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase">
-                              {resellers.find(r => r.id === (customer as any).resellerId)?.name || "Reseller"}
-                            </span>
-                          )}
                         </div>
                         <div className="text-sm text-gray-400">{customer.phone}</div>
                         <div className="text-xs text-gray-500 max-w-48 truncate">{customer.address || "No address"}</div>

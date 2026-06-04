@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const queryId = searchParams.get("routerId") || searchParams.get("id");
-    let routerId: number | undefined = undefined;
+    let routerIds: (number | undefined)[] = [];
 
     if (session.role === "reseller") {
       if (queryId) {
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
         if (!routerObj) {
           return NextResponse.json({ error: "Access denied to this router" }, { status: 403 });
         }
-        routerId = routerObj.id;
+        routerIds = [routerObj.id];
       } else {
         // Fall back to reseller's mikrotikId
         const resellerUser = await db.query.users.findFirst({
@@ -39,26 +39,35 @@ export async function GET(req: Request) {
           columns: { mikrotikId: true }
         });
         if (resellerUser?.mikrotikId) {
-          routerId = resellerUser.mikrotikId;
+          routerIds = [resellerUser.mikrotikId];
         } else {
           // Find first router registered by this reseller
           const firstRouter = await db.query.mikrotiks.findFirst({
             where: eq(mikrotiks.resellerId, session.userId),
           });
           if (firstRouter) {
-            routerId = firstRouter.id;
+            routerIds = [firstRouter.id];
             // Update profile
-            await db.update(users).set({ mikrotikId: routerId }).where(eq(users.id, session.userId));
+            await db.update(users).set({ mikrotikId: firstRouter.id }).where(eq(users.id, session.userId));
           }
         }
       }
     } else {
       if (queryId) {
-        routerId = Number(queryId);
+        routerIds = [Number(queryId)];
+      } else {
+        // Fetch ALL routers for this admin
+        const dbRouters = await db.select({ id: mikrotiks.id }).from(mikrotiks).where(
+          and(eq(mikrotiks.adminId, session.userId), eq(mikrotiks.status, true))
+        );
+        routerIds = dbRouters.map(r => r.id);
+        if (session.userId === 1) {
+          routerIds.push(undefined);
+        }
       }
     }
 
-    if (session.role === "reseller" && !routerId) {
+    if (session.role === "reseller" && routerIds.length === 0) {
       return NextResponse.json({
         secrets: [],
         active: [],
@@ -68,17 +77,37 @@ export async function GET(req: Request) {
       });
     }
 
-    // Fetch all router details using a SINGLE connection sequentially
-    const details = await getRouterDetails(routerId);
+    let allSecrets: any[] = [];
+    let allActive: any[] = [];
+    let allProfiles: any[] = [];
+    let lastStatus = { ok: true, version: "Unknown", error: undefined as string | undefined };
 
-    // Automatically import any new router secrets into database using the fetched secrets (no extra connection)
-    if (details.secrets && details.secrets.length > 0) {
-      await syncMikrotikSecrets(details.secrets, routerId);
-    }
+    await Promise.all(routerIds.map(async (routerId) => {
+      try {
+        const details = await getRouterDetails(routerId);
+        if (details.secrets && details.secrets.length > 0) {
+          await syncMikrotikSecrets(details.secrets, routerId);
+          allSecrets.push(...details.secrets);
+        }
+        if (details.active && details.active.length > 0) {
+          allActive.push(...details.active);
+        }
+        if (details.profiles && details.profiles.length > 0) {
+          allProfiles.push(...details.profiles);
+        }
+        if (!details.status.ok) {
+          lastStatus = { ok: false, version: details.status.version || "Unknown", error: details.status.error };
+        } else {
+          lastStatus = { ok: true, version: details.status.version || "Unknown", error: undefined };
+        }
+      } catch (err) {
+        console.error(`Error fetching router ${routerId}:`, err);
+      }
+    }));
 
     // Update lastSeen for online users in DB
-    if (details.active && details.active.length > 0) {
-      const activeNames = details.active.map((a: any) => a.name).filter(Boolean);
+    if (allActive.length > 0) {
+      const activeNames = allActive.map((a: any) => a.name).filter(Boolean);
       const allSearchNames = [...new Set([...activeNames, ...activeNames.map((n: string) => n.toLowerCase())])];
       if (allSearchNames.length > 0) {
         try {
@@ -97,10 +126,10 @@ export async function GET(req: Request) {
       }
     }
 
-    const errorMessage = details.status.ok ? null : (details.status.error || "Connection failed");
+    const errorMessage = lastStatus.ok ? null : (lastStatus.error || "Connection failed");
 
-    let finalSecrets = details.secrets || [];
-    let finalActive = details.active || [];
+    let finalSecrets = allSecrets;
+    let finalActive = allActive;
 
     if (session.role === "reseller") {
       const resellerCustomers = await db.query.users.findMany({
@@ -118,11 +147,11 @@ export async function GET(req: Request) {
       secrets: finalSecrets,
       active: finalActive,
       routerStatus: {
-        ok: details.status.ok,
-        version: details.status.version || "Unknown",
+        ok: lastStatus.ok,
+        version: lastStatus.version || "Unknown",
         error: errorMessage || undefined
       },
-      profiles: details.profiles || [],
+      profiles: allProfiles || [],
       error: errorMessage,
     });
   } catch (err) {

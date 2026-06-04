@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, payments, invoices, mikrotiks, olts, dataUsage, expenses } from "@/db/schema";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, isNull } from "drizzle-orm";
 import AdminDashboardClient from "./AdminDashboardClient";
 import { syncMikrotikSecrets } from "@/lib/sync";
 import { getSession } from "@/lib/auth";
@@ -8,13 +8,7 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-async function countExpiredDays(days: number, adminId: number) {
-  const [result] = await db
-    .select({ count: sql<number>`cast(count(*) as int)` })
-    .from(users)
-    .where(sql`${users.role} = 'customer' and ${users.adminId} = ${adminId} and ${users.expireDate}::date = (current_date - ${days}::int)`);
-  return result?.count || 0;
-}
+
 
 export default async function AdminDashboard() {
   const session = await getSession();
@@ -29,21 +23,17 @@ export default async function AdminDashboard() {
     console.error("Background MikroTik sync error:", err);
   });
 
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
+  const bdTime = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
+  const d = new Date(bdTime);
+  const startOfMonthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const endOfToday = new Date();
-  endOfToday.setHours(23, 59, 59, 999);
+  const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+  const startOfToday = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const endOfToday = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
 
   const [
     allDbCustomers,
-    expired1Day,
-    expired2Day,
-    expired3Day,
-    expired4Day,
     todayRechargeResult,
     todayCollectionResult,
     collectionResult,
@@ -54,43 +44,66 @@ export default async function AdminDashboard() {
     paidUsersThisMonthResult
   ] = await Promise.all([
     db.query.users.findMany({
-      where: and(eq(users.role, "customer"), eq(users.adminId, adminId)),
+      where: and(eq(users.role, "customer"), eq(users.adminId, adminId), isNull(users.resellerId)),
       with: { package: true }
     }),
-    countExpiredDays(1, adminId),
-    countExpiredDays(2, adminId),
-    countExpiredDays(3, adminId),
-    countExpiredDays(4, adminId),
+
     db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(payments)
       .innerJoin(users, eq(payments.userId, users.id))
-      .where(sql`${payments.status} = 'approved' and ${payments.createdAt}::date = current_date and ${users.adminId} = ${adminId}`),
+      .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${todayStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
     db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` })
       .from(payments)
       .innerJoin(users, eq(payments.userId, users.id))
-      .where(sql`${payments.status} = 'approved' and ${payments.createdAt}::date = current_date and ${users.adminId} = ${adminId}`),
+      .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${todayStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
     db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` })
       .from(payments)
       .innerJoin(users, eq(payments.userId, users.id))
-      .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${startOfMonth} and ${users.adminId} = ${adminId}`),
+      .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${startOfMonthStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
     db.select({ sum: sql<number>`cast(coalesce(sum(${invoices.amount}), 0) as int)` })
       .from(invoices)
       .innerJoin(users, eq(invoices.userId, users.id))
-      .where(sql`${invoices.status} in ('unpaid', 'due') and ${invoices.createdAt} >= ${startOfMonth} and ${users.adminId} = ${adminId}`),
-    db.select({ count: sql<number>`cast(count(*) as int)` }).from(mikrotiks).where(eq(mikrotiks.adminId, adminId)),
-    db.select({ count: sql<number>`cast(count(*) as int)` }).from(olts).where(eq(olts.adminId, adminId)),
-    db.select({ sum: sql<number>`cast(coalesce(sum(${expenses.amount}), 0) as int)` }).from(expenses).where(sql`${expenses.expenseDate} >= ${startOfMonth} and ${expenses.adminId} = ${adminId}`),
+      .where(sql`${invoices.status} in ('unpaid', 'due') and ${invoices.createdAt} >= ${startOfMonthStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
+    db.select({ count: sql<number>`cast(count(*) as int)` }).from(mikrotiks).where(and(eq(mikrotiks.adminId, adminId), isNull(mikrotiks.resellerId))),
+    db.select({ count: sql<number>`cast(count(*) as int)` }).from(olts).where(and(eq(olts.adminId, adminId), isNull(olts.resellerId))),
+    db.select({ sum: sql<number>`cast(coalesce(sum(${expenses.amount}), 0) as int)` }).from(expenses).where(sql`${expenses.expenseDate} >= ${startOfMonthStr}::date and ${expenses.adminId} = ${adminId}`),
     db.select({ userId: payments.userId })
       .from(payments)
       .innerJoin(users, eq(payments.userId, users.id))
-      .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${startOfMonth} and ${users.adminId} = ${adminId}`),
+      .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${startOfMonthStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
   ]);
 
-  const totalCustomers = allDbCustomers.length;
-  const activeCustomers = allDbCustomers.filter(c => c.status === "active").length;
-  const expiredCustomers = allDbCustomers.filter(c => c.status === "expired").length;
+  const getExpiredDaysCount = (days: number) => {
+    return allDbCustomers.filter(c => {
+      if (!c.expireDate) return false;
+      const exp = new Date(c.expireDate);
+      exp.setHours(0, 0, 0, 0);
+      const daysDiff = Math.floor((startOfToday.getTime() - exp.getTime()) / (1000 * 60 * 60 * 24));
+      return daysDiff === days;
+    }).length;
+  };
 
-  const activeCustomersList = allDbCustomers.filter(c => c.status === "active");
+  const expired1Day = getExpiredDaysCount(1);
+  const expired2Day = getExpiredDaysCount(2);
+  const expired3Day = getExpiredDaysCount(3);
+  const expired4Day = getExpiredDaysCount(4);
+
+  const totalCustomers = allDbCustomers.length;
+
+  const activeCustomersList = allDbCustomers.filter(c => {
+    const exp = c.expireDate ? new Date(c.expireDate) : null;
+    if (exp) exp.setHours(0, 0, 0, 0);
+    const isExpired = c.status === "expired" || !exp || (exp.getTime() < startOfToday.getTime());
+    return c.status === "active" && !isExpired;
+  });
+  const activeCustomers = activeCustomersList.length;
+
+  const expiredCustomers = allDbCustomers.filter(c => {
+    const exp = c.expireDate ? new Date(c.expireDate) : null;
+    if (exp) exp.setHours(0, 0, 0, 0);
+    return c.status === "expired" || !exp || (exp.getTime() < startOfToday.getTime());
+  }).length;
+
   const expectedCollection = activeCustomersList.reduce((sum, c) => {
     const price = c.package ? parseFloat(c.package.price) : 0;
     return sum + price;
@@ -138,7 +151,7 @@ export default async function AdminDashboard() {
     })
     .from(payments)
     .innerJoin(users, eq(payments.userId, users.id))
-    .where(and(eq(payments.status, "approved"), eq(users.adminId, adminId)))
+    .where(and(eq(payments.status, "approved"), eq(users.adminId, adminId), isNull(users.resellerId), eq(users.role, "customer")))
     .groupBy(sql`to_char(${payments.createdAt}, 'YYYY-MM')`);
 
   const last6Months = [];
@@ -167,7 +180,7 @@ export default async function AdminDashboard() {
     })
     .from(dataUsage)
     .innerJoin(users, eq(dataUsage.userId, users.id))
-    .where(sql`${dataUsage.recordedAt} >= current_date - interval '7 days' and ${users.adminId} = ${adminId}`)
+    .where(sql`${dataUsage.recordedAt} >= current_date - interval '7 days' and ${users.adminId} = ${adminId} and ${users.resellerId} is null`)
     .groupBy(sql`to_char(${dataUsage.recordedAt}, 'YYYY-MM-DD')`);
 
   const last7Days = [];
