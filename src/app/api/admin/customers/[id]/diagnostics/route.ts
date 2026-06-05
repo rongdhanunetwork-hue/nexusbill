@@ -47,10 +47,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       const uptimeHours = (customerId * 7) % 24;
       uptime = `${uptimeDays} days, ${uptimeHours} hours`;
 
-      if (!customer.routerModel) {
-        const routers = ["Tenda AC1200", "TP-Link Archer C6", "Netgear Nighthawk", "Xiaomi Mi Router 4A", "Mercusys MW302R"];
-        routerModel = routers[customerId % routers.length];
-      }
+      // No fallback mock router model. Keep as in DB.
     }
 
     return NextResponse.json({

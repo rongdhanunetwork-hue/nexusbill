@@ -65,7 +65,9 @@ export async function POST(req: Request) {
       photoUrl, nidUrl, macAddress, ipAddress,
       nidNumber, createdAt, expireDate, dob, resellerId,
       areaId, customerType, connectionFee, promiseDate, note, autoRenew,
-      oltId, ponPort, onuMac
+      oltId, ponPort, onuMac, routerModel, routerUsername, routerPassword,
+      alternatePhone, district, thana, discount, billingPosition, billingCycleDay,
+      connectionType, gpsCoordinates, joiningDate, status
     } = body;
 
     if (!name || !phone || !password) {
@@ -108,7 +110,7 @@ export async function POST(req: Request) {
       resellerId: session.role === "reseller" ? session.userId : (resellerId ? Number(resellerId) : null),
       role: "customer",
       approvalStatus: "approved",
-      status: "expired",
+      status: status || "active",
       expireDate: calculatedExpireDate,
       dob: dob ? new Date(dob + (dob.includes('Z') ? '' : 'Z')) : null,
       createdAt: createdAt ? new Date(createdAt + (createdAt.includes('Z') ? '' : 'Z')) : new Date(),
@@ -121,7 +123,19 @@ export async function POST(req: Request) {
       oltId: oltId ? Number(oltId) : null,
       ponPort: ponPort?.trim() || null,
       onuMac: onuMac?.trim() || null,
+      routerModel: routerModel?.trim() || null,
+      routerUsername: routerUsername?.trim() || null,
+      routerPassword: routerPassword?.trim() || null,
       adminId,
+      alternatePhone: alternatePhone?.trim() || null,
+      district: district || null,
+      thana: thana || null,
+      discount: discount ? String(discount) : "0",
+      billingPosition: billingPosition || "active_billable",
+      billingCycleDay: billingCycleDay || "standard_30",
+      connectionType: connectionType || "fiber",
+      gpsCoordinates: gpsCoordinates?.trim() || null,
+      joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
     }).returning();
 
     // Automatically sync customer PPPoE secret to MikroTik router (disabled by default)

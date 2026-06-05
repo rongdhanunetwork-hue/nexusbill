@@ -42,7 +42,10 @@ export default async function CustomerDashboard() {
   const neverRecharged = totalInvoiceCount === 0 && !customer.expireDate;
   const billStatus = (dueAmount > 0 || neverRecharged) ? "Unpaid" : "Paid";
 
-  const latestNotice = await db.query.notices.findFirst({ orderBy: [desc(notices.createdAt)] });
+  const latestNotice = await db.query.notices.findFirst({
+    where: eq(notices.adminId, customer.adminId || 1),
+    orderBy: [desc(notices.createdAt)]
+  });
 
   // Fetch real daily data usage (last 7 days) for the customer
   const rawUsage = await db.query.dataUsage.findMany({

@@ -27,10 +27,14 @@ export default async function PayBillPage() {
   const bkashRow2 = await db.query.settings.findFirst({
     where: and(eq(settings.key, "bkash_number_2"), eq(settings.adminId, adminId))
   });
+  const bankCardRow = await db.query.settings.findFirst({
+    where: and(eq(settings.key, "bank_card_number"), eq(settings.adminId, adminId))
+  });
   return (
     <PayBillClient
-      bkashNumber={bkashRow?.value || "017XXXXXXXX"}
-      bkashNumber2={bkashRow2?.value || ""}
+      bkashNumber={bkashRow?.value || "01580838281"}
+      bkashNumber2={bkashRow2?.value || "017XXXXXXXX"}
+      bankCardNumber={bankCardRow?.value || "Dutch-Bangla Bank: 123.456.7890"}
     />
   );
 }

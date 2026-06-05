@@ -35,6 +35,7 @@ interface Customer {
   promiseDate?: string | Date | null;
   note?: string | null;
   autoRenew?: boolean | null;
+  mikrotikId?: number | null;
 }
 
 export default function CustomersClient({
@@ -447,7 +448,7 @@ export default function CustomersClient({
   };
 
   // Kick MikroTik active session
-  const triggerKick = async (username: string) => {
+  const triggerKick = async (username: string, routerId?: number | null) => {
     const isConfirm = await showConfirm({
       title: "Terminate Session",
       message: `Are you sure you want to terminate active session for "${username}"?`,
@@ -460,7 +461,7 @@ export default function CustomersClient({
       const res = await fetch("/api/admin/mikrotik/toggle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "disconnect", name: username }),
+        body: JSON.stringify({ action: "disconnect", name: username, routerId }),
       });
       const d = await res.json();
       if (res.ok) {
@@ -981,7 +982,7 @@ export default function CustomersClient({
                                 <>
                                   <button
                                     onClick={() => {
-                                      triggerKick(customer.pppoeUsername!);
+                                      triggerKick(customer.pppoeUsername!, customer.mikrotikId);
                                       setActiveDropdownId(null);
                                     }}
                                     className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-orange-400 hover:bg-orange-500/10 transition-colors"

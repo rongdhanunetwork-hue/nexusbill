@@ -36,6 +36,7 @@ export async function GET() {
 
     // 2. Latest Notices
     const latestNotices = await db.query.notices.findMany({
+      where: eq(notices.adminId, customer.adminId || 1),
       orderBy: [desc(notices.createdAt)],
       limit: 3,
     });

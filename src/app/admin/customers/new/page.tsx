@@ -1,10 +1,9 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Loader2, Eye, EyeOff, CheckCircle2, AlertCircle, Upload } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Compass, AlertCircle, RefreshCw } from "lucide-react";
 import ImageUploadField from "@/components/ui/ImageUploadField";
 
 interface Package {
@@ -15,92 +14,91 @@ interface Package {
   durationDays: number;
 }
 
-interface MikroTik {
+interface RouterPop {
   id: number;
   name: string;
-  ipAddress: string;
 }
 
-interface OLT {
+interface AreaZone {
   id: number;
   name: string;
-  ipAddress: string;
+  type: string;
 }
 
-function getAreaLabel(item: any, list: any[]): string {
-  if (item.type === "area") return `📍 ${item.name}`;
-  if (item.type === "subarea") {
-    const parent = list.find(a => a.id === item.parentId);
-    return parent ? `📍 ${parent.name} ➔ 🧭 ${item.name}` : `🧭 ${item.name}`;
-  }
-  if (item.type === "polebox") {
-    const parentSub = list.find(a => a.id === item.parentId);
-    if (parentSub) {
-      const parentArea = list.find(a => a.id === parentSub.parentId);
-      return parentArea
-        ? `📍 ${parentArea.name} ➔ 🧭 ${parentSub.name} ➔ 📦 ${item.name}`
-        : `🧭 ${parentSub.name} ➔ 📦 ${item.name}`;
-    }
-    return `📦 ${item.name}`;
-  }
-  return item.name;
+interface OltTjBox {
+  id: number;
+  name: string;
 }
+
+const DISTRICT_THANAS: Record<string, string[]> = {
+  Dhaka: ["Mirpur", "Uttara", "Gulshan", "Dhanmondi", "Badda", "Mohammadpur", "Khilgaon", "Tejgaon", "Ramna", "Savar", "Keraniganj", "Dhamrai"],
+  Chittagong: ["Panchlaish", "Double Mooring", "Kotwali", "Halishahar", "Patenga", "Hathazari", "Sitakunda", "Rangunia", "Patiya"],
+  Sylhet: ["Kotwali", "Shahparan", "South Surma", "Jaintiapur", "Beanibazar", "Golapganj", "Sreemangal"],
+  Rajshahi: ["Boalia", "Rajpara", "Motihar", "Shah Makhdum", "Paba", "Bagha", "Godagari"],
+  Khulna: ["Kotwali", "Sonadanga", "Khalishpur", "Daulatpur", "Khan Jahan Ali", "Rupsha"],
+  Barisal: ["Kotwali", "Airport", "South Surma", "Bakerganj", "Wazirpur"],
+  Rangpur: ["Kotwali", "Mithapukur", "Pirganj", "Kaunia", "Badarganj"],
+  Mymensingh: ["Kotwali", "Muktagachha", "Bhaluka", "Trishal", "Gafargaon"]
+};
 
 export default function AddCustomerPage() {
   const router = useRouter();
   const [packages, setPackages] = useState<Package[]>([]);
-  const [routers, setRouters] = useState<MikroTik[]>([]);
-  const [oltsList, setOltsList] = useState<OLT[]>([]);
-  const [areas, setAreas] = useState<any[]>([]);
+  const [routers, setRouters] = useState<RouterPop[]>([]);
+  const [zones, setZones] = useState<AreaZone[]>([]);
+  const [olts, setOlts] = useState<OltTjBox[]>([]);
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPwd, setShowPwd] = useState(false);
-  const [autoRenew, setAutoRenew] = useState(false);
+
+  // Dynamic values
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [discount, setDiscount] = useState<number>(0);
+  const [gpsCoordinates, setGpsCoordinates] = useState("");
+  const [fetchingGps, setFetchingGps] = useState(false);
+  const [district, setDistrict] = useState("");
+  const [thana, setThana] = useState("");
 
   useEffect(() => {
-    fetch("/api/admin/packages").then(r => r.json()).then(setPackages);
-    fetch("/api/admin/mikrotik/routers").then(r => r.json()).then(data => {
-      if (Array.isArray(data)) setRouters(data);
-    }).catch(() => {});
-    fetch("/api/admin/olts").then(r => r.json()).then(data => {
-      if (Array.isArray(data)) setOltsList(data);
-    }).catch(() => {});
-    fetch("/api/admin/areas").then(r => r.json()).then(data => {
-      if (Array.isArray(data)) setAreas(data);
-    }).catch(() => {});
+    fetch("/api/admin/packages").then(r => r.json()).then(setPackages).catch(() => {});
+    fetch("/api/admin/mikrotik/routers").then(r => r.json()).then(data => { if (Array.isArray(data)) setRouters(data); }).catch(() => {});
+    fetch("/api/admin/areas").then(r => r.json()).then(data => { if (Array.isArray(data)) setZones(data); }).catch(() => {});
+    fetch("/api/admin/olts").then(r => r.json()).then(data => { if (Array.isArray(data)) setOlts(data); }).catch(() => {});
   }, []);
+
+  const selectedPkgPrice = selectedPackage ? parseFloat(selectedPackage.price) : 0;
+  const billAmount = Math.max(0, selectedPkgPrice - discount).toFixed(2);
+
+  function handlePackageChange(idStr: string) {
+    const pkg = packages.find(p => p.id === Number(idStr)) || null;
+    setSelectedPackage(pkg);
+  }
+
+  function handleFetchGps() {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by this browser.");
+      return;
+    }
+    setFetchingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setGpsCoordinates(`${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`);
+        setFetchingGps(false);
+      },
+      (err) => {
+        console.error(err);
+        alert("Failed to access location. Please input coordinates manually.");
+        setFetchingGps(false);
+      }
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
 
-    const body = {
-      name: String(form.get("name") || "").trim(),
-      phone: String(form.get("phone") || "").trim(),
-      password: String(form.get("password") || "").trim(),
-      address: String(form.get("address") || "").trim(),
-      pppoeUsername: String(form.get("pppoeUsername") || "").trim(),
-      packageId: form.get("packageId") ? Number(form.get("packageId")) : null,
-      mikrotikId: form.get("mikrotikId") ? Number(form.get("mikrotikId")) : null,
-      photoUrl: String(form.get("photoUrl") || "").trim(),
-      nidUrl: String(form.get("nidUrl") || "").trim(),
-      nidNumber: String(form.get("nidNumber") || "").trim(),
-      macAddress: String(form.get("macAddress") || "").trim(),
-      createdAt: form.get("createdAt") ? String(form.get("createdAt")) : null,
-      expireDate: form.get("expireDate") ? String(form.get("expireDate")) : null,
-      dob: form.get("dob") ? String(form.get("dob")) : null,
-      areaId: form.get("areaId") ? Number(form.get("areaId")) : null,
-      customerType: String(form.get("customerType") || "pppoe"),
-      connectionFee: String(form.get("connectionFee") || "0"),
-      promiseDate: form.get("promiseDate") ? String(form.get("promiseDate")) : null,
-      note: String(form.get("note") || "").trim(),
-      autoRenew: autoRenew,
-      oltId: form.get("oltId") ? Number(form.get("oltId")) : null,
-      ponPort: String(form.get("ponPort") || "").trim(),
-      onuMac: String(form.get("onuMac") || "").trim(),
-    };
-
-    if (!body.password || body.password.length < 6) {
+    const password = String(form.get("password") || "").trim();
+    if (password.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
     }
@@ -108,190 +106,381 @@ export default function AddCustomerPage() {
     setLoading(true);
     setError(null);
 
-    const res = await fetch("/api/admin/customers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const body = {
+      name: String(form.get("name") || "").trim(),
+      phone: String(form.get("phone") || "").trim(),
+      alternatePhone: String(form.get("alternatePhone") || "").trim(),
+      nidNumber: String(form.get("nidNumber") || "").trim(),
+      pppoeUsername: String(form.get("pppoeUsername") || "").trim(),
+      password,
+      photoUrl: String(form.get("photoUrl") || "").trim(),
+      address: String(form.get("address") || "").trim(),
+      district,
+      thana,
+      packageId: selectedPackage ? selectedPackage.id : null,
+      discount: discount,
+      billingPosition: String(form.get("billingPosition") || "active_billable"),
+      status: String(form.get("status") || "active"),
+      joiningDate: form.get("joiningDate") ? String(form.get("joiningDate")) : new Date().toISOString(),
+      billingCycleDay: String(form.get("billingCycleDay") || "standard_30"),
+      mikrotikId: form.get("mikrotikId") ? Number(form.get("mikrotikId")) : null,
+      areaId: form.get("areaId") ? Number(form.get("areaId")) : null,
+      oltId: form.get("oltId") ? Number(form.get("oltId")) : null,
+      connectionType: String(form.get("connectionType") || "fiber"),
+      customerType: String(form.get("customerType") || "home"),
+      onuMac: String(form.get("onuMac") || "").trim(),
+      gpsCoordinates: gpsCoordinates.trim(),
+      note: String(form.get("note") || "").trim(),
+    };
 
-    const data = await res.json();
-    setLoading(false);
+    try {
+      const res = await fetch("/api/admin/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    if (!res.ok) {
-      setError(data.error || "Failed to create customer.");
-    } else {
-      router.push("/admin/customers");
-      router.refresh();
+      const data = await res.json();
+      setLoading(false);
+
+      if (!res.ok) {
+        setError(data.error || "Failed to register new client.");
+      } else {
+        router.push("/admin/customers");
+        router.refresh();
+      }
+    } catch {
+      setError("Network error. Please try again.");
+      setLoading(false);
     }
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-5xl space-y-6">
+      {/* Title */}
       <div className="flex items-center gap-4">
         <Link href="/admin/customers" className="text-gray-400 hover:text-white transition-colors">
           <ArrowLeft size={22} />
         </Link>
-        <h1 className="text-2xl font-bold text-white tracking-wide">Add Customer</h1>
+        <h1 className="text-2xl font-bold text-white tracking-wide">Client Directory</h1>
       </div>
 
-      <motion.form
-        onSubmit={handleSubmit}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-card p-6 md:p-8 space-y-8"
-      >
-        {/* Profile */}
-        <section>
-          <h3 className="text-lg font-semibold text-white mb-5 pb-3 border-b border-white/10">Customer Profile</h3>
-          <div className="grid md:grid-cols-2 gap-5">
-            <Field label="Full Name *" name="name" required placeholder="Customer full name" />
-            <Field label="Phone Number *" name="phone" required placeholder="01XXXXXXXXX" type="tel" />
-            <Field label="NID Number" name="nidNumber" placeholder="NID Number" />
-            <Field label="Date of Birth (জন্ম তারিখ)" name="dob" type="date" />
-            <div className="md:col-span-2">
-              <Field label="Address" name="address" placeholder="Full address" />
-            </div>
-            <ImageUploadField label="Customer Photo" name="photoUrl" />
-            <ImageUploadField label="NID Document Upload" name="nidUrl" />
+      <form onSubmit={handleSubmit} className="glass-card overflow-hidden shadow-2xl border border-white/10 rounded-2xl">
+        {/* Styled Card Header */}
+        <div className="bg-emerald-700/80 border-b border-emerald-600/40 p-5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center text-white font-bold">
+            👤+
           </div>
-        </section>
-
-        {/* Connection */}
-        <section>
-          <h3 className="text-lg font-semibold text-white mb-5 pb-3 border-b border-white/10">Connection & Billing</h3>
-          <div className="grid md:grid-cols-2 gap-5">
-            <Field label="PPPoE Username" name="pppoeUsername" placeholder="pppoe_username" />
-            <Field label="MAC Address" name="macAddress" placeholder="AA:BB:CC:DD:EE:FF" />
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Package</label>
-              <select name="packageId" className="w-full glass-input px-4 py-3 bg-slate-800">
-                <option value="" className="bg-slate-800">Select package</option>
-                {packages.map(pkg => (
-                  <option key={pkg.id} value={pkg.id} className="bg-slate-800">
-                    {pkg.name} ({pkg.speed} — ৳{pkg.price}/mo)
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">MikroTik Router</label>
-              <select name="mikrotikId" className="w-full glass-input px-4 py-3 bg-slate-800">
-                <option value="" className="bg-slate-800">No router assigned</option>
-                {routers.map(r => (
-                  <option key={r.id} value={r.id} className="bg-slate-800">
-                    {r.name} ({r.ipAddress})
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Customer Connection Type</label>
-              <select name="customerType" className="w-full glass-input px-4 py-3 bg-slate-800">
-                <option value="pppoe" className="bg-slate-800">PPPoE Connection</option>
-                <option value="static" className="bg-slate-800">Static IP Connection</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Assign Area / Pole Box</label>
-              <select name="areaId" className="w-full glass-input px-4 py-3 bg-slate-800">
-                <option value="" className="bg-slate-800">No area assigned</option>
-                {areas.map(item => (
-                  <option key={item.id} value={item.id} className="bg-slate-800">
-                    {getAreaLabel(item, areas)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Field label="Connection Fee (৳)" name="connectionFee" placeholder="0" type="number" />
-            <Field label="Promise Date" name="promiseDate" type="date" />
-            <Field label="Profile Creation Date" name="createdAt" type="date" />
-            <Field label="Expiration Date & Time (Expiry)" name="expireDate" type="datetime-local" />
-            <div className="md:col-span-2">
-              <Field label="Customer Remarks / Notes" name="note" placeholder="Any remarks or special instructions" />
-            </div>
-            <div className="md:col-span-2 flex items-center gap-3 bg-white/5 p-4 rounded-xl border border-white/10">
-              <input
-                type="checkbox"
-                id="autoRenew"
-                checked={autoRenew}
-                onChange={(e) => setAutoRenew(e.target.checked)}
-                className="w-5 h-5 accent-neon-blue rounded cursor-pointer"
-              />
-              <label htmlFor="autoRenew" className="text-sm font-semibold text-gray-300 cursor-pointer">
-                Auto Renew (অটো রিচার্জ) <span className="text-xs text-gray-500 font-normal ml-1">- If checked, account will be auto-recharged based on available balance</span>
-              </label>
-            </div>
+          <div>
+            <h2 className="text-lg font-bold text-white leading-tight">Add New Client / Broadband User</h2>
+            <p className="text-xs text-emerald-200 mt-0.5">Register new customer profile, package, billing and POP box mapping.</p>
           </div>
-        </section>
-
-        {/* Password */}
-        <section>
-          <h3 className="text-lg font-semibold text-white mb-5 pb-3 border-b border-white/10">Login Credentials</h3>
-          <div className="max-w-sm">
-            <label className="block text-sm font-medium text-gray-300 mb-2">Password *</label>
-            <div className="relative">
-              <input
-                name="password"
-                type={showPwd ? "text" : "password"}
-                required
-                minLength={6}
-                placeholder="Min 6 characters"
-                className="w-full glass-input px-4 py-3 pr-12"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwd(!showPwd)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                tabIndex={-1}
-              >
-                {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {error && (
-          <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
-            <AlertCircle size={16} />
-            {error}
-          </div>
-        )}
-
-        <div className="flex gap-4">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center gap-2 px-7 py-3 rounded-xl bg-neon-blue/20 text-neon-blue border border-neon-blue/40 font-semibold hover:bg-neon-blue/30 transition-colors disabled:opacity-50"
-          >
-            {loading ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : <><Save size={18} /> Save Customer</>}
-          </button>
-          <Link href="/admin/customers" className="px-7 py-3 rounded-xl bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition-colors">
-            Cancel
-          </Link>
         </div>
-      </motion.form>
+
+        {/* Card Body */}
+        <div className="p-6 md:p-8 space-y-8">
+          
+          {/* Section 1: Client Identity */}
+          <section className="space-y-5">
+            <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase border-b border-white/5 pb-2">Client Identity</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Field label="Full Name *" name="name" required placeholder="Enter Client Name" />
+              <Field label="Primary Phone No *" name="phone" required placeholder="e.g. 01711000000" type="tel" />
+              <Field label="Alternate Phone" name="alternatePhone" placeholder="Optional Number" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Field label="National ID (NID) *" name="nidNumber" required placeholder="NID Number" />
+              <div className="md:col-span-2">
+                <Field label="PPPoE ID / Username" name="pppoeUsername" placeholder="Set Mikrotik Username" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Field label="PPPoE Password" name="password" placeholder="Set Mikrotik Password" type="password" />
+              <ImageUploadField label="Profile Picture" name="photoUrl" />
+              <Field label="Address" name="address" placeholder="House, Street, Area info" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">District *</label>
+                <select
+                  required
+                  value={district}
+                  onChange={(e) => { setDistrict(e.target.value); setThana(""); }}
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="" className="bg-slate-950">-- Select District --</option>
+                  {Object.keys(DISTRICT_THANAS).map(d => (
+                    <option key={d} value={d} className="bg-slate-950">{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Thana / Upazila *</label>
+                <select
+                  required
+                  value={thana}
+                  onChange={(e) => setThana(e.target.value)}
+                  disabled={!district}
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none disabled:opacity-50"
+                >
+                  <option value="" className="bg-slate-950">-- Select Thana --</option>
+                  {district && DISTRICT_THANAS[district].map(t => (
+                    <option key={t} value={t} className="bg-slate-950">{t}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Section 2: Package & Billing Setup */}
+          <section className="space-y-5">
+            <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase border-b border-white/5 pb-2">Package & Billing Setup</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Select Package</label>
+                <select
+                  onChange={(e) => handlePackageChange(e.target.value)}
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="" className="bg-slate-950">-- Choose Package --</option>
+                  {packages.map(p => (
+                    <option key={p.id} value={p.id} className="bg-slate-950">{p.name} ({p.speed} - ৳{p.price})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Discount (৳)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={discount}
+                  onChange={(e) => setDiscount(Math.max(0, Number(e.target.value)))}
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Bill Amount</label>
+                <div className="flex items-center bg-emerald-950/60 border border-emerald-500/30 rounded-xl px-4 py-3 text-emerald-400 font-mono font-bold text-lg select-none">
+                  <span className="mr-2">৳</span>
+                  <span>{billAmount}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Billing Position / Status</label>
+                <select
+                  name="billingPosition"
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="active_billable" className="bg-slate-950">Active (Billable)</option>
+                  <option value="free_trial" className="bg-slate-950">Free / Trial</option>
+                  <option value="suspended" className="bg-slate-950">Suspended / Stopped</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Client Status</label>
+                <select
+                  name="status"
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="active" className="bg-slate-950">Active</option>
+                  <option value="expired" className="bg-slate-950">In-Active / Expired</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Joining Date</label>
+                <input
+                  type="date"
+                  name="joiningDate"
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Billing Cycle Day</label>
+                <select
+                  name="billingCycleDay"
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="standard_30" className="bg-slate-950">Standard 30 Days</option>
+                  <option value="pro_rata" className="bg-slate-950">Calculates pro-rata credit</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Section 3: Network & Location */}
+          <section className="space-y-5">
+            <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase border-b border-white/5 pb-2">Network & Location</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Router / POP</label>
+                <select
+                  name="mikrotikId"
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="" className="bg-slate-950">-- Select Router --</option>
+                  {routers.map(r => (
+                    <option key={r.id} value={r.id} className="bg-slate-950">{r.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Zone Configuration</label>
+                <select
+                  name="areaId"
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="" className="bg-slate-950">Default / No Zone</option>
+                  {zones.map(z => (
+                    <option key={z.id} value={z.id} className="bg-slate-950">📍 {z.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">TJ Box / Port</label>
+                <select
+                  name="oltId"
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="" className="bg-slate-950">None</option>
+                  {olts.map(o => (
+                    <option key={o.id} value={o.id} className="bg-slate-950">⚡ {o.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Connection Type</label>
+                <select
+                  name="connectionType"
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="fiber" className="bg-slate-950">Fiber (FTTH)</option>
+                  <option value="lan" className="bg-slate-950">Cat5/LAN</option>
+                  <option value="wifi" className="bg-slate-950">WiFi / Wireless</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Client Type *</label>
+                <select
+                  name="customerType"
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="home" className="bg-slate-950">Home</option>
+                  <option value="corporate" className="bg-slate-950">Corporate</option>
+                </select>
+              </div>
+
+              <Field label="ONU MAC Address" name="onuMac" placeholder="e.g. AA:BB:CC:11:22:33" />
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">GPS Coordinates (Lat, Long)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={gpsCoordinates}
+                    onChange={(e) => setGpsCoordinates(e.target.value)}
+                    placeholder="Fetching..."
+                    className="flex-1 glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleFetchGps}
+                    disabled={fetchingGps}
+                    className="w-12 h-12 bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 rounded-xl border border-sky-400/40 flex items-center justify-center transition disabled:opacity-50 shrink-0"
+                    title="Get Current Coordinates"
+                  >
+                    {fetchingGps ? <RefreshCw className="animate-spin" size={18} /> : <Compass size={18} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Remarks</label>
+              <textarea
+                name="note"
+                placeholder="Any notes..."
+                rows={3}
+                className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+              />
+            </div>
+          </section>
+
+          {/* Action Trigger */}
+          {error && (
+            <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-lg shadow-emerald-600/20"
+            >
+              {loading ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                "💾 Register New Client & Save Profile"
+              )}
+            </button>
+            <Link
+              href="/admin/customers"
+              className="px-8 py-4 bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-white rounded-xl font-bold text-center transition"
+            >
+              Cancel
+            </Link>
+          </div>
+
+        </div>
+      </form>
     </div>
   );
 }
 
-function Field({ label, name, required, placeholder, type = "text" }: {
-  label: string; name: string; required?: boolean; placeholder?: string; type?: string;
+function Field({
+  label,
+  name,
+  required,
+  placeholder,
+  type = "text",
+}: {
+  label: string;
+  name: string;
+  required?: boolean;
+  placeholder?: string;
+  type?: string;
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+      <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">{label}</label>
       <input
         name={name}
         type={type}
         required={required}
         placeholder={placeholder}
-        className="w-full glass-input px-4 py-3 bg-slate-800"
+        className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
       />
     </div>
   );
 }
-
-
-

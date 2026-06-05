@@ -53,7 +53,19 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { name, ipAddress, portCount, connectionPort } = body;
+    const { 
+      name, 
+      ipAddress, 
+      portCount, 
+      connectionPort, 
+      username, 
+      password,
+      webPort,
+      protocol,
+      brand,
+      snmpCommunity,
+      timeout
+    } = body;
 
     if (!name || !ipAddress) {
       return NextResponse.json({ error: "Name and IP Address required" }, { status: 400 });
@@ -64,9 +76,16 @@ export async function POST(req: Request) {
       ipAddress: ipAddress.trim(),
       portCount: Number(portCount) || 8,
       connectionPort: Number(connectionPort) || 23,
+      username: username?.trim() || null,
+      password: password || null,
       status: true,
       resellerId: session.role === "reseller" ? session.userId : null,
       adminId,
+      webPort: Number(webPort) || 80,
+      protocol: protocol || "HTTP",
+      brand: brand || "BDCOM EPON",
+      snmpCommunity: snmpCommunity || "public",
+      timeout: Number(timeout) || 10,
     }).returning();
 
     return NextResponse.json(olt, { status: 201 });

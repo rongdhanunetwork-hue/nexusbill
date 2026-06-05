@@ -1,12 +1,26 @@
 import { db } from "@/db";
-import { notices } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { notices, users } from "@/db/schema";
+import { desc, eq } from "drizzle-orm";
 import { Megaphone, Wrench, Gift } from "lucide-react";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function ResellerNoticesPage() {
-  const allNotices = await db.query.notices.findMany({ orderBy: [desc(notices.createdAt)] });
+  const session = await getSession();
+  if (!session || session.role !== "reseller") redirect("/login");
+
+  const reseller = await db.query.users.findFirst({
+    where: eq(users.id, session.userId),
+    columns: { adminId: true }
+  });
+  const adminId = reseller?.adminId || 1;
+
+  const allNotices = await db.query.notices.findMany({
+    where: eq(notices.adminId, adminId),
+    orderBy: [desc(notices.createdAt)]
+  });
 
   const iconForType = (type: string | null) => {
     if (type === "offer") return <Gift size={18} className="text-purple-300" />;

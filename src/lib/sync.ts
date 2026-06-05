@@ -3,6 +3,7 @@ import { users, mikrotiks, packages, dataUsage } from "@/db/schema";
 import { eq, and, lte, gte, isNull } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
+import bcrypt from "bcryptjs";
 import { 
   getPppoeSecrets, 
   getPppoeActive, 
@@ -93,10 +94,13 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
           ? `${secret.name}-${Math.floor(1000 + Math.random() * 9000)}`
           : secret.name;
 
+        const rawPassword = secret.password || "password123";
+        const hashedPassword = await bcrypt.hash(rawPassword, 12);
+
         await db.insert(users).values({
           name: secret.name,
           phone: uniquePhone,
-          password: defaultHashedPassword,
+          password: hashedPassword,
           pppoeUsername: secret.name,
           status: secret.disabled === "true" ? "expired" : "active",
           role: "customer",
@@ -157,7 +161,7 @@ export async function syncCustomerToMikrotik(
       }
     }
 
-    const isDisabled = status === "expired" || status === "suspended" ? "true" : "false";
+    const isDisabled = (status && status !== "active" && status !== "online") ? "true" : "false";
 
     if (existingSecret) {
       // Update existing secret on MikroTik

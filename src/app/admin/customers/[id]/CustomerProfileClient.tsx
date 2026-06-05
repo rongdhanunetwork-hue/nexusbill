@@ -40,6 +40,10 @@ interface Customer {
   onuMac?: string | null;
   ipAddress?: string | null;
   olt?: { name: string; ipAddress: string } | null;
+  routerUsername?: string | null;
+  routerPassword?: string | null;
+  routerModel?: string | null;
+  mikrotikId?: number | null;
 }
 
 const toLocalDatetimeString = (dateInput: string | Date | null | undefined) => {
@@ -266,26 +270,7 @@ export default function CustomerProfileClient({
     }
   };
 
-  const handleUpdateRouterModel = async () => {
-    const newModel = prompt("Enter new WiFi Router Name:", wifiRouterModel === "Unknown" ? "" : wifiRouterModel);
-    if (newModel !== null) {
-      const isConfirm = await showConfirm({
-        title: "Update WiFi Router",
-        message: `Save "${newModel || 'Unknown'}" as WiFi Router?`,
-        confirmText: "Update"
-      });
-      if (isConfirm) {
-        setOnuData(prev => ({...prev, routerModel: newModel || "Unknown"}));
-        
-        await fetch(`/api/admin/customers/${customer.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ routerModel: newModel })
-        });
-        showAlert({ title: "Success", message: "WiFi Router updated successfully", type: "success" });
-      }
-    }
-  };
+
 
   const handleForceDisconnect = async () => {
     if (!customer.pppoeUsername) {
@@ -308,6 +293,7 @@ export default function CustomerProfileClient({
         body: JSON.stringify({
           action: "disconnect",
           name: customer.pppoeUsername,
+          routerId: customer.mikrotikId,
         })
       });
       const data = await res.json();
@@ -626,41 +612,40 @@ export default function CustomerProfileClient({
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
-              <div className="flex-1 flex justify-between items-center">
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">WiFi Router</p>
-                  <p className="font-semibold text-white">{wifiRouterModel}</p>
-                </div>
-                <button 
-                  onClick={handleUpdateRouterModel}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors group"
-                  title="Edit WiFi Router Name"
-                >
-                  <Edit size={16} className="text-gray-400 group-hover:text-neon-blue" />
-                </button>
+              <div className="flex-1">
+                <p className="text-xs text-gray-400 uppercase font-semibold">WiFi Router Brand</p>
+                <p className="font-semibold text-white mt-0.5">{wifiRouterModel}</p>
               </div>
               <Wifi size={20} className="text-gray-500" />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                <p className="text-xs text-gray-400 uppercase">OLT Name / Port</p>
-                <p className="font-semibold text-white">{customer.olt?.name || "N/A"}</p>
+                <p className="text-[10px] text-gray-400 uppercase font-semibold">Router Admin User</p>
+                <p className="font-semibold text-white mt-0.5 font-mono text-sm">{customer.routerUsername || customer.pppoeUsername || "—"}</p>
               </div>
               <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                <p className="text-xs text-gray-400 uppercase">ONU Distance</p>
-                <p className="font-semibold text-white">{onuDistance}</p>
+                <p className="text-[10px] text-gray-400 uppercase font-semibold">Router Admin Pass</p>
+                <p className="font-semibold text-white mt-0.5 font-mono text-sm">{customer.routerPassword || plainTextPassword || "—"}</p>
+              </div>
+              <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                <p className="text-[10px] text-gray-400 uppercase font-semibold">OLT Name / Port</p>
+                <p className="font-semibold text-white mt-0.5 text-sm">{customer.olt?.name || "N/A"}</p>
+              </div>
+              <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                <p className="text-[10px] text-gray-400 uppercase font-semibold">ONU Distance</p>
+                <p className="font-semibold text-white mt-0.5 text-sm">{onuDistance}</p>
               </div>
               <div className="p-3 bg-white/5 rounded-lg border border-white/5 col-span-2">
-                <p className="text-xs text-gray-400 uppercase mb-1">Live Tracking (IP & MAC)</p>
+                <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1">Live Tracking (IP & MAC)</p>
                 <div className="flex flex-col gap-1">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">IP:</span>
-                    <span className="text-sm text-neon-blue font-mono">{activeSession?.address || customer.ipAddress || "Offline"}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500">IP:</span>
+                    <span className="text-xs text-neon-blue font-mono font-semibold">{activeSession?.address || customer.ipAddress || "Offline"}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">MAC:</span>
-                    <span className="text-sm text-neon-blue font-mono">{activeSession?.["caller-id"] || customer.macAddress || "Offline"}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500">MAC:</span>
+                    <span className="text-xs text-neon-blue font-mono font-semibold">{activeSession?.["caller-id"] || customer.macAddress || "Offline"}</span>
                   </div>
                 </div>
               </div>

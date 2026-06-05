@@ -7,9 +7,10 @@ import { motion, AnimatePresence } from "framer-motion";
 interface Props {
   bkashNumber: string;
   bkashNumber2: string;
+  bankCardNumber: string;
 }
 
-export default function PayBillClient({ bkashNumber, bkashNumber2 }: Props) {
+export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumber }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,11 +52,15 @@ export default function PayBillClient({ bkashNumber, bkashNumber2 }: Props) {
   };
 
   const paymentMethods = [
-    { key: "bkash", label: "bKash Payment 1", number: bkashNumber, color: "#E2136E", textColor: "#FF4C9C" }
+    { key: "bkash", label: "bKash Merchant 1", number: bkashNumber, color: "#E2136E", textColor: "#FF4C9C" }
   ];
 
   if (bkashNumber2) {
-    paymentMethods.push({ key: "bkash2", label: "bKash Payment 2", number: bkashNumber2, color: "#E2136E", textColor: "#FF4C9C" });
+    paymentMethods.push({ key: "bkash2", label: "bKash Merchant 2", number: bkashNumber2, color: "#E2136E", textColor: "#FF4C9C" });
+  }
+
+  if (bankCardNumber) {
+    paymentMethods.push({ key: "bank", label: "Bank Card Details", number: bankCardNumber, color: "#00F3FF", textColor: "#00F3FF" });
   }
 
 

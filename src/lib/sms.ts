@@ -40,18 +40,18 @@ async function sendViaSslWireless(
     normalizedPhone = "88" + normalizedPhone;
   }
 
-  const url = "https://sms.sslwireless.com/pushapi/dynamic/server.php";
-  const params = new URLSearchParams({
-    api_token: apiKey,
-    sid: senderId,
-    msisdn: normalizedPhone,
-    sms: message,
-    csmsid: `isp-${Date.now()}`,
-  });
+  const url = "https://smsplus.sslwireless.com/api/v3/send-sms";
 
-  const response = await fetch(`${url}?${params.toString()}`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      api_token: apiKey,
+      sid: senderId,
+      msisdn: normalizedPhone,
+      sms: message,
+      csms_id: `isp-${Date.now()}`,
+    }),
   });
 
   if (!response.ok) {
@@ -59,12 +59,18 @@ async function sendViaSslWireless(
   }
 
   const text = await response.text();
-  // SSL Wireless returns 1000 for success
-  if (text.includes("1000") || text.includes("success")) {
-    return { success: true, message: "SMS sent via SSL Wireless" };
+  try {
+    const data = JSON.parse(text);
+    if (data.status === "SUCCESS" || data.status_code === 200 || String(data.status_code).includes("200")) {
+      return { success: true, message: "SMS sent via SSL Wireless" };
+    }
+    return { success: false, error: data.error_message || `SSL Wireless status: ${data.status}` };
+  } catch {
+    if (text.toLowerCase().includes("success") || text.includes("1000")) {
+      return { success: true, message: "SMS sent via SSL Wireless (legacy match)" };
+    }
+    return { success: false, error: `SSL Wireless raw response: ${text}` };
   }
-
-  return { success: false, error: `SSL Wireless response: ${text}` };
 }
 
 /**
@@ -76,20 +82,21 @@ async function sendViaBdBulkSms(
   apiKey: string,
   senderId: string
 ): Promise<SMSResult> {
+  // Normalize phone — remove leading 0, add +880
   let normalizedPhone = phone.replace(/\s+/g, "").replace(/^0/, "88");
   if (!normalizedPhone.startsWith("88")) {
     normalizedPhone = "88" + normalizedPhone;
   }
 
-  const response = await fetch("https://api.bdbulksms.net/sms.php", {
+  const url = "https://api.bdbulksms.net/api.php?json";
+
+  const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      api_key: apiKey,
-      type: "text",
-      contacts: normalizedPhone,
-      senderid: senderId,
-      msg: message,
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      token: apiKey,
+      to: normalizedPhone,
+      message: message,
     }),
   });
 
@@ -97,12 +104,23 @@ async function sendViaBdBulkSms(
     throw new Error(`BDBulkSMS API error: ${response.status}`);
   }
 
-  const data = await response.json();
-  if (data.status === "success" || data.code === "200") {
-    return { success: true, message: "SMS sent via BDBulkSMS" };
+  const text = await response.text();
+  try {
+    const responseData = JSON.parse(text);
+    const data = Array.isArray(responseData) ? responseData[0] : responseData;
+    if (data && (data.status === "SUCCESS" || data.status === "success")) {
+      return { success: true, message: "SMS sent via BDBulkSMS" };
+    }
+    return { 
+      success: false, 
+      error: data?.statusmsg || data?.error || `BDBulkSMS response status: ${data?.status}` 
+    };
+  } catch {
+    if (text.toLowerCase().includes("success")) {
+      return { success: true, message: "SMS sent via BDBulkSMS" };
+    }
+    return { success: false, error: `BDBulkSMS raw response: ${text}` };
   }
-
-  return { success: false, error: `BDBulkSMS response: ${JSON.stringify(data)}` };
 }
 
 /**

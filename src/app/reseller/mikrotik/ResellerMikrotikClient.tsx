@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Router, RadioTower, Activity, Wifi, WifiOff, Plus, Power,
   RefreshCw, CheckCircle2, AlertTriangle, Loader2, Server, Trash,
-  Edit, LogOut
+  Edit, LogOut, X, FileText
 } from "lucide-react";
 import { usePopup } from "@/components/ui/PopupProvider";
 
@@ -65,6 +65,13 @@ interface OltDb {
   portCount: number;
   connectionPort: number;
   status: boolean;
+  webPort?: number | null;
+  protocol?: string | null;
+  brand?: string | null;
+  username?: string | null;
+  password?: string | null;
+  snmpCommunity?: string | null;
+  timeout?: number | null;
 }
 
 export default function ResellerMikrotikClient() {
@@ -97,6 +104,9 @@ export default function ResellerMikrotikClient() {
   const [olts, setOlts] = useState<OltDb[]>([]);
   const [oltsLoading, setOltsLoading] = useState(false);
   const [addingOlt, setAddingOlt] = useState(false);
+  const [showAddOltModal, setShowAddOltModal] = useState(false);
+  const [editingOlt, setEditingOlt] = useState<OltDb | null>(null);
+  const [testingOltId, setTestingOltId] = useState<number | null>(null);
 
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -458,6 +468,13 @@ export default function ResellerMikrotikClient() {
       ipAddress: String(form.get("ipAddress") || "").trim(),
       portCount: Number(form.get("portCount")) || 8,
       connectionPort: Number(form.get("connectionPort")) || 23,
+      username: String(form.get("username") || "").trim(),
+      password: String(form.get("password") || "").trim(),
+      webPort: Number(form.get("webPort")) || 80,
+      protocol: String(form.get("protocol") || "HTTP"),
+      brand: String(form.get("brand") || "BDCOM EPON"),
+      snmpCommunity: String(form.get("snmpCommunity") || "public").trim(),
+      timeout: Number(form.get("timeout")) || 10,
     };
 
     if (!body.name || !body.ipAddress) {
@@ -475,6 +492,7 @@ export default function ResellerMikrotikClient() {
       if (res.ok) {
         showToast("OLT device added!", true);
         (e.target as HTMLFormElement).reset();
+        setShowAddOltModal(false);
         fetchOlts();
       } else {
         const d = await res.json();
@@ -484,6 +502,71 @@ export default function ResellerMikrotikClient() {
       showToast("Network error", false);
     } finally {
       setAddingOlt(false);
+    }
+  }
+
+  async function handleEditOlt(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editingOlt) return;
+    const form = new FormData(e.currentTarget);
+    const body = {
+      name: String(form.get("name") || "").trim(),
+      ipAddress: String(form.get("ipAddress") || "").trim(),
+      portCount: Number(form.get("portCount")) || 8,
+      connectionPort: Number(form.get("connectionPort")) || 23,
+      username: String(form.get("username") || "").trim(),
+      password: String(form.get("password") || "").trim(),
+      webPort: Number(form.get("webPort")) || 80,
+      protocol: String(form.get("protocol") || "HTTP"),
+      brand: String(form.get("brand") || "BDCOM EPON"),
+      snmpCommunity: String(form.get("snmpCommunity") || "public").trim(),
+      timeout: Number(form.get("timeout")) || 10,
+    };
+
+    if (!body.name || !body.ipAddress) {
+      showToast("Required fields: Name, IP Address", false);
+      return;
+    }
+
+    setAddingOlt(true);
+    try {
+      const res = await fetch(`/api/admin/olts/${editingOlt.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        showToast("OLT device updated successfully!", true);
+        setEditingOlt(null);
+        fetchOlts();
+      } else {
+        const d = await res.json();
+        showToast(d.error || "Failed to update OLT", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    } finally {
+      setAddingOlt(false);
+    }
+  }
+
+  async function handleTestOlt(id: number) {
+    setTestingOltId(id);
+    try {
+      const res = await fetch(`/api/admin/olts/${id}`, {
+        method: "POST",
+      });
+      const d = await res.json();
+      if (res.ok && d.success) {
+        showToast(d.message || "Test completed successfully!", d.ok);
+        fetchOlts();
+      } else {
+        showToast(d.error || "Failed to run connection test", false);
+      }
+    } catch {
+      showToast("Network error during test connection", false);
+    } finally {
+      setTestingOltId(null);
     }
   }
 
@@ -925,100 +1008,383 @@ export default function ResellerMikrotikClient() {
 
       {/* ==================== TAB: OLT DEVICES ==================== */}
       {activeTab === "olts" && (
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="glass-card overflow-hidden">
-              <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">My Registered OLT Devices</h2>
-                {oltsLoading && <Loader2 size={18} className="animate-spin text-gray-400" />}
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-white/10 text-xs text-gray-400 uppercase bg-white/5">
-                      <th className="p-4">OLT Device Name</th>
-                      <th className="p-4">IP Address:Port</th>
-                      <th className="p-4">Ports</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {oltsLoading && olts.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-8 text-center text-gray-500"><Loader2 size={24} className="animate-spin mx-auto mb-2 text-purple-400" /> Loading OLTs...</td>
-                      </tr>
-                    ) : olts.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-8 text-center text-gray-500">No OLT devices added yet. Add your first OLT →</td>
-                      </tr>
-                    ) : (
-                      olts.map((olt) => (
-                        <tr key={olt.id} className="hover:bg-white/5">
-                          <td className="p-4 text-white font-bold flex items-center gap-2"><RadioTower size={16} className="text-teal-400" />{olt.name}</td>
-                          <td className="p-4 text-gray-300 font-mono">{olt.ipAddress}:{olt.connectionPort || 23}</td>
-                          <td className="p-4 text-gray-300 font-semibold">{olt.portCount} Ports</td>
-                          <td className="p-4">
-                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${olt.status ? "bg-neon-green/20 text-neon-green border border-neon-green/20" : "bg-red-500/20 text-red-400 border border-red-500/20"}`}>
-                              {olt.status ? "Online" : "Offline"}
-                            </span>
-                          </td>
-                          <td className="p-4 text-right flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleViewOnuDetails(olt)}
-                              className="px-2.5 py-1 bg-teal-500/25 text-teal-300 border border-teal-500/35 hover:bg-teal-500/35 rounded-lg text-xs font-bold transition-all"
-                            >
-                              ONU Details
-                            </button>
-                            <button
-                              onClick={() => handleDeleteOlt(olt.id)}
-                              className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors"
-                            >
-                              <Trash size={15} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/5 border border-white/10 p-5 rounded-2xl">
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                <RadioTower className="text-teal-400" size={22} />
+                OLT Monitoring System
+                <span className="text-sm font-normal text-gray-400 bg-slate-800 border border-white/5 px-2.5 py-0.5 rounded-full">
+                  Total: {olts.length}
+                </span>
+              </h2>
+              <p className="text-xs text-gray-400 mt-1">Manage, test connection status, and inspect connected ONU terminals.</p>
             </div>
+            <button
+              onClick={() => setShowAddOltModal(true)}
+              className="bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-500/35 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-teal-950/20"
+            >
+              <Plus size={18} /> Add New OLT
+            </button>
           </div>
 
-          {/* Add OLT Form */}
-          <div className="space-y-6">
-            <form onSubmit={handleAddOlt} className="glass-card p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2"><Plus size={18} className="text-teal-400" /> Add OLT Device</h3>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">OLT Name</label>
-                <input name="name" required placeholder="e.g. EPON OLT 01" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+          {oltsLoading && olts.length === 0 ? (
+            <div className="glass-card p-16 text-center text-gray-500 flex flex-col items-center justify-center">
+              <Loader2 size={36} className="animate-spin text-teal-400 mb-4" />
+              <p className="text-sm font-semibold text-gray-300">Loading OLT configurations...</p>
+            </div>
+          ) : olts.length === 0 ? (
+            <div className="glass-card p-16 text-center text-gray-500 flex flex-col items-center justify-center">
+              <RadioTower size={48} className="text-gray-600 mb-4 animate-pulse" />
+              <p className="text-sm font-semibold text-gray-300">No OLT devices added yet.</p>
+              <p className="text-xs text-gray-500 mt-1">Click the "Add New OLT" button above to register a device.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {olts.map((olt) => {
+                // Determine brand color
+                let brandColor = "bg-purple-500/15 text-purple-300 border-purple-500/20";
+                if (olt.brand?.toLowerCase().includes("vsol")) {
+                  brandColor = "bg-pink-500/15 text-pink-300 border-pink-500/20";
+                } else if (olt.brand?.toLowerCase().includes("huawei") || olt.brand?.toLowerCase().includes("zte")) {
+                  brandColor = "bg-amber-500/15 text-amber-300 border-amber-500/20";
+                }
+
+                return (
+                  <div key={olt.id} className="glass-card border border-white/10 overflow-hidden hover:border-white/20 transition-all flex flex-col justify-between group relative">
+                    <div className="p-6 space-y-4">
+                      {/* Title & Badges */}
+                      <div className="flex justify-between items-start gap-3">
+                        <div>
+                          <h3 className="text-lg font-bold text-white tracking-wide truncate max-w-[180px]" title={olt.name}>
+                            {olt.name}
+                          </h3>
+                          <div className="text-[10px] text-gray-500 font-mono mt-0.5">ID: {olt.id}</div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <span className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase border ${brandColor}`}>
+                            {olt.brand || "BDCOM EPON"}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                            olt.status 
+                              ? "bg-neon-green/10 text-neon-green border-neon-green/30" 
+                              : "bg-red-500/10 text-red-400 border-red-500/30"
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${olt.status ? "bg-neon-green online-pulsing-dot" : "bg-red-500 offline-blink-dot"}`} />
+                            {olt.status ? "Online" : "Offline"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Details */}
+                      <div className="pt-3 border-t border-white/5 space-y-2 text-xs font-mono text-gray-400">
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-gray-500">IP Address:</span>
+                          <span className="text-white font-bold">{olt.ipAddress}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-gray-500">Web Port:</span>
+                          <span className="text-white font-bold">{olt.webPort || 80} ({olt.protocol || "HTTP"})</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-gray-500">Telnet Port:</span>
+                          <span className="text-white font-bold">{olt.connectionPort || 23}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="p-4 bg-white/2 border-t border-white/5 flex items-center gap-2">
+                      <button
+                        onClick={() => setEditingOlt(olt)}
+                        className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 border border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        title="Edit OLT"
+                      >
+                        <Edit size={13} /> Edit
+                      </button>
+
+                      <button
+                        onClick={() => handleTestOlt(olt.id)}
+                        disabled={testingOltId === olt.id}
+                        className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 border border-sky-500/30 text-sky-400 hover:bg-sky-500/10 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                        title="Test Connection"
+                      >
+                        {testingOltId === olt.id ? <Loader2 size={13} className="animate-spin" /> : <Activity size={13} />} Test
+                      </button>
+
+                      <button
+                        onClick={() => handleViewOnuDetails(olt)}
+                        className="flex-[1.5] flex items-center justify-center gap-1 px-3 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/35 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        title="View ONUs List"
+                      >
+                        <FileText size={13} /> ONUs List
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteOlt(olt.id)}
+                        className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-xl border border-red-500/30 transition-all flex items-center justify-center cursor-pointer"
+                        title="Delete OLT"
+                      >
+                        <Trash size={15} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Modal: Register New OLT */}
+          <AnimatePresence>
+            {showAddOltModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="bg-[#1e293b] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-left"
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Plus className="text-teal-400" size={20} /> Register New OLT
+                    </h3>
+                    <button 
+                      onClick={() => setShowAddOltModal(false)}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleAddOlt} className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">OLT Name</label>
+                      <input name="name" required placeholder="e.g. Core OLT 1" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">IP Address</label>
+                        <input name="ipAddress" required placeholder="e.g. 192.168.1.100" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Telnet Port</label>
+                        <input name="connectionPort" type="number" defaultValue="23" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Web Port</label>
+                        <input name="webPort" type="number" defaultValue="80" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Protocol</label>
+                        <select name="protocol" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white">
+                          <option value="HTTP" className="bg-slate-800">HTTP</option>
+                          <option value="HTTPS" className="bg-slate-800">HTTPS</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">OLT Brand & Technology Type</label>
+                      <select name="brand" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white">
+                        <option value="BDCOM EPON" className="bg-slate-800">BDCOM EPON</option>
+                        <option value="BDCOM GPON" className="bg-slate-800">BDCOM GPON</option>
+                        <option value="VSOL EPON" className="bg-slate-800">VSOL EPON</option>
+                        <option value="VSOL GPON" className="bg-slate-800">VSOL GPON</option>
+                        <option value="Huawei GPON" className="bg-slate-800">Huawei GPON</option>
+                        <option value="ZTE GPON" className="bg-slate-800">ZTE GPON</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">OLT Port Count</label>
+                      <select name="portCount" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white">
+                        <option value="4" className="bg-slate-800">4 Ports</option>
+                        <option value="8" className="bg-slate-800">8 Ports</option>
+                        <option value="16" className="bg-slate-800">16 Ports</option>
+                      </select>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5">
+                      <h4 className="text-sm font-bold text-teal-400 mb-3 flex items-center gap-1.5">
+                        🔑 Access Credentials
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-300 mb-1.5">Telnet User</label>
+                          <input name="username" defaultValue="admin" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-300 mb-1.5">Telnet Password</label>
+                          <input name="password" type="password" required placeholder="password" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pb-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">SNMP Read Community</label>
+                        <input name="snmpCommunity" defaultValue="public" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Timeout (s)</label>
+                        <input name="timeout" type="number" defaultValue="10" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                    </div>
+
+                    {/* Footer Buttons */}
+                    <div className="flex justify-end gap-3 pt-4 border-t border-white/10 bg-white/2 px-6 py-4 -mx-6 -mb-6">
+                      <button 
+                        type="button" 
+                        onClick={() => setShowAddOltModal(false)}
+                        className="px-5 py-2.5 border border-white/10 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm transition-all"
+                      >
+                        Close
+                      </button>
+                      <button 
+                        type="submit" 
+                        disabled={addingOlt}
+                        className="px-5 py-2.5 bg-teal-500 text-white hover:bg-teal-600 rounded-xl font-bold text-sm transition-all disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        {addingOlt && <Loader2 size={16} className="animate-spin" />}
+                        Add OLT
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
               </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">IP Address</label>
-                <input name="ipAddress" required placeholder="e.g. 192.168.10.25" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
+            )}
+          </AnimatePresence>
+
+          {/* Modal: Edit OLT */}
+          <AnimatePresence>
+            {editingOlt && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="bg-[#1e293b] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-left"
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Edit className="text-teal-400" size={20} /> Edit OLT Details
+                    </h3>
+                    <button 
+                      onClick={() => setEditingOlt(null)}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleEditOlt} className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">OLT Name</label>
+                      <input name="name" defaultValue={editingOlt.name} required placeholder="e.g. Core OLT 1" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">IP Address</label>
+                        <input name="ipAddress" defaultValue={editingOlt.ipAddress} required placeholder="e.g. 192.168.1.100" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Telnet Port</label>
+                        <input name="connectionPort" type="number" defaultValue={editingOlt.connectionPort || 23} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Web Port</label>
+                        <input name="webPort" type="number" defaultValue={editingOlt.webPort || 80} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Protocol</label>
+                        <select name="protocol" defaultValue={editingOlt.protocol || "HTTP"} className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white">
+                          <option value="HTTP" className="bg-slate-800">HTTP</option>
+                          <option value="HTTPS" className="bg-slate-800">HTTPS</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">OLT Brand & Technology Type</label>
+                      <select name="brand" defaultValue={editingOlt.brand || "BDCOM EPON"} className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white">
+                        <option value="BDCOM EPON" className="bg-slate-800">BDCOM EPON</option>
+                        <option value="BDCOM GPON" className="bg-slate-800">BDCOM GPON</option>
+                        <option value="VSOL EPON" className="bg-slate-800">VSOL EPON</option>
+                        <option value="VSOL GPON" className="bg-slate-800">VSOL GPON</option>
+                        <option value="Huawei GPON" className="bg-slate-800">Huawei GPON</option>
+                        <option value="ZTE GPON" className="bg-slate-800">ZTE GPON</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">OLT Port Count</label>
+                      <select name="portCount" defaultValue={editingOlt.portCount} className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white">
+                        <option value="4" className="bg-slate-800">4 Ports</option>
+                        <option value="8" className="bg-slate-800">8 Ports</option>
+                        <option value="16" className="bg-slate-800">16 Ports</option>
+                      </select>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5">
+                      <h4 className="text-sm font-bold text-teal-400 mb-3 flex items-center gap-1.5">
+                        🔑 Access Credentials
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-300 mb-1.5">Telnet User</label>
+                          <input name="username" defaultValue={editingOlt.username || ""} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-300 mb-1.5">Telnet Password</label>
+                          <input name="password" type="password" defaultValue={editingOlt.password || ""} required placeholder="password" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pb-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">SNMP Read Community</label>
+                        <input name="snmpCommunity" defaultValue={editingOlt.snmpCommunity || "public"} className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Timeout (s)</label>
+                        <input name="timeout" type="number" defaultValue={editingOlt.timeout || 10} className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                    </div>
+
+                    {/* Footer Buttons */}
+                    <div className="flex justify-end gap-3 pt-4 border-t border-white/10 bg-white/2 px-6 py-4 -mx-6 -mb-6">
+                      <button 
+                        type="button" 
+                        onClick={() => setEditingOlt(null)}
+                        className="px-5 py-2.5 border border-white/10 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm transition-all"
+                      >
+                        Close
+                      </button>
+                      <button 
+                        type="submit" 
+                        disabled={addingOlt}
+                        className="px-5 py-2.5 bg-teal-500 text-white hover:bg-teal-600 rounded-xl font-bold text-sm transition-all disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        {addingOlt && <Loader2 size={16} className="animate-spin" />}
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
               </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">Connection Port (Telnet/API)</label>
-                <input name="connectionPort" type="number" defaultValue="23" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">OLT Port Count</label>
-                <select name="portCount" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white">
-                  <option value="4" className="bg-slate-800">4 Ports</option>
-                  <option value="8" className="bg-slate-800">8 Ports</option>
-                  <option value="16" className="bg-slate-800">16 Ports</option>
-                </select>
-              </div>
-              <button
-                type="submit"
-                disabled={addingOlt}
-                className="w-full py-3 bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-500/30 transition-colors"
-              >
-                {addingOlt ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Save OLT Device
-              </button>
-            </form>
-          </div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 

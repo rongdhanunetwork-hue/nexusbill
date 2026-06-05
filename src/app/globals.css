@@ -8,6 +8,8 @@
   --color-neon-green: #39ff14;
   --color-neon-red: #ff073a;
   --color-neon-blue: #00f3ff;
+
+  --font-sans: var(--font-poppins), sans-serif;
 }
 
 @utility glass-panel {

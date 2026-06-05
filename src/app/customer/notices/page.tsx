@@ -1,8 +1,8 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { notices } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { notices, users } from "@/db/schema";
+import { desc, eq } from "drizzle-orm";
 import { Megaphone, Calendar } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,14 @@ export default async function CustomerNoticesPage() {
   const session = await getSession();
   if (!session || session.role !== "customer") redirect("/login/customer");
 
+  const customer = await db.query.users.findFirst({
+    where: eq(users.id, session.userId),
+    columns: { adminId: true }
+  });
+  const adminId = customer?.adminId || 1;
+
   const allNotices = await db.query.notices.findMany({
+    where: eq(notices.adminId, adminId),
     orderBy: [desc(notices.createdAt)],
   });
 

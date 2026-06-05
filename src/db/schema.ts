@@ -48,7 +48,18 @@ export const users = pgTable("users", {
   ponPort: varchar("pon_port", { length: 50 }),
   onuMac: varchar("onu_mac", { length: 100 }),
   routerModel: varchar("router_model", { length: 255 }),
+  routerUsername: varchar("router_username", { length: 255 }),
+  routerPassword: varchar("router_password", { length: 255 }),
   adminId: integer("admin_id"),
+  alternatePhone: varchar("alternate_phone", { length: 50 }),
+  district: varchar("district", { length: 100 }),
+  thana: varchar("thana", { length: 100 }),
+  discount: decimal("discount", { precision: 10, scale: 2 }).default("0"),
+  billingPosition: varchar("billing_position", { length: 50 }).default("active_billable"),
+  billingCycleDay: varchar("billing_cycle_day", { length: 50 }).default("standard_30"),
+  connectionType: varchar("connection_type", { length: 50 }).default("fiber"),
+  gpsCoordinates: varchar("gps_coordinates", { length: 100 }),
+  joiningDate: timestamp("joining_date").defaultNow(),
 });
 
 export const packages = pgTable("packages", {
@@ -80,10 +91,17 @@ export const olts = pgTable("olts", {
   ipAddress: varchar("ip_address", { length: 50 }).notNull(),
   portCount: integer("port_count").default(8),
   connectionPort: integer("connection_port").default(23),
+  username: varchar("username", { length: 255 }),
+  password: text("password"),
   status: boolean("status").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   resellerId: integer("reseller_id"),
   adminId: integer("admin_id"),
+  webPort: integer("web_port").default(80),
+  protocol: varchar("protocol", { length: 50 }).default("HTTP"),
+  brand: varchar("brand", { length: 100 }).default("BDCOM EPON"),
+  snmpCommunity: varchar("snmp_community", { length: 255 }).default("public"),
+  timeout: integer("timeout").default(10),
 });
 
 export const dataUsage = pgTable("data_usage", {

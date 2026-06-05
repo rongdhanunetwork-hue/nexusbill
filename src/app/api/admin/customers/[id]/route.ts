@@ -73,6 +73,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.ponPort !== undefined) updateData.ponPort = body.ponPort?.trim() || null;
     if (body.onuMac !== undefined) updateData.onuMac = body.onuMac?.trim() || null;
     if (body.routerModel !== undefined) updateData.routerModel = body.routerModel?.trim() || null;
+    if (body.routerUsername !== undefined) updateData.routerUsername = body.routerUsername?.trim() || null;
+    if (body.routerPassword !== undefined) updateData.routerPassword = body.routerPassword?.trim() || null;
+    if (body.alternatePhone !== undefined) updateData.alternatePhone = body.alternatePhone?.trim() || null;
+    if (body.district !== undefined) updateData.district = body.district || null;
+    if (body.thana !== undefined) updateData.thana = body.thana || null;
+    if (body.discount !== undefined) updateData.discount = body.discount ? String(body.discount) : "0";
+    if (body.billingPosition !== undefined) updateData.billingPosition = body.billingPosition || "active_billable";
+    if (body.billingCycleDay !== undefined) updateData.billingCycleDay = body.billingCycleDay || "standard_30";
+    if (body.connectionType !== undefined) updateData.connectionType = body.connectionType || "fiber";
+    if (body.gpsCoordinates !== undefined) updateData.gpsCoordinates = body.gpsCoordinates?.trim() || null;
+    if (body.joiningDate !== undefined) updateData.joiningDate = body.joiningDate ? new Date(body.joiningDate) : null;
 
     // Package change
     if (body.packageId !== undefined) {

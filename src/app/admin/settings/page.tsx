@@ -7,6 +7,7 @@ import { Save, Shield, Globe, Phone, Loader2, CheckCircle2, Eye, EyeOff, Message
 interface SettingsMap {
   bkash_number?: string;
   bkash_number_2?: string;
+  bank_card_number?: string;
 
   system_name?: string;
   website_logo?: string;
@@ -149,7 +150,12 @@ export default function SettingsPage() {
               defaultValue={settings.bkash_number_2 || ""}
               placeholder="e.g. 01712345678"
             />
-
+            <Field
+              label="Bank Card Number"
+              name="bank_card_number"
+              defaultValue={settings.bank_card_number || ""}
+              placeholder="e.g. Dutch-Bangla Bank 123.456.7890"
+            />
           </div>
           <p className="text-xs text-gray-500">
             এই নম্বরগুলো Customer Pay Bill পেজে দেখাবে।

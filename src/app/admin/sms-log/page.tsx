@@ -12,7 +12,8 @@ import {
   RefreshCw,
   Loader2,
   Phone,
-  MessageSquare
+  MessageSquare,
+  Trash2
 } from "lucide-react";
 
 interface SmsLog {
@@ -30,13 +31,35 @@ export default function SmsLogPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   useEffect(() => {
     fetchLogs();
   }, []);
 
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [search, statusFilter, typeFilter]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(filteredLogs.map((l) => l.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedIds((prev) => [...prev, id]);
+    } else {
+      setSelectedIds((prev) => prev.filter((item) => item !== id));
+    }
+  };
+
   async function fetchLogs() {
     setLoading(true);
+    setSelectedIds([]);
     try {
       const res = await fetch("/api/admin/sms-log");
       if (res.ok) {
@@ -47,6 +70,64 @@ export default function SmsLogPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDeleteLog(id: number) {
+    if (!confirm("Are you sure you want to delete this SMS log entry?")) return;
+    try {
+      const res = await fetch(`/api/admin/sms-log?id=${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setLogs((prev) => prev.filter((log) => log.id !== id));
+        setSelectedIds((prev) => prev.filter((item) => item !== id));
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to delete log");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete log");
+    }
+  }
+
+  async function handleDeleteSelected() {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Are you sure you want to delete the ${selectedIds.length} selected SMS log entries?`)) return;
+    try {
+      const res = await fetch(`/api/admin/sms-log?ids=${selectedIds.join(",")}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setLogs((prev) => prev.filter((log) => !selectedIds.includes(log.id)));
+        setSelectedIds([]);
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to delete selected logs");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete selected logs");
+    }
+  }
+
+  async function handleClearAll() {
+    if (!confirm("Warning: This will permanently clear all SMS delivery logs! Are you sure?")) return;
+    try {
+      const res = await fetch("/api/admin/sms-log", {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setLogs([]);
+        setSelectedIds([]);
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to clear logs");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to clear logs");
     }
   }
 
@@ -108,18 +189,38 @@ export default function SmsLogPage() {
             গ্রাহকদের কাছে পাঠানো প্রতিটি SMS এর স্থিতি এবং তথ্য এখানে ট্র্যাক করুন।
           </p>
         </div>
-        <button
-          onClick={fetchLogs}
-          disabled={loading}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold hover:bg-white/10 transition disabled:opacity-50 text-white shrink-0 self-start sm:self-auto"
-        >
-          {loading ? (
-            <Loader2 size={16} className="animate-spin text-neon-blue" />
-          ) : (
-            <RefreshCw size={16} />
+        <div className="flex items-center gap-3 self-start sm:self-auto shrink-0">
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              disabled={loading}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-sm font-semibold hover:bg-red-500/30 transition text-red-300 cursor-pointer animate-pulse"
+            >
+              <Trash2 size={16} />
+              Delete Selected ({selectedIds.length})
+            </button>
           )}
-          Refresh Log
-        </button>
+          <button
+            onClick={handleClearAll}
+            disabled={loading || logs.length === 0}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-sm font-semibold hover:bg-red-500/20 transition disabled:opacity-50 text-red-300 cursor-pointer"
+          >
+            <Trash2 size={16} />
+            Clear All
+          </button>
+          <button
+            onClick={fetchLogs}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold hover:bg-white/10 transition disabled:opacity-50 text-white cursor-pointer"
+          >
+            {loading ? (
+              <Loader2 size={16} className="animate-spin text-neon-blue" />
+            ) : (
+              <RefreshCw size={16} />
+            )}
+            Refresh Log
+          </button>
+        </div>
       </div>
 
       {/* Filters & Search */}
@@ -177,18 +278,27 @@ export default function SmsLogPage() {
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="bg-slate-900/60 border-b border-white/5 text-gray-400 uppercase text-[11px] font-bold tracking-wider">
+                  <th className="px-6 py-4 w-12 text-center">
+                    <input
+                      type="checkbox"
+                      className="rounded border-white/10 bg-slate-800 text-neon-blue focus:ring-neon-blue w-4 h-4 cursor-pointer"
+                      checked={filteredLogs.length > 0 && selectedIds.length === filteredLogs.length}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                    />
+                  </th>
                   <th className="px-6 py-4">Recipient</th>
                   <th className="px-6 py-4">SMS Content</th>
                   <th className="px-6 py-4">Campaign Type</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Sent At</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 <AnimatePresence>
                   {filteredLogs.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                         No SMS logs matching the selected filters.
                       </td>
                     </tr>
@@ -199,8 +309,18 @@ export default function SmsLogPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="hover:bg-white/5 transition-colors"
+                        className={`hover:bg-white/5 transition-colors ${selectedIds.includes(log.id) ? "bg-white/5" : ""}`}
                       >
+                        {/* Checkbox */}
+                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            className="rounded border-white/10 bg-slate-800 text-neon-blue focus:ring-neon-blue w-4 h-4 cursor-pointer"
+                            checked={selectedIds.includes(log.id)}
+                            onChange={(e) => handleSelectRow(log.id, e.target.checked)}
+                          />
+                        </td>
+
                         {/* Recipient */}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
@@ -236,6 +356,17 @@ export default function SmsLogPage() {
                         {/* Sent At */}
                         <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-400">
                           {log.sentAt ? new Date(log.sentAt).toLocaleString("en-BD") : "N/A"}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <button
+                            onClick={() => handleDeleteLog(log.id)}
+                            className="p-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all cursor-pointer inline-flex items-center justify-center"
+                            title="Delete Log"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </td>
                       </motion.tr>
                     ))
