@@ -5,7 +5,7 @@ import Link from "next/link";
 import { 
   Search, Edit, Trash, Wifi, WifiOff, Eye, Zap, Clock, 
   MoreHorizontal, X, Check, HelpCircle, AlertCircle, Save,
-  FileText, MessageSquare, ShieldAlert, LogOut, CheckCircle2, Download
+  FileText, MessageSquare, ShieldAlert, LogOut, CheckCircle2, Download, FileUp
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePopup } from "@/components/ui/PopupProvider";
@@ -58,6 +58,10 @@ export default function CustomersClient({
   const basePath = role === "reseller" ? "/reseller" : role === "employee" ? "/employee" : "/admin";
   const [searchTerm, setSearchTerm] = useState("");
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
+  // Import CSV modal state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
   const { showConfirm, showAlert } = usePopup();
   
   // Custom filters state
@@ -259,11 +263,14 @@ export default function CustomersClient({
       ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
       : null;
     const daysLeft = getDaysLeft(customer.expireDate);
-    const isExpired = customer.status === "expired" || !customer.expireDate || (daysLeft !== null && daysLeft < 0);
+    // Only mark as expired if status is explicitly 'expired' OR has a past expireDate
+    // NOT having expireDate with status='active' means new/not-yet-billed — NOT expired
+    const isExpired = customer.status === "expired" || (customer.expireDate && daysLeft !== null && daysLeft < 0);
 
     let displayStatus: "online" | "active" | "offline" = "offline";
     if (activeSession) {
-      displayStatus = isExpired ? "active" : "online";
+      // If connected to MikroTik → always show as online
+      displayStatus = "online";
     } else {
       displayStatus = "offline";
     }
@@ -433,6 +440,35 @@ export default function CustomersClient({
       setRechargeLoading(false);
     }
   };
+
+  // ------- Import CSV handlers -------
+const handleImportSubmit = async () => {
+  if (!importFile) return;
+  setImportLoading(true);
+  try {
+    const csvText = await importFile.text();
+    const res = await fetch('/api/admin/customers/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csvText }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      await showAlert({ title: 'Success', message: data.message || 'Imported successfully', type: 'success' });
+      setShowImportModal(false);
+      const refreshed = await fetch('/api/admin/customers');
+      const list = await refreshed.json();
+      setCustomersList(list);
+    } else {
+      await showAlert({ title: 'Error', message: data.error || 'Import failed', type: 'error' });
+    }
+  } catch {
+    await showAlert({ title: 'Error', message: 'Network error', type: 'error' });
+  } finally {
+    setImportLoading(false);
+  }
+};
+
 
   // Trigger server delete action
   const triggerDelete = async (id: number, name: string) => {
@@ -658,6 +694,14 @@ export default function CustomersClient({
             >
               <FileText size={14} /> CSV
             </button>
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="px-4 py-2 bg-white/5 text-gray-300 border border-white/10 rounded-xl hover:bg-white/10 text-xs font-bold transition-all flex items-center gap-2"
+              title="Import customers from CSV"
+            >
+              <FileUp size={14} /> Import CSV
+            </button>
+
           </div>
 
           <select
@@ -1607,6 +1651,47 @@ export default function CustomersClient({
         <div>Page 1 of 1</div>
       </div>
     </div>
+
+      {/* Import CSV Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <FileUp size={18} className="text-neon-blue" /> Import Customers (CSV)
+              </h3>
+              <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-white transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">
+              CSV-এ এই columns থাকতে হবে:<br />
+              <code className="text-neon-blue text-[11px]">Name, Phone, PPPoE Username, Password, Address, Package, Area</code>
+            </p>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+              className="w-full mb-4 text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-neon-blue/20 file:text-neon-blue hover:file:bg-neon-blue/30 cursor-pointer"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowImportModal(false); setImportFile(null); }}
+                className="flex-1 px-4 py-2 bg-white/5 text-gray-300 border border-white/10 rounded-xl hover:bg-white/10 text-sm font-semibold transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleImportSubmit}
+                disabled={importLoading || !importFile}
+                className="flex-1 px-4 py-2 bg-neon-blue text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+              >
+                {importLoading ? "Importing..." : "Import"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
   </>
   );
 }

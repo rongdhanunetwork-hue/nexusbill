@@ -1,0 +1,3 @@
+Name,Phone,PPPoE Username,Password,Address,Package,Area,Discount,ONU MAC,Connection Type
+John Doe,0123456789,john123,password123,123 Main St,Standard,Area 1,0,,Ethernet
+Jane Smith,0987654321,jane456,password456,456 Oak Ave,Premium,Area 2,5,,Fiber

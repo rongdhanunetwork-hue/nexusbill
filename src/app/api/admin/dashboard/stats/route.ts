@@ -84,18 +84,25 @@ export async function GET() {
 
     const totalCustomers = allDbCustomers.length;
     
+    // Active = status is 'active' AND (expireDate is in the future OR no expireDate set yet)
+    // NOT having expireDate means new/not-yet-billed — treat as active, NOT expired
     const activeCustomersList = allDbCustomers.filter(c => {
-      const exp = c.expireDate ? new Date(c.expireDate) : null;
-      if (exp) exp.setHours(0, 0, 0, 0);
-      const isExpired = c.status === "expired" || !exp || (exp.getTime() < startOfToday.getTime());
-      return c.status === "active" && !isExpired;
+      if (c.status !== "active") return false;
+      if (!c.expireDate) return true; // no expireDate = new customer, treat as active
+      const exp = new Date(c.expireDate);
+      exp.setHours(0, 0, 0, 0);
+      return exp.getTime() >= startOfToday.getTime();
     });
     const activeCustomers = activeCustomersList.length;
 
+    // Expired = status is 'expired' OR has a past expireDate
+    // NOT having expireDate ≠ expired
     const expiredCustomers = allDbCustomers.filter(c => {
-      const exp = c.expireDate ? new Date(c.expireDate) : null;
-      if (exp) exp.setHours(0, 0, 0, 0);
-      return c.status === "expired" || !exp || (exp.getTime() < startOfToday.getTime());
+      if (c.status === "expired") return true;
+      if (!c.expireDate) return false; // no expireDate ≠ expired
+      const exp = new Date(c.expireDate);
+      exp.setHours(0, 0, 0, 0);
+      return exp.getTime() < startOfToday.getTime();
     }).length;
 
     const expectedCollection = activeCustomersList.reduce((sum, c) => {

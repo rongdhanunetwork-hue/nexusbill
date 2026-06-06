@@ -16,6 +16,16 @@ export async function GET() {
   try {
     const adminId = await getAdminIdForSession(session);
 
+    // Simple in-memory cache per admin/reseller to reduce router calls
+    const globalCache = globalThis as any;
+    if (!globalCache.__activeStatusCache) globalCache.__activeStatusCache = new Map<string, { ts: number; data: { onlineCustomers: number; offlineCustomers: number } }>();
+    const cacheKey = `${adminId}-${session.role}-${session.userId}`;
+    const cached = globalCache.__activeStatusCache.get(cacheKey);
+    const CACHE_TTL = 10 * 1000; // 10 seconds
+    if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
+      return NextResponse.json(cached.data);
+    }
+
     let customerQuery = db
       .select({ pppoeUsername: users.pppoeUsername, status: users.status, resellerId: users.resellerId })
       .from(users);
@@ -27,8 +37,12 @@ export async function GET() {
       whereClause = and(eq(users.role, "customer"), eq(users.adminId, adminId), isNull(users.resellerId));
     }
 
+    // Fetch only the minimal fields to reduce payload
     const [allDbCustomers, routers] = await Promise.all([
-      customerQuery.where(whereClause),
+      db.query.users.findMany({
+        where: whereClause,
+        columns: { pppoeUsername: true, status: true }
+      }),
       db.select().from(mikrotiks).where(
         session.role === "reseller"
           ? and(eq(mikrotiks.resellerId, session.userId), eq(mikrotiks.status, true), eq(mikrotiks.adminId, adminId))
@@ -65,13 +79,23 @@ export async function GET() {
       }
     }
 
-    const onlineCustomers = allDbCustomers.filter(c => {
+    // Filter to only active customers
+    const activeCustomers = allDbCustomers.filter(c => c.status === "active" || c.status === "online");
+    
+    const onlineCustomers = activeCustomers.filter(c => {
       return c.pppoeUsername && activePppoeNames.has(c.pppoeUsername.toLowerCase());
     }).length;
 
-    const offlineCustomers = Math.max(0, allDbCustomers.length - onlineCustomers);
+    const offlineCustomers = Math.max(0, activeCustomers.length - onlineCustomers);
 
-    return NextResponse.json({ onlineCustomers, offlineCustomers });
+    const result = { onlineCustomers, offlineCustomers };
+    try {
+      globalCache.__activeStatusCache.set(cacheKey, { ts: Date.now(), data: result });
+    } catch (e) {
+      // ignore cache set failures
+    }
+
+    return NextResponse.json(result);
   } catch (err) {
     console.error("Dashboard active status route error:", err);
     return NextResponse.json({ onlineCustomers: 0, offlineCustomers: 0 });
