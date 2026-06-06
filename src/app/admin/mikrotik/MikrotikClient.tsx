@@ -108,11 +108,11 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
   const [onusData, setOnusData] = useState<any>(null);
   const [onusLoading, setOnusLoading] = useState(false);
 
-  // Routers tab states
   const [routers, setRouters] = useState<RouterDb[]>([]);
   const [routersLoading, setRoutersLoading] = useState(false);
   const [addingRouter, setAddingRouter] = useState(false);
   const [editingRouter, setEditingRouter] = useState<RouterDb | null>(null);
+  const [testingRouterId, setTestingRouterId] = useState<number | null>(null);
 
   // OLTs tab states
   const [olts, setOlts] = useState<OltDb[]>([]);
@@ -449,9 +449,14 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
         body: JSON.stringify(body),
       });
       if (res.ok) {
+        const newRouter = await res.json();
         showToast("Router registered successfully!", true);
         (e.target as HTMLFormElement).reset();
-        fetchRouters();
+        await fetchRouters();
+        if (newRouter && newRouter.id) {
+          setSelectedRouterId(newRouter.id);
+          setActiveTab("live");
+        }
       } else {
         const d = await res.json();
         showToast(d.error || "Failed to add router", false);
@@ -537,6 +542,7 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
         showToast("Router updated successfully!", true);
         setEditingRouter(null);
         fetchRouters();
+        fetchLiveData();
       } else {
         const d = await res.json();
         showToast(d.error || "Failed to update router", false);
@@ -545,6 +551,26 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
       showToast("Network error", false);
     } finally {
       setAddingRouter(false);
+    }
+  }
+
+  async function handleTestRouter(id: number) {
+    setTestingRouterId(id);
+    try {
+      const res = await fetch(`/api/admin/mikrotik/routers/${id}`, {
+        method: "POST",
+      });
+      const d = await res.json();
+      if (res.ok && d.success) {
+        showToast(d.message || "Test completed successfully!", d.ok);
+        fetchRouters();
+      } else {
+        showToast(d.error || "Failed to run connection test", false);
+      }
+    } catch {
+      showToast("Network error during test connection", false);
+    } finally {
+      setTestingRouterId(null);
     }
   }
 
@@ -1050,8 +1076,31 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                     ) : (
                       routers.map((router) => (
                         <tr key={router.id} className="hover:bg-white/5">
-                          <td className="p-4 text-white font-bold">{router.name}</td>
-                          <td className="p-4 text-gray-300 font-mono">{router.ipAddress}</td>
+                          <td className="p-4">
+                            <button
+                              onClick={() => {
+                                setSelectedRouterId(router.id);
+                                setActiveTab("live");
+                              }}
+                              className="text-left font-bold text-white hover:text-neon-blue hover:underline transition-all flex items-center gap-1.5 cursor-pointer"
+                              title="Click to connect and open Live Control"
+                            >
+                              <Server size={14} className="text-gray-400" />
+                              {router.name}
+                            </button>
+                          </td>
+                          <td className="p-4">
+                            <button
+                              onClick={() => {
+                                setSelectedRouterId(router.id);
+                                setActiveTab("live");
+                              }}
+                              className="text-left font-mono text-gray-300 hover:text-neon-blue hover:underline transition-all cursor-pointer"
+                              title="Click to connect and open Live Control"
+                            >
+                              {router.ipAddress}
+                            </button>
+                          </td>
                           <td className="p-4 text-gray-300 font-mono">{router.apiPort}</td>
                           <td className="p-4">
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${router.status ? "bg-neon-green/20 text-neon-green border border-neon-green/20" : "bg-red-500/20 text-red-400 border border-red-500/20"}`}>
@@ -1061,18 +1110,26 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                           {(role === "admin" || role === "reseller") && (
                             <td className="p-4 text-right flex justify-end gap-2">
                               <button
+                                onClick={() => setEditingRouter(router)}
+                                title="Edit Router"
+                                className="p-1.5 border border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10 rounded-lg transition-colors"
+                              >
+                                <Edit size={15} />
+                              </button>
+                              <button
+                                onClick={() => handleTestRouter(router.id)}
+                                disabled={testingRouterId === router.id}
+                                title="Test Connection"
+                                className="p-1.5 border border-sky-500/30 text-sky-400 hover:bg-sky-500/10 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                {testingRouterId === router.id ? <Loader2 size={15} className="animate-spin" /> : <Activity size={15} />}
+                              </button>
+                              <button
                                 onClick={() => handleToggleRouter(router.id, router.status)}
                                 title={router.status ? "Deactivate Router" : "Activate Router"}
                                 className={`p-1.5 rounded-lg border transition-colors ${router.status ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30" : "bg-neon-green/20 text-neon-green hover:bg-neon-green/30 border-neon-green/30"}`}
                               >
                                 <Power size={15} />
-                              </button>
-                              <button
-                                onClick={() => setEditingRouter(router)}
-                                title="Edit Router"
-                                className="p-1.5 bg-neon-blue/20 text-neon-blue hover:bg-neon-blue/30 rounded-lg border border-neon-blue/30 transition-colors"
-                              >
-                                <Edit size={15} />
                               </button>
                               <button
                                 onClick={() => handleDeleteRouter(router.id)}
@@ -1126,79 +1183,6 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
               </form>
             </div>
           )}
-          {/* Modal: Edit Router */}
-          <AnimatePresence>
-            {editingRouter && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  className="bg-[#1e293b] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-left"
-                >
-                  {/* Header */}
-                  <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5">
-                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                      <Edit className="text-neon-blue" size={20} /> Edit Router Details
-                    </h3>
-                    <button 
-                      onClick={() => setEditingRouter(null)}
-                      className="text-gray-400 hover:text-white transition-colors"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleEditRouter} className="p-6 space-y-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">Router Name</label>
-                      <input name="name" defaultValue={editingRouter.name} required placeholder="e.g. Core MikroTik" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">IP Address / Domain</label>
-                      <input name="ipAddress" defaultValue={editingRouter.ipAddress} required placeholder="e.g. bd2.mikrovpn.xyz" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">API REST Port</label>
-                        <input name="apiPort" type="number" defaultValue={editingRouter.apiPort || 13065} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Username</label>
-                        <input name="username" defaultValue={editingRouter.username || "admin"} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">Password</label>
-                      <input name="password" type="password" required placeholder="Enter password to save/update" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
-                    </div>
-
-                    {/* Footer Buttons */}
-                    <div className="flex justify-end gap-3 pt-4 border-t border-white/10 bg-white/2 px-6 py-4 -mx-6 -mb-6">
-                      <button 
-                        type="button" 
-                        onClick={() => setEditingRouter(null)}
-                        className="px-5 py-2.5 border border-white/10 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm transition-all"
-                      >
-                        Close
-                      </button>
-                      <button 
-                        type="submit" 
-                        disabled={addingRouter}
-                        className="px-5 py-2.5 bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 rounded-xl font-bold text-sm transition-all disabled:opacity-50 flex items-center gap-1.5"
-                      >
-                        {addingRouter && <Loader2 size={16} className="animate-spin" />}
-                        Save Changes
-                      </button>
-                    </div>
-                  </form>
-                </motion.div>
-              </div>
-            )}
-          </AnimatePresence>
         </div>
       )}
 
@@ -1779,6 +1763,97 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                   className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 text-sm font-semibold transition-colors disabled:opacity-50"
                 >
                   {actionLoading === editingSecret[".id"] ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Edit Router Modal */}
+      {editingRouter && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="w-full max-w-md glass-card p-6 space-y-4 border border-white/20"
+          >
+            <h3 className="text-lg font-bold text-white border-b border-white/10 pb-3 flex items-center gap-2">
+              <Edit size={18} className="text-neon-blue" /> Edit Router Details
+            </h3>
+            <form onSubmit={handleEditRouter} className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">Router Name</label>
+                <input
+                  name="name"
+                  type="text"
+                  defaultValue={editingRouter.name}
+                  required
+                  placeholder="e.g. Core MikroTik"
+                  className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">IP Address / Domain</label>
+                <input
+                  name="ipAddress"
+                  type="text"
+                  defaultValue={editingRouter.ipAddress}
+                  required
+                  placeholder="e.g. bd2.mikrovpn.xyz"
+                  className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">API REST Port</label>
+                <input
+                  name="apiPort"
+                  type="number"
+                  defaultValue={editingRouter.apiPort}
+                  required
+                  className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">Username</label>
+                <input
+                  name="username"
+                  type="text"
+                  defaultValue={editingRouter.username || "admin"}
+                  required
+                  className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">Password</label>
+                <input
+                  name="password"
+                  type="password"
+                  defaultValue={editingRouter.password || ""}
+                  required
+                  placeholder="password"
+                  className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingRouter(null)}
+                  className="px-4 py-2 rounded-lg bg-white/10 text-gray-300 border border-white/10 hover:bg-white/20 text-sm font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingRouter}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 text-sm font-semibold transition-colors disabled:opacity-50"
+                >
+                  {addingRouter ? (
                     <Loader2 size={14} className="animate-spin" />
                   ) : (
                     "Save Changes"
