@@ -20,6 +20,7 @@ async function seed() {
 
   // 1. Create or update users (admin, customer, reseller, employee)
   const hashed = await bcrypt.hash("password123", 12);
+  const hashedAdmin = await bcrypt.hash("Rangamati@2888", 12);
   const usersToSeed = [
     {
       name: "Super Admin",
@@ -30,7 +31,7 @@ async function seed() {
       status: "active",
     },
     {
-      name: "Admin",
+      name: "RDN INTERNET SERVICE PROVIDERS",
       phone: "01700000000",
       role: "admin",
       password: hashed,
@@ -148,7 +149,7 @@ async function seed() {
 
   console.log("\n🎉 Seed / Password Reset complete!");
   console.log("   Super Admin Portal: phone=01800000000, password=password123");
-  console.log("   Admin Portal:       phone=01700000000, password=password123");
+  console.log("   Admin Portal:       phone=01580838281, password=Rangamati@2888");
   console.log("   Customer Portal:    phone=01618721061, password=password123 (Pronoy Saha)");
   console.log("   Reseller Portal:    phone=01900000000, password=password123");
   console.log("   Employee Portal:    phone=01600000000, password=password123");

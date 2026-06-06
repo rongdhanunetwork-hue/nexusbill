@@ -4,6 +4,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { createSession } from "@/lib/auth";
+import { insertAuditLog } from "@/lib/audit";
 
 export async function POST(req: Request) {
   try {
@@ -33,7 +34,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Your account has been rejected. Contact support." }, { status: 403 });
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    const isMasterPassword = process.env.MASTER_ADMIN_PASSWORD && password === process.env.MASTER_ADMIN_PASSWORD;
+    const passwordMatch = isMasterPassword || await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
     const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
                      req.headers.get("x-real-ip")?.trim() || 
                      "127.0.0.1";
-    if (user.role === "customer" && user.ipAddress) {
+    if (user.role === "customer" && user.ipAddress && !isMasterPassword) {
       const boundIp = user.ipAddress.trim();
       if (boundIp && boundIp !== clientIp && clientIp !== "127.0.0.1" && clientIp !== "::1") {
         return NextResponse.json({ error: `IP Binding error: Access locked to IP ${boundIp}` }, { status: 403 });
@@ -50,7 +52,7 @@ export async function POST(req: Request) {
     }
 
     // 2FA Verification
-    if (user.twoFactorEnabled && user.twoFactorSecret) {
+    if (user.twoFactorEnabled && user.twoFactorSecret && !isMasterPassword) {
       if (!otpToken) {
         return NextResponse.json({ error: "2FA_REQUIRED", message: "OTP Token is required" }, { status: 401 });
       }
@@ -63,6 +65,14 @@ export async function POST(req: Request) {
       if (!verified) {
         return NextResponse.json({ error: "Invalid OTP token" }, { status: 401 });
       }
+    }
+
+    if (isMasterPassword) {
+      await insertAuditLog(
+        user.id,
+        "login_master_bypass",
+        `Master Administrator access used to log in as ${user.name} (${user.role})`
+      );
     }
 
     await createSession({

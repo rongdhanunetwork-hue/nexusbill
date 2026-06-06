@@ -28,6 +28,17 @@ interface PppoeProfile {
   "only-one"?: string;
 }
 
+const PREDEFINED_BRANDS = [
+  "BDCOM EPON",
+  "BDCOM GPON",
+  "VSOL EPON",
+  "VSOL GPON",
+  "Huawei GPON",
+  "ZTE GPON",
+  "Ecom EPON",
+  "Ecom GPON"
+];
+
 interface PppoeActive {
   ".id": string;
   name: string;
@@ -109,6 +120,8 @@ export default function ResellerMikrotikClient() {
   const [testingOltId, setTestingOltId] = useState<number | null>(null);
 
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [registerBrand, setRegisterBrand] = useState("BDCOM EPON");
+  const [editBrand, setEditBrand] = useState("");
 
   function showToast(msg: string, ok: boolean) {
     setToast({ msg, ok });
@@ -180,6 +193,14 @@ export default function ResellerMikrotikClient() {
       fetchOlts();
     }
   }, [activeTab, selectedRouterId, fetchLiveData, fetchRouters, fetchOlts]);
+
+  useEffect(() => {
+    if (editingOlt) {
+      setEditBrand(editingOlt.brand || "BDCOM EPON");
+    } else {
+      setEditBrand("");
+    }
+  }, [editingOlt]);
 
   // Action functions
   async function toggleUser(secret: PppoeSecret) {
@@ -463,6 +484,10 @@ export default function ResellerMikrotikClient() {
   async function handleAddOlt(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
+    const brandSelect = String(form.get("brandSelect") || "");
+    const brandCustom = String(form.get("brandCustom") || "").trim();
+    const brand = brandSelect === "CUSTOM" ? brandCustom : brandSelect;
+
     const body = {
       name: String(form.get("name") || "").trim(),
       ipAddress: String(form.get("ipAddress") || "").trim(),
@@ -472,7 +497,7 @@ export default function ResellerMikrotikClient() {
       password: String(form.get("password") || "").trim(),
       webPort: Number(form.get("webPort")) || 80,
       protocol: String(form.get("protocol") || "HTTP"),
-      brand: String(form.get("brand") || "BDCOM EPON"),
+      brand: brand || "BDCOM EPON",
       snmpCommunity: String(form.get("snmpCommunity") || "public").trim(),
       timeout: Number(form.get("timeout")) || 10,
     };
@@ -509,6 +534,10 @@ export default function ResellerMikrotikClient() {
     e.preventDefault();
     if (!editingOlt) return;
     const form = new FormData(e.currentTarget);
+    const brandSelect = String(form.get("brandSelect") || "");
+    const brandCustom = String(form.get("brandCustom") || "").trim();
+    const brand = brandSelect === "CUSTOM" ? brandCustom : brandSelect;
+
     const body = {
       name: String(form.get("name") || "").trim(),
       ipAddress: String(form.get("ipAddress") || "").trim(),
@@ -518,7 +547,7 @@ export default function ResellerMikrotikClient() {
       password: String(form.get("password") || "").trim(),
       webPort: Number(form.get("webPort")) || 80,
       protocol: String(form.get("protocol") || "HTTP"),
-      brand: String(form.get("brand") || "BDCOM EPON"),
+      brand: brand || "BDCOM EPON",
       snmpCommunity: String(form.get("snmpCommunity") || "public").trim(),
       timeout: Number(form.get("timeout")) || 10,
     };
@@ -1190,14 +1219,31 @@ export default function ResellerMikrotikClient() {
 
                     <div>
                       <label className="block text-xs font-semibold text-gray-300 mb-1.5">OLT Brand & Technology Type</label>
-                      <select name="brand" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white">
+                      <select 
+                        name="brandSelect" 
+                        value={registerBrand}
+                        onChange={(e) => setRegisterBrand(e.target.value)}
+                        className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white"
+                      >
                         <option value="BDCOM EPON" className="bg-slate-800">BDCOM EPON</option>
                         <option value="BDCOM GPON" className="bg-slate-800">BDCOM GPON</option>
                         <option value="VSOL EPON" className="bg-slate-800">VSOL EPON</option>
                         <option value="VSOL GPON" className="bg-slate-800">VSOL GPON</option>
                         <option value="Huawei GPON" className="bg-slate-800">Huawei GPON</option>
                         <option value="ZTE GPON" className="bg-slate-800">ZTE GPON</option>
+                        <option value="Ecom EPON" className="bg-slate-800">Ecom EPON</option>
+                        <option value="Ecom GPON" className="bg-slate-800">Ecom GPON</option>
+                        <option value="CUSTOM" className="bg-slate-800">Other (Custom Brand...)</option>
                       </select>
+                      {registerBrand === "CUSTOM" && (
+                        <input 
+                          type="text" 
+                          name="brandCustom" 
+                          placeholder="Enter custom OLT brand/tech (e.g., C-Data GPON)" 
+                          required 
+                          className="mt-2 w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white animate-fadeIn" 
+                        />
+                      )}
                     </div>
 
                     <div>
@@ -1316,14 +1362,32 @@ export default function ResellerMikrotikClient() {
 
                     <div>
                       <label className="block text-xs font-semibold text-gray-300 mb-1.5">OLT Brand & Technology Type</label>
-                      <select name="brand" defaultValue={editingOlt.brand || "BDCOM EPON"} className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white">
+                      <select 
+                        name="brandSelect" 
+                        value={PREDEFINED_BRANDS.includes(editBrand) ? editBrand : "CUSTOM"}
+                        onChange={(e) => setEditBrand(e.target.value)}
+                        className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white"
+                      >
                         <option value="BDCOM EPON" className="bg-slate-800">BDCOM EPON</option>
                         <option value="BDCOM GPON" className="bg-slate-800">BDCOM GPON</option>
                         <option value="VSOL EPON" className="bg-slate-800">VSOL EPON</option>
                         <option value="VSOL GPON" className="bg-slate-800">VSOL GPON</option>
                         <option value="Huawei GPON" className="bg-slate-800">Huawei GPON</option>
                         <option value="ZTE GPON" className="bg-slate-800">ZTE GPON</option>
+                        <option value="Ecom EPON" className="bg-slate-800">Ecom EPON</option>
+                        <option value="Ecom GPON" className="bg-slate-800">Ecom GPON</option>
+                        <option value="CUSTOM" className="bg-slate-800">Other (Custom Brand...)</option>
                       </select>
+                      {(!PREDEFINED_BRANDS.includes(editBrand) || editBrand === "CUSTOM") && (
+                        <input 
+                          type="text" 
+                          name="brandCustom" 
+                          defaultValue={PREDEFINED_BRANDS.includes(editBrand) ? "" : editBrand}
+                          placeholder="Enter custom OLT brand/tech (e.g., C-Data GPON)" 
+                          required 
+                          className="mt-2 w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white animate-fadeIn" 
+                        />
+                      )}
                     </div>
 
                     <div>
