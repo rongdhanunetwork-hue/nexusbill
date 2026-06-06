@@ -56,24 +56,21 @@ export async function GET(req: Request) {
       if (queryId) {
         routerIds = [Number(queryId)];
       } else {
-        // Fetch ALL routers for this admin
+        // Fetch ALL active routers for this admin
         const dbRouters = await db.select({ id: mikrotiks.id }).from(mikrotiks).where(
           and(eq(mikrotiks.adminId, session.userId), eq(mikrotiks.status, true))
         );
         routerIds = dbRouters.map(r => r.id);
-        if (session.userId === 1) {
-          routerIds.push(undefined);
-        }
       }
     }
 
-    if (session.role === "reseller" && routerIds.length === 0) {
+    if (routerIds.length === 0) {
       return NextResponse.json({
         secrets: [],
         active: [],
-        routerStatus: { ok: false, error: "No router configured. Please add a router in 'Routers List' first." },
+        routerStatus: { ok: false, error: "No active router configured. Please add/enable a router first." },
         profiles: [],
-        error: "No router configured",
+        error: "No active router configured",
       });
     }
 

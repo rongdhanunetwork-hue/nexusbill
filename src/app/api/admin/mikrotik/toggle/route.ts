@@ -39,52 +39,63 @@ export async function POST(req: Request) {
     } = body;
 
     let routerId: number | undefined = undefined;
-    if (session.role === "reseller") {
-      const bodyRouterId = body.routerId;
-      if (bodyRouterId) {
-        // Verify ownership
-        const routerObj = await db.query.mikrotiks.findFirst({
-          where: and(
-            eq(mikrotiks.id, Number(bodyRouterId)),
-            eq(mikrotiks.resellerId, session.userId)
-          )
-        });
-        if (!routerObj) {
-          return NextResponse.json({ error: "Access denied to this router" }, { status: 403 });
-        }
-        routerId = routerObj.id;
-      } else {
-        // Fall back to reseller's mikrotikId
-        const resellerUser = await db.query.users.findFirst({
+    if (body.routerId) {
+      routerId = Number(body.routerId);
+    }
+
+    if (session.role === "reseller" && routerId) {
+      // Verify ownership
+      const routerObj = await db.query.mikrotiks.findFirst({
+        where: and(
+          eq(mikrotiks.id, routerId),
+          eq(mikrotiks.resellerId, session.userId)
+        )
+      });
+      if (!routerObj) {
+        return NextResponse.json({ error: "Access denied to this router" }, { status: 403 });
+      }
+    }
+
+    // Try to find the customer's assigned router if username is provided
+    if (!routerId && name) {
+      const customer = await db.query.users.findFirst({
+        where: and(
+          eq(users.role, "customer"),
+          eq(users.pppoeUsername, name)
+        ),
+        columns: { mikrotikId: true }
+      });
+      if (customer?.mikrotikId) {
+        routerId = customer.mikrotikId;
+      }
+    }
+
+    // Fallback to first active router for the reseller/admin/employee
+    if (!routerId) {
+      let targetAdminId = session.userId;
+      if (session.role === "reseller" || session.role === "employee") {
+        const u = await db.query.users.findFirst({
           where: eq(users.id, session.userId),
-          columns: { mikrotikId: true }
+          columns: { adminId: true }
         });
-        if (resellerUser?.mikrotikId) {
-          routerId = resellerUser.mikrotikId;
-        } else {
-          // Find first router registered by this reseller
-          const firstRouter = await db.query.mikrotiks.findFirst({
-            where: eq(mikrotiks.resellerId, session.userId),
-          });
-          if (firstRouter) {
-            routerId = firstRouter.id;
-            // Update profile
-            await db.update(users).set({ mikrotikId: routerId }).where(eq(users.id, session.userId));
-          }
-        }
+        targetAdminId = u?.adminId || 1;
       }
-    } else {
-      if (body.routerId) {
-        routerId = Number(body.routerId);
+      
+      const firstActiveRouter = await db.query.mikrotiks.findFirst({
+        where: and(
+          session.role === "reseller"
+            ? eq(mikrotiks.resellerId, session.userId)
+            : eq(mikrotiks.adminId, targetAdminId),
+          eq(mikrotiks.status, true)
+        )
+      });
+      if (firstActiveRouter) {
+        routerId = firstActiveRouter.id;
       }
     }
 
-    if (session.role === "reseller" && !routerId) {
-      return NextResponse.json({ error: "No router configured. Please add a router in 'Routers List' first." }, { status: 400 });
-    }
-
-    if (session.role === "admin" && session.userId !== 1 && !routerId) {
-      return NextResponse.json({ error: "No router selected or configured." }, { status: 400 });
+    if (!routerId) {
+      return NextResponse.json({ error: "No active router configured or selected." }, { status: 400 });
     }
 
     switch (action) {
