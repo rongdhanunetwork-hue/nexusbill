@@ -1080,7 +1080,7 @@ export default function CustomersClient({
                     onClick={() => setCurrentPage(i)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                       currentPage === i
-                        ? "bg-neon-blue text-white border-neon-blue shadow-lg shadow-neon-blue/20"
+                        ? "bg-neon-blue text-slate-950 font-bold border-neon-blue shadow-lg shadow-neon-blue/20"
                         : "bg-white/5 hover:bg-white/10 border-white/10 text-gray-300 hover:text-white"
                     }`}
                   >
