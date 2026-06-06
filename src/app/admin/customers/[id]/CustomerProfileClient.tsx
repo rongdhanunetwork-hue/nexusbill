@@ -146,6 +146,9 @@ export default function CustomerProfileClient({
     onuMac: null as string | null,
     isRxGood: false
   });
+  const [resolvedRouter, setResolvedRouter] = useState<any | null>(null);
+  const [resolvedRouterLoading, setResolvedRouterLoading] = useState(false);
+  const [resolvedRouterError, setResolvedRouterError] = useState<string | null>(null);
   
   useEffect(() => {
     fetch(`/api/admin/customers/${customer.id}/diagnostics`)
@@ -185,6 +188,51 @@ export default function CustomerProfileClient({
       .catch(() => {});
     return () => { active = false; };
   }, [customer.mikrotikId]);
+
+  // Resolve router by IP or MAC to show router name in Device Info
+  useEffect(() => {
+    let active = true;
+    const ip = activeSession?.address || customer.ipAddress;
+    const mac = activeSession?.["caller-id"] || customer.macAddress;
+    if (!ip && !mac) return;
+
+    (async () => {
+      setResolvedRouterLoading(true);
+      setResolvedRouterError(null);
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch('/api/admin/tools/resolve-router', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ip, mac }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        const data = await res.json();
+        console.debug('resolve-router response', { status: res.status, data });
+        if (!active) return;
+        if (res.ok && data.found) {
+          if (data.source === 'db-user' && data.router) setResolvedRouter({ name: data.router.name, source: data.source, router: data.router });
+          else if (data.source === 'router-scan' && data.result && data.result.router) setResolvedRouter({ name: data.result.router.name, source: data.source, router: data.result.router, hit: data.result.hit });
+          else setResolvedRouter({ name: data.router?.name || data.result?.router?.name || null, source: data.source || 'unknown', raw: data });
+        } else if (res.ok && !data.found) {
+          setResolvedRouter(null);
+        } else {
+          setResolvedRouterError(data.error || `Status ${res.status}`);
+        }
+      } catch (e: any) {
+        console.debug('resolve-router fetch error', e?.name || e?.message || e);
+        if (!active) return;
+        if (e?.name === 'AbortError') setResolvedRouterError('timeout');
+        else setResolvedRouterError(String(e));
+      } finally {
+        setResolvedRouterLoading(false);
+      }
+    })();
+
+    return () => { active = false; };
+  }, [customer.id, customer.ipAddress, customer.macAddress, activeSession]);
 
   const { rxPower, txPower, temperature: onuTemp, voltage: onuVoltage, distance: onuDistance, uptime: onuUptime, routerModel: wifiRouterModel, routerVendor: wifiRouterVendor, isRxGood } = onuData;
 
@@ -649,6 +697,12 @@ export default function CustomerProfileClient({
               <div className="p-3 bg-white/5 rounded-lg border border-white/5">
                 <p className="text-[10px] text-gray-400 uppercase font-semibold">Router Admin Pass</p>
                 <p className="font-semibold text-white mt-0.5 font-mono text-sm">{customer.routerPassword || plainTextPassword || "—"}</p>
+              </div>
+              <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                <p className="text-[10px] text-gray-400 uppercase font-semibold">Detected Router</p>
+                <p className="font-semibold text-white mt-0.5 text-sm">{resolvedRouter?.name || (customer.mikrotikId ? `Router ID ${customer.mikrotikId}` : "—")}</p>
+                {resolvedRouterLoading && <p className="text-[11px] text-gray-400 mt-1">Resolving...</p>}
+                {resolvedRouterError && <p className="text-[11px] text-rose-400 mt-1">Error: {resolvedRouterError}</p>}
               </div>
               <div className="p-3 bg-white/5 rounded-lg border border-white/5">
                 <p className="text-[10px] text-gray-400 uppercase font-semibold">OLT Name / Port</p>

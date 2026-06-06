@@ -468,6 +468,90 @@ export async function getRouterDetails(routerId?: number): Promise<{
   }
 }
 
+// Try to find a device by IP or MAC on a single router (ARP table, DHCP leases)
+export async function findDeviceOnRouter(routerId: number, opts: { ip?: string; mac?: string }): Promise<any | null> {
+  const client = await getClient(routerId);
+  try {
+    await client.connect();
+
+    const ip = opts.ip?.toLowerCase();
+    const mac = opts.mac?.toLowerCase()?.replace(/[:\-]/g, "");
+
+    // Check ARP table
+    try {
+      const arp = await client.write(["/ip/arp/print"]);
+      for (const row of arp as any[]) {
+        const rowIp = String(row.address || "").toLowerCase();
+        const rowMac = String(row.mac || "").toLowerCase().replace(/[:\-]/g, "");
+        if ((ip && rowIp === ip) || (mac && rowMac === mac)) {
+          return { type: 'arp', routerId, entry: row };
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // Check DHCP leases
+    try {
+      const leases = await client.write(["/ip/dhcp-server/lease/print"]);
+      for (const l of leases as any[]) {
+        const lIp = String(l.address || "").toLowerCase();
+        const lMac = String(l.mac-address || l.mac || "").toLowerCase().replace(/[:\-]/g, "");
+        if ((ip && lIp === ip) || (mac && lMac === mac)) {
+          return { type: 'dhcp-lease', routerId, entry: l };
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // Check wireless registration (for wireless routers)
+    try {
+      const reg = await client.write(["/interface/wireless/registration-table/print"]);
+      for (const r of reg as any[]) {
+        const rMac = String(r.mac || "").toLowerCase().replace(/[:\-]/g, "");
+        const rIp = String(r.address || "").toLowerCase();
+        if ((ip && rIp === ip) || (mac && rMac === mac)) {
+          return { type: 'wireless-reg', routerId, entry: r };
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return null;
+  } catch (err) {
+    console.error('findDeviceOnRouter error:', err);
+    return null;
+  } finally {
+    try { await client.close(); } catch {}
+  }
+}
+
+// Search across all configured mikrotik routers and return first hit with router metadata
+export async function findDeviceAcrossRouters(opts: { ip?: string; mac?: string }): Promise<any | null> {
+  // Load routers from DB
+  const { db } = await import('@/db');
+  const { mikrotiks } = await import('@/db/schema');
+  try {
+    const routers = await db.query.mikrotiks.findMany();
+    for (const r of routers) {
+      try {
+        const hit = await findDeviceOnRouter(r.id, opts);
+        if (hit) {
+          return { router: r, hit };
+        }
+      } catch (e) {
+        // continue to next router
+        console.error(`Error scanning router ${r.id}`, e);
+      }
+    }
+  } catch (err) {
+    console.error('findDeviceAcrossRouters error:', err);
+  }
+  return null;
+}
+
 export async function suspendUsers(usernames: string[], routerId?: number): Promise<void> {
   if (usernames.length === 0) return;
   const client = await getClient(routerId);

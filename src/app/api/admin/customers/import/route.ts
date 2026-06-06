@@ -71,7 +71,7 @@ export async function POST(req: Request) {
 
     const nameIdx     = headers.findIndex(h => ['name','customername','fullname','clientname','customer','nameofclient','clientfullname','subscribername'].includes(h));
     const phoneIdx    = headers.findIndex(h => ['phone','phonenumber','mobile','mobilenumber','cell','cellphone','contact','contactnumber','clientphone','customerphone','mobilephone'].includes(h));
-    const usernameIdx = headers.findIndex(h => ['pppoeusername','username','pppoeuser','user','pppoe','loginid','login','userid','id','pppoename','pppoelogin','pppid','clientid','customerid','pppoeid'].includes(h));
+    const usernameIdx = headers.findIndex(h => ['pppoeusername','username','pppoeuser','user','pppoe','loginid','login','userid','pppoename','pppoelogin','pppid','clientid','customerid','pppoeid'].includes(h));
     const passwordIdx = headers.findIndex(h => ['password','pppoepassword','pass','passwd','pppoepass'].includes(h));
     const addressIdx  = headers.findIndex(h => ['address','customeraddress','addr','location','village','addressofclient','clientaddress','customeraddr'].includes(h));
     const packageIdx  = headers.findIndex(h => ['package','packagename','plan','planname','service','bandwidth','bandwidthallocationmb','speed','packageplan','sellingbandwidthbdtexcludingvat'].includes(h));
