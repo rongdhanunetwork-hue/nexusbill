@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { packages } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { users } from "@/db/schema";
-import { getSession } from "@/lib/auth";
+import { getSession, getAdminIdForSession } from "@/lib/auth";
 
 export async function GET() {
   const session = await getSession();
@@ -11,14 +11,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let adminId = session.userId;
-  if (session.role === "reseller" || session.role === "employee") {
-    const u = await db.query.users.findFirst({
-      where: eq(users.id, session.userId),
-      columns: { adminId: true }
-    });
-    adminId = u?.adminId || 1;
-  }
+  const adminId = await getAdminIdForSession(session);
 
   const pkgs = await db.query.packages.findMany({
     where: eq(packages.adminId, adminId),
@@ -40,12 +33,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Name, speed, price required" }, { status: 400 });
   }
 
+  const adminId = await getAdminIdForSession(session);
+
   const [pkg] = await db.insert(packages).values({
     name: name.trim(),
     speed: speed.trim(),
     price: String(price),
     durationDays: Number(durationDays) || 30,
-    adminId: session.userId,
+    adminId,
   }).returning();
 
   return NextResponse.json(pkg, { status: 201 });

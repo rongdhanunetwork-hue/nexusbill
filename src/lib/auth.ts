@@ -1,5 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "nexusbill-isp-secret-key-change-in-production-2024"
@@ -69,4 +72,17 @@ export async function verifyToken(token: string): Promise<SessionPayload | null>
   } catch {
     return null;
   }
+}
+
+export async function getAdminIdForSession(session: { userId: number; role: string }): Promise<number> {
+  try {
+    const u = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+      columns: { adminId: true }
+    });
+    if (u?.adminId) return u.adminId;
+  } catch (err) {
+    console.error("Error in getAdminIdForSession:", err);
+  }
+  return session.role === "admin" ? session.userId : 1;
 }

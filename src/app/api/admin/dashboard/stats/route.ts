@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, payments, invoices, mikrotiks, olts, dataUsage, expenses } from "@/db/schema";
 import { eq, sql, and, isNull } from "drizzle-orm";
-import { getSession } from "@/lib/auth";
+import { getSession, getAdminIdForSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const adminId = session.userId;
+  const adminId = await getAdminIdForSession(session);
 
   const bdTime = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
   const d = new Date(bdTime);

@@ -2,22 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { olts, users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { getSession } from "@/lib/auth";
+import { getSession, getAdminIdForSession } from "@/lib/auth";
 import { exec } from "child_process";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
 async function getAdminId(session: any): Promise<number> {
-  let adminId = session.userId;
-  if (session.role === "reseller" || session.role === "employee") {
-    const u = await db.query.users.findFirst({
-      where: eq(users.id, session.userId),
-      columns: { adminId: true }
-    });
-    adminId = u?.adminId || 1;
-  }
-  return adminId;
+  return getAdminIdForSession(session);
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {

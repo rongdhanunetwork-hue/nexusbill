@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { payments, expenses, invoices, users } from "@/db/schema";
 import { sql, and, eq, inArray } from "drizzle-orm";
-import { getSession } from "@/lib/auth";
+import { getSession, getAdminIdForSession } from "@/lib/auth";
 import { insertAuditLog } from "@/lib/audit";
 
 // DELETE /api/admin/monthly-summary/[monthYear] - Deletes all records for a specific month
@@ -20,7 +20,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ month
       return NextResponse.json({ error: "Invalid month format. Expected YYYY-MM." }, { status: 400 });
     }
 
-    const adminId = session.userId;
+    const adminId = await getAdminIdForSession(session);
 
     // Get all user IDs belonging to this admin
     const adminUserRows = await db

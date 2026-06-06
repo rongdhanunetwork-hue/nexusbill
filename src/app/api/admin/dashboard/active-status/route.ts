@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { users, mikrotiks } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { getPppoeActive } from "@/lib/mikrotik";
-import { getSession } from "@/lib/auth";
+import { getSession, getAdminIdForSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -14,14 +14,7 @@ export async function GET() {
   }
 
   try {
-    let adminId = session.userId;
-    if (session.role === "reseller" || session.role === "employee") {
-      const u = await db.query.users.findFirst({
-        where: eq(users.id, session.userId),
-        columns: { adminId: true }
-      });
-      adminId = u?.adminId || 1;
-    }
+    const adminId = await getAdminIdForSession(session);
 
     let customerQuery = db
       .select({ pppoeUsername: users.pppoeUsername, status: users.status, resellerId: users.resellerId })

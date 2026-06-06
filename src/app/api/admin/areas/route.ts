@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { areas, users } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
-import { getSession } from "@/lib/auth";
+import { getSession, getAdminIdForSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,14 +13,7 @@ export async function GET() {
   }
 
   try {
-    let adminId = session.userId;
-    if (session.role === "reseller" || session.role === "employee") {
-      const u = await db.query.users.findFirst({
-        where: eq(users.id, session.userId),
-        columns: { adminId: true }
-      });
-      adminId = u?.adminId || 1;
-    }
+    const adminId = await getAdminIdForSession(session);
     const list = await db.select().from(areas).where(eq(areas.adminId, adminId)).orderBy(asc(areas.name));
     return NextResponse.json(list);
   } catch (err: any) {

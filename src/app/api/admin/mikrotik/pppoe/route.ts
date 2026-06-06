@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, getAdminIdForSession } from "@/lib/auth";
 import { getRouterDetails } from "@/lib/mikrotik";
 import { syncMikrotikSecrets } from "@/lib/sync";
 import { db } from "@/db";
@@ -57,8 +57,9 @@ export async function GET(req: Request) {
         routerIds = [Number(queryId)];
       } else {
         // Fetch ALL active routers for this admin
+        const adminId = await getAdminIdForSession(session);
         const dbRouters = await db.select({ id: mikrotiks.id }).from(mikrotiks).where(
-          and(eq(mikrotiks.adminId, session.userId), eq(mikrotiks.status, true))
+          and(eq(mikrotiks.adminId, adminId), eq(mikrotiks.status, true))
         );
         routerIds = dbRouters.map(r => r.id);
       }

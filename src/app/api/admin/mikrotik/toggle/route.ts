@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, getAdminIdForSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { db } from "@/db";
 import { users, mikrotiks } from "@/db/schema";
@@ -72,14 +72,7 @@ export async function POST(req: Request) {
 
     // Fallback to first active router for the reseller/admin/employee
     if (!routerId) {
-      let targetAdminId = session.userId;
-      if (session.role === "reseller" || session.role === "employee") {
-        const u = await db.query.users.findFirst({
-          where: eq(users.id, session.userId),
-          columns: { adminId: true }
-        });
-        targetAdminId = u?.adminId || 1;
-      }
+      const targetAdminId = await getAdminIdForSession(session);
       
       const firstActiveRouter = await db.query.mikrotiks.findFirst({
         where: and(

@@ -67,6 +67,8 @@ interface RouterDb {
   ipAddress: string;
   apiPort: number;
   status: boolean;
+  username?: string;
+  password?: string;
 }
 
 interface OltDb {
@@ -110,6 +112,7 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
   const [routers, setRouters] = useState<RouterDb[]>([]);
   const [routersLoading, setRoutersLoading] = useState(false);
   const [addingRouter, setAddingRouter] = useState(false);
+  const [editingRouter, setEditingRouter] = useState<RouterDb | null>(null);
 
   // OLTs tab states
   const [olts, setOlts] = useState<OltDb[]>([]);
@@ -503,6 +506,45 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
       }
     } catch {
       showToast("Network error", false);
+    }
+  }
+
+  async function handleEditRouter(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editingRouter) return;
+    const form = new FormData(e.currentTarget);
+    const body = {
+      name: String(form.get("name") || "").trim(),
+      ipAddress: String(form.get("ipAddress") || "").trim(),
+      apiPort: Number(form.get("apiPort")) || 80,
+      username: String(form.get("username") || "admin").trim(),
+      password: String(form.get("password") || "").trim(),
+    };
+
+    if (!body.name || !body.ipAddress || !body.password) {
+      showToast("Required fields: Name, IP Address, Password", false);
+      return;
+    }
+
+    setAddingRouter(true);
+    try {
+      const res = await fetch(`/api/admin/mikrotik/routers/${editingRouter.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        showToast("Router updated successfully!", true);
+        setEditingRouter(null);
+        fetchRouters();
+      } else {
+        const d = await res.json();
+        showToast(d.error || "Failed to update router", false);
+      }
+    } catch {
+      showToast("Network error", false);
+    } finally {
+      setAddingRouter(false);
     }
   }
 
@@ -1026,6 +1068,13 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                                 <Power size={15} />
                               </button>
                               <button
+                                onClick={() => setEditingRouter(router)}
+                                title="Edit Router"
+                                className="p-1.5 bg-neon-blue/20 text-neon-blue hover:bg-neon-blue/30 rounded-lg border border-neon-blue/30 transition-colors"
+                              >
+                                <Edit size={15} />
+                              </button>
+                              <button
                                 onClick={() => handleDeleteRouter(router.id)}
                                 title="Delete Router"
                                 className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors"
@@ -1077,6 +1126,79 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
               </form>
             </div>
           )}
+          {/* Modal: Edit Router */}
+          <AnimatePresence>
+            {editingRouter && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="bg-[#1e293b] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-left"
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Edit className="text-neon-blue" size={20} /> Edit Router Details
+                    </h3>
+                    <button 
+                      onClick={() => setEditingRouter(null)}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleEditRouter} className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">Router Name</label>
+                      <input name="name" defaultValue={editingRouter.name} required placeholder="e.g. Core MikroTik" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">IP Address / Domain</label>
+                      <input name="ipAddress" defaultValue={editingRouter.ipAddress} required placeholder="e.g. bd2.mikrovpn.xyz" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">API REST Port</label>
+                        <input name="apiPort" type="number" defaultValue={editingRouter.apiPort || 13065} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Username</label>
+                        <input name="username" defaultValue={editingRouter.username || "admin"} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">Password</label>
+                      <input name="password" type="password" required placeholder="Enter password to save/update" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                    </div>
+
+                    {/* Footer Buttons */}
+                    <div className="flex justify-end gap-3 pt-4 border-t border-white/10 bg-white/2 px-6 py-4 -mx-6 -mb-6">
+                      <button 
+                        type="button" 
+                        onClick={() => setEditingRouter(null)}
+                        className="px-5 py-2.5 border border-white/10 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm transition-all"
+                      >
+                        Close
+                      </button>
+                      <button 
+                        type="submit" 
+                        disabled={addingRouter}
+                        className="px-5 py-2.5 bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 rounded-xl font-bold text-sm transition-all disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        {addingRouter && <Loader2 size={16} className="animate-spin" />}
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
