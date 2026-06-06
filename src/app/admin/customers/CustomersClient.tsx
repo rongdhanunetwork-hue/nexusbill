@@ -221,6 +221,12 @@ export default function CustomersClient({
   };
 
   const [statusFilter, setStatusFilter] = useState(getInitialStatus());
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedAreaId, selectedPackageId, statusFilter]);
 
   // Calculate days remaining
   const getDaysLeft = (expireDate: string | Date | null) => {
@@ -728,28 +734,31 @@ export default function CustomersClient({
                   </td>
                 </motion.tr>
               ) : (
-                filteredCustomers.map((customer, index) => {
-                  const daysLeft = getDaysLeft(customer.expireDate);
-                  const activeSession = customer.pppoeUsername
-                    ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
-                    : null;
-                  const isOnline = customer.status === "active" && !!activeSession;
-                  const isExpired = customer.status === "expired" || !customer.expireDate || (daysLeft !== null && daysLeft < 0);
+                filteredCustomers
+                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                  .map((customer, index) => {
+                    const globalIndex = (currentPage - 1) * pageSize + index;
+                    const daysLeft = getDaysLeft(customer.expireDate);
+                    const activeSession = customer.pppoeUsername
+                      ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
+                      : null;
+                    const isOnline = customer.status === "active" && !!activeSession;
+                    const isExpired = customer.status === "expired" || !customer.expireDate || (daysLeft !== null && daysLeft < 0);
 
-                  return (
-                    <motion.tr
-                      key={customer.id}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="hover:bg-white/5 transition-colors group"
-                    >
-                      {/* Serial Number */}
-                      <td className="p-5 text-center text-gray-500 font-mono text-xs">
-                        {index + 1}
-                      </td>
+                    return (
+                      <motion.tr
+                        key={customer.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="hover:bg-white/5 transition-colors group"
+                      >
+                        {/* Serial Number */}
+                        <td className="p-5 text-center text-gray-500 font-mono text-xs">
+                          {globalIndex + 1}
+                        </td>
 
                       {/* 1. Customer Info */}
                       <td className="p-5">
@@ -1031,6 +1040,67 @@ export default function CustomersClient({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {filteredCustomers.length > pageSize && (
+        <div className="flex items-center justify-between p-5 border-t border-white/5 bg-white/2 no-print-col mt-4">
+          <div className="text-xs text-gray-400">
+            Showing <span className="font-semibold text-white">{(currentPage - 1) * pageSize + 1}</span> to{" "}
+            <span className="font-semibold text-white">
+              {Math.min(currentPage * pageSize, filteredCustomers.length)}
+            </span>{" "}
+            of <span className="font-semibold text-white">{filteredCustomers.length}</span> customers
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all"
+            >
+              Previous
+            </button>
+            
+            {/* Page numbers */}
+            {(() => {
+              const totalPages = Math.ceil(filteredCustomers.length / pageSize);
+              const pages = [];
+              const maxVisible = 5;
+              
+              let start = Math.max(1, currentPage - 2);
+              let end = Math.min(totalPages, start + maxVisible - 1);
+              
+              if (end - start < maxVisible - 1) {
+                start = Math.max(1, end - maxVisible + 1);
+              }
+              
+              for (let i = start; i <= end; i++) {
+                pages.push(
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                      currentPage === i
+                        ? "bg-neon-blue text-white border-neon-blue shadow-lg shadow-neon-blue/20"
+                        : "bg-white/5 hover:bg-white/10 border-white/10 text-gray-300 hover:text-white"
+                    }`}
+                  >
+                    {i}
+                  </button>
+                );
+              }
+              return pages;
+            })()}
+            
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Math.ceil(filteredCustomers.length / pageSize)))}
+              disabled={currentPage === Math.ceil(filteredCustomers.length / pageSize)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 4th Image - Advanced Recharge Popup Modal */}
       <AnimatePresence>
