@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { 
   Search, Edit, Trash, Wifi, WifiOff, Eye, Zap, Clock, 
@@ -124,6 +124,24 @@ export default function CustomersClient({
     setCustomersList(allCustomers);
   }, [allCustomers]);
 
+  // Load paginated customers from server to avoid fetching full dataset client-side
+  useEffect(() => {
+    const loadPaged = async () => {
+      try {
+        const res = await fetch('/api/admin/customers?page=1&pageSize=200');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setCustomersList(data);
+        } else if (data && Array.isArray(data.items)) {
+          setCustomersList(data.items);
+        }
+      } catch (e) {
+        // ignore and keep initial list
+      }
+    };
+    loadPaged();
+  }, []);
+
   useEffect(() => {
     const refreshData = () => {
       fetch("/api/admin/mikrotik/pppoe")
@@ -133,16 +151,8 @@ export default function CustomersClient({
             setLiveActiveSessions(data.active);
             setLiveActiveNames(data.active.map((s: any) => s.name));
           }
-
-          // Re-fetch updated customer list to automatically show imported router users
-          fetch("/api/admin/customers")
-            .then((res) => res.json())
-            .then((newCustomers) => {
-              if (Array.isArray(newCustomers)) {
-                setCustomersList(newCustomers);
-              }
-            })
-            .catch(() => {});
+          // NOTE: avoid re-fetching the full customers list on every poll —
+          // keep the existing customersList in memory and only update active sessions.
         })
         .catch((err) => {
           console.error("Failed to fetch active sessions client-side:", err);
@@ -153,6 +163,17 @@ export default function CustomersClient({
     const interval = setInterval(refreshData, 20000); // Poll every 20s for real-time status & sync
     return () => clearInterval(interval);
   }, []);
+
+  // Build quick lookup maps for active sessions to avoid O(n^2) finds
+  const activeSessionMap = useMemo(() => {
+    const map = new Map<string, any>();
+    (liveActiveSessions || []).forEach((s: any) => {
+      if (s && s.name) map.set(String(s.name).toLowerCase(), s);
+    });
+    return map;
+  }, [liveActiveSessions]);
+
+  const activeNamesSet = useMemo(() => new Set(activeSessionMap.keys()), [activeSessionMap]);
 
   // Click-away listener to close action dropdowns safely on mobile/desktop without blocking touch events
   useEffect(() => {
@@ -244,7 +265,8 @@ export default function CustomersClient({
   };
 
   // Filter logic
-  const filteredCustomers = customersList.filter((customer) => {
+  const filteredCustomers = useMemo(() => {
+    return customersList.filter((customer) => {
     const matchesSearch =
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.phone.includes(searchTerm) ||
@@ -260,7 +282,7 @@ export default function CustomersClient({
     const isPrimaryPppoeOwner = samePppoeCustomers.length > 0 ? samePppoeCustomers[0].id === customer.id : true;
 
     const activeSession = customer.pppoeUsername && isPrimaryPppoeOwner
-      ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
+      ? activeSessionMap.get(customer.pppoeUsername!.toLowerCase()) || null
       : null;
     const daysLeft = getDaysLeft(customer.expireDate);
     // Only mark as expired if status is explicitly 'expired' OR has a past expireDate
@@ -298,7 +320,8 @@ export default function CustomersClient({
     const matchesPackage = selectedPackageId === "All Packages" || String(customer.packageId) === selectedPackageId;
 
     return matchesSearch && matchesStatus && matchesArea && matchesPackage;
-  });
+    });
+  }, [customersList, searchTerm, selectedAreaId, selectedPackageId, statusFilter, activeSessionMap, areasList]);
 
   // Calculate values for Recharge Modal
   // If admin selected a new package, use that package's price for calculation
@@ -454,11 +477,12 @@ const handleImportSubmit = async () => {
     });
     const data = await res.json();
     if (res.ok) {
-      await showAlert({ title: 'Success', message: data.message || 'Imported successfully', type: 'success' });
-      setShowImportModal(false);
-      const refreshed = await fetch('/api/admin/customers');
-      const list = await refreshed.json();
-      setCustomersList(list);
+        await showAlert({ title: 'Success', message: data.message || 'Imported successfully', type: 'success' });
+        setShowImportModal(false);
+        const refreshed = await fetch('/api/admin/customers?page=1&pageSize=200');
+        const d = await refreshed.json();
+        if (Array.isArray(d)) setCustomersList(d);
+        else if (d && Array.isArray(d.items)) setCustomersList(d.items);
     } else {
       await showAlert({ title: 'Error', message: data.error || 'Import failed', type: 'error' });
     }
@@ -581,11 +605,9 @@ const handleImportSubmit = async () => {
   // CSV export trigger
   const exportCSV = () => {
     const headers = ["Name", "Phone", "Address", "PPPoE Username", "Package", "Monthly Fee", "Balance", "Expire Date", "Days Left", "Status"];
-    const rows = filteredCustomers.map(c => {
+      const rows = filteredCustomers.map(c => {
       const daysLeft = getDaysLeft(c.expireDate);
-      const activeSession = c.pppoeUsername
-        ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === c.pppoeUsername!.toLowerCase())
-        : null;
+      const activeSession = c.pppoeUsername ? activeSessionMap.get(c.pppoeUsername!.toLowerCase()) || null : null;
       const isExpired = c.status === "expired" || !c.expireDate || (daysLeft !== null && daysLeft < 0);
       
       let statusText = "Offline";
@@ -783,9 +805,7 @@ const handleImportSubmit = async () => {
                   .map((customer, index) => {
                     const globalIndex = (currentPage - 1) * pageSize + index;
                     const daysLeft = getDaysLeft(customer.expireDate);
-                    const activeSession = customer.pppoeUsername
-                      ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
-                      : null;
+                    const activeSession = customer.pppoeUsername ? activeSessionMap.get(customer.pppoeUsername!.toLowerCase()) || null : null;
                     const isOnline = customer.status === "active" && !!activeSession;
                     const isExpired = customer.status === "expired" || !customer.expireDate || (daysLeft !== null && daysLeft < 0);
 
@@ -1601,9 +1621,7 @@ const handleImportSubmit = async () => {
         <tbody>
           {filteredCustomers.map((customer, index) => {
             const daysLeft = getDaysLeft(customer.expireDate);
-            const activeSession = customer.pppoeUsername
-              ? (liveActiveSessions || []).find((s) => s.name.toLowerCase() === customer.pppoeUsername!.toLowerCase())
-              : null;
+            const activeSession = customer.pppoeUsername ? activeSessionMap.get(customer.pppoeUsername!.toLowerCase()) || null : null;
             const isOnline = customer.status === "active" && !!activeSession;
             const isExpired = customer.status === "expired" || !customer.expireDate || (daysLeft !== null && daysLeft < 0);
 

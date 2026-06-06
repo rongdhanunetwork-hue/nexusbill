@@ -36,7 +36,7 @@ async function getClient(routerId?: number) {
     port: config.port,
     user: config.user,
     password: config.pass,
-    timeout: 3,
+    timeout: parseInt(process.env.MIKROTIK_API_TIMEOUT || '8'),
   });
   client.on("error", (err) => {
     console.error("MikroTik socket error caught:", err);
@@ -73,6 +73,21 @@ export interface SystemResource {
   "free-memory": string;
   "total-memory": string;
   "free-hdd-space": string;
+}
+
+export async function getSystemResource(routerId?: number): Promise<SystemResource | null> {
+  const client = await getClient(routerId);
+  try {
+    await client.connect();
+    const data = await client.write('/system/resource/print');
+    if (data && data.length > 0) return data[0] as unknown as SystemResource;
+    return null;
+  } catch (err) {
+    console.error('getSystemResource error:', err);
+    return null;
+  } finally {
+    try { await client.close(); } catch {}
+  }
 }
 
 // ───── PPPoE Secrets (user accounts) ─────────────────────
@@ -398,20 +413,7 @@ export async function getPppoeTraffic(username: string, routerId?: number): Prom
   }
 }
 
-// ───── System Resource ────────────────────────────────────
-
-export async function getSystemResource(routerId?: number): Promise<SystemResource> {
-  const client = await getClient(routerId);
-  try {
-    await client.connect();
-    const data = await client.write("/system/resource/print");
-    return data[0] as unknown as SystemResource;
-  } finally {
-    try {
-      await client.close();
-    } catch {}
-  }
-}
+// (System resource helper is defined earlier to avoid duplicate definitions)
 
 // ───── Health check ───────────────────────────────────────
 

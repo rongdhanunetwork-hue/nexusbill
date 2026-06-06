@@ -8,7 +8,7 @@ import { syncCustomerToMikrotik } from "@/lib/sync";
 import { insertAuditLog } from "@/lib/audit";
 
 // GET /api/admin/customers — list customers (filtered by role)
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getSession();
   if (!session || (session.role !== "admin" && session.role !== "reseller" && session.role !== "employee")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -16,20 +16,32 @@ export async function GET() {
 
   const adminId = await getAdminIdForSession(session);
 
-  let customers;
-  if (session.role === "reseller") {
-    customers = await db.query.users.findMany({
-      where: and(eq(users.role, "customer"), eq(users.resellerId, session.userId), eq(users.adminId, adminId)),
+  // Support optional pagination via ?page={n}&pageSize={m}
+  const url = new URL(req.url);
+  const page = parseInt(url.searchParams.get("page") || "0") || 0;
+  const pageSize = parseInt(url.searchParams.get("pageSize") || "0") || 0;
+
+  const baseWhere = session.role === "reseller"
+    ? and(eq(users.role, "customer"), eq(users.resellerId, session.userId), eq(users.adminId, adminId))
+    : and(eq(users.role, "customer"), eq(users.adminId, adminId), isNull(users.resellerId));
+
+  if (page > 0 && pageSize > 0) {
+    const total = await db.query.users.count({ where: baseWhere });
+    const items = await db.query.users.findMany({
+      where: baseWhere,
       orderBy: [asc(users.name)],
       with: { package: true },
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
     });
-  } else {
-    customers = await db.query.users.findMany({
-      where: and(eq(users.role, "customer"), eq(users.adminId, adminId), isNull(users.resellerId)),
-      orderBy: [asc(users.name)],
-      with: { package: true },
-    });
+    return NextResponse.json({ items, total });
   }
+
+  const customers = await db.query.users.findMany({
+    where: baseWhere,
+    orderBy: [asc(users.name)],
+    with: { package: true },
+  });
 
   return NextResponse.json(customers);
 }

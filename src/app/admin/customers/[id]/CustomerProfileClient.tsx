@@ -141,6 +141,9 @@ export default function CustomerProfileClient({
     distance: "—",
     uptime: "—",
     routerModel: "Unknown",
+    routerVendor: null as string | null,
+    ipAddress: null as string | null,
+    onuMac: null as string | null,
     isRxGood: false
   });
   
@@ -157,6 +160,9 @@ export default function CustomerProfileClient({
             distance: data.distance,
             uptime: data.uptime,
             routerModel: data.routerModel,
+            routerVendor: data.routerVendor || null,
+            ipAddress: data.ipAddress || null,
+            onuMac: data.onuMac || null,
             isRxGood: parseFloat(data.rxPower) >= -27
           });
         }
@@ -164,7 +170,23 @@ export default function CustomerProfileClient({
       .catch(() => {});
   }, [customer.id]);
 
-  const { rxPower, txPower, temperature: onuTemp, voltage: onuVoltage, distance: onuDistance, uptime: onuUptime, routerModel: wifiRouterModel, isRxGood } = onuData;
+  // Fetch router system info directly from router (real-time board name)
+  useEffect(() => {
+    if (!customer.mikrotikId) return;
+    let active = true;
+    fetch(`/api/admin/mikrotik/${customer.mikrotikId}/system`)
+      .then(r => r.json())
+      .then(data => {
+        if (!active) return;
+        if (!data.error && data.boardName) {
+          setOnuData(prev => ({ ...prev, routerModel: data.boardName }));
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [customer.mikrotikId]);
+
+  const { rxPower, txPower, temperature: onuTemp, voltage: onuVoltage, distance: onuDistance, uptime: onuUptime, routerModel: wifiRouterModel, routerVendor: wifiRouterVendor, isRxGood } = onuData;
 
   useEffect(() => {
     fetch("/api/admin/areas").then(r => r.json()).then(setAreas).catch(() => {});
@@ -614,7 +636,7 @@ export default function CustomerProfileClient({
             <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
               <div className="flex-1">
                 <p className="text-xs text-gray-400 uppercase font-semibold">WiFi Router Brand</p>
-                <p className="font-semibold text-white mt-0.5">{wifiRouterModel}</p>
+                <p className="font-semibold text-white mt-0.5">{wifiRouterVendor || wifiRouterModel}</p>
               </div>
               <Wifi size={20} className="text-gray-500" />
             </div>
@@ -742,6 +764,7 @@ export default function CustomerProfileClient({
           {activeTab === "service" && (
             <div className="grid md:grid-cols-2 gap-4">
               <Info icon={<Phone size={18} />} label="Phone" value={customer.phone} />
+              <Info icon={<KeyRound size={18} />} label="PPPoE Username" value={customer.pppoeUsername || activeSession?.name || "Not set"} />
               <Info icon={<MapPin size={18} />} label="Address" value={customer.address || "Not set"} />
               <div className="p-4 bg-white/5 rounded-xl flex items-start justify-between gap-3 border border-white/5">
                 <div className="flex items-start gap-3">

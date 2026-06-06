@@ -51,30 +51,41 @@ export async function GET() {
     ]);
 
     // Fetch active sessions from all relevant routers in parallel
-    const activeSessionsPromises = routers.map((r) => 
-      getPppoeActive(r.id).catch((err) => {
-        console.error(`Failed to fetch active sessions from router ${r.id}:`, err);
-        return [];
-      })
-    );
+    // Retry helper for transient router timeouts
+    const fetchWithRetry = async (routerId?: number, attempts = 2) => {
+      for (let i = 0; i < attempts; i++) {
+        try {
+          return await getPppoeActive(routerId);
+        } catch (err) {
+          console.error(`Attempt ${i+1} failed for router ${routerId}:`, err?.message || err);
+          if (i < attempts - 1) await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+      return [];
+    };
+
+    const activeSessionsPromises = routers.map((r) => fetchWithRetry(r.id));
 
     if (adminId === 1) {
-      activeSessionsPromises.push(
-        getPppoeActive(undefined).catch((err) => {
-          console.error(`Failed to fetch active sessions from default router:`, err);
-          return [];
-        })
-      );
+      activeSessionsPromises.push(fetchWithRetry(undefined));
     }
 
     const activeSessionsLists = await Promise.all(activeSessionsPromises);
 
-    // Combine all active session names
+    // Combine all active sessions and build lookups
     const activePppoeNames = new Set<string>();
+    const activeByMac = new Set<string>();
+    const activeByIp = new Set<string>();
     for (const list of activeSessionsLists) {
       for (const sess of list) {
-        if (sess.name) {
-          activePppoeNames.add(sess.name.toLowerCase());
+        if (!sess) continue;
+        if (sess.name) activePppoeNames.add(String(sess.name).toLowerCase());
+        if (sess["caller-id"]) {
+          const cleaned = String(sess["caller-id"]).replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+          if (cleaned.length >= 6) activeByMac.add(cleaned);
+        }
+        if (sess.address) {
+          activeByIp.add(String(sess.address));
         }
       }
     }
@@ -82,8 +93,17 @@ export async function GET() {
     // Filter to only active customers
     const activeCustomers = allDbCustomers.filter(c => c.status === "active" || c.status === "online");
     
+    // Normalize MAC helper
+    const normMac = (m?: string | null) => (m || '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+
     const onlineCustomers = activeCustomers.filter(c => {
-      return c.pppoeUsername && activePppoeNames.has(c.pppoeUsername.toLowerCase());
+      try {
+        if (c.pppoeUsername && activePppoeNames.has(c.pppoeUsername.toLowerCase())) return true;
+        const mac = normMac((c as any).onuMac || (c as any).macAddress || (c as any).mac || null);
+        if (mac && activeByMac.has(mac)) return true;
+        if ((c as any).ipAddress && activeByIp.has((c as any).ipAddress)) return true;
+      } catch (e) {}
+      return false;
     }).length;
 
     const offlineCustomers = Math.max(0, activeCustomers.length - onlineCustomers);
