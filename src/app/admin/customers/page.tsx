@@ -8,7 +8,7 @@ import CustomersClient from "./CustomersClient";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
-import { syncMikrotikSecrets, syncDeleteCustomerFromMikrotik } from "@/lib/sync";
+import { syncDeleteCustomerFromMikrotik } from "@/lib/sync";
 
 export const dynamic = "force-dynamic";
 
@@ -43,26 +43,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
 
   const { status } = await searchParams;
 
-  // Sync MikroTik secrets for this admin's routers in the background
-  db.select({ id: mikrotiks.id })
-    .from(mikrotiks)
-    .where(and(eq(mikrotiks.status, true), eq(mikrotiks.adminId, session.userId)))
-    .then((routers) => {
-      for (const r of routers) {
-        syncMikrotikSecrets(undefined, r.id).catch((err) => {
-          console.error(`Background MikroTik sync error on router ${r.id}:`, err);
-        });
-      }
-      // If admin is default admin (adminId = 1), also sync the default router (null)
-      if (session.userId === 1) {
-        syncMikrotikSecrets(undefined, null).catch((err) => {
-          console.error("Background MikroTik sync error on default router:", err);
-        });
-      }
-    })
-    .catch((err) => {
-      console.error("Failed to fetch routers for background sync:", err);
-    });
+  // NOTE: syncMikrotikSecrets removed — auto-importing PPPoE secrets as customers
+  // was creating junk entries with no real name/phone. Customers must be created manually.
 
   const allCustomers = await db.query.users.findMany({
     where: and(eq(users.role, "customer"), eq(users.adminId, session.userId), isNull(users.resellerId)),
