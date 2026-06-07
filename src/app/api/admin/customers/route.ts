@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, packages, dataUsage, payments, invoices, transactions, tickets } from "@/db/schema";
-import { eq, asc, and, isNull, inArray } from "drizzle-orm";
+import { eq, asc, and, isNull, inArray, sql } from "drizzle-orm";
 import { getSession, getAdminIdForSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { syncCustomerToMikrotik, syncDeleteCustomerFromMikrotik } from "@/lib/sync";
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     : and(eq(users.role, "customer"), eq(users.adminId, adminId), isNull(users.resellerId));
 
   if (page > 0 && pageSize > 0) {
-    const total = await db.query.users.count({ where: baseWhere });
+    const [{ count: total }] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(baseWhere);
     const items = await db.query.users.findMany({
       where: baseWhere,
       orderBy: [asc(users.name)],
