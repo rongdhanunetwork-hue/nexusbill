@@ -3,7 +3,6 @@ import { users, mikrotiks, packages, dataUsage } from "@/db/schema";
 import { eq, and, lte, gte, isNull } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
-import bcrypt from "bcryptjs";
 import { 
   getPppoeSecrets, 
   getPppoeActive, 
@@ -96,30 +95,13 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
               .where(eq(users.id, exists.id));
           }
         } else {
-          // If not registered, automatically import it
-          // Ensure a unique phone number (use the secret name or append random suffix)
-          const allDbCustomers = await db.select({ phone: users.phone }).from(users).where(eq(users.role, "customer"));
-          const phoneExists = allDbCustomers.some(
-            (c) => c.phone.toLowerCase() === secret.name.toLowerCase()
-          );
-          const uniquePhone = phoneExists 
-            ? `${secret.name}-${Math.floor(1000 + Math.random() * 9000)}`
-            : secret.name;
-
-          const rawPassword = secret.password || "password123";
-          const hashedPassword = await bcrypt.hash(rawPassword, 12);
-
-          await db.insert(users).values({
-            name: secret.name,
-            phone: uniquePhone,
-            password: hashedPassword,
-            pppoeUsername: secret.name,
-            status: secret.disabled === "true" ? "expired" : "active",
-            role: "customer",
-            approvalStatus: "approved",
-            mikrotikId: finalRouterId,
-            adminId: routerAdminId,
-          }).onConflictDoNothing();
+          // PPPoE secret exists on router but NOT in the billing database.
+          // Previously, this code auto-imported the secret as a customer using the PPPoE username
+          // as name and phone — creating junk entries with no real data.
+          // FIX: Do NOT auto-create customers from MikroTik secrets.
+          // Customers must be created manually through the portal with proper name, phone, and address.
+          // The sync only updates status for EXISTING customers.
+          console.log(`[Sync] Skipping PPPoE secret "${secret.name}" — not registered as a customer in billing DB. Create manually if needed.`);
         }
       }
     } finally {
