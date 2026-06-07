@@ -17,6 +17,10 @@ import {
   disconnectPppoeActive
 } from "./mikrotik";
 
+const globalForSync = globalThis as typeof globalThis & {
+  __isSyncingSecrets?: boolean;
+};
+
 export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerId?: number | null) {
   try {
     if (routerId === undefined && !passedSecrets) {
@@ -34,81 +38,92 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
       return;
     }
 
-    // 1. Fetch secrets from MikroTik
-    const secrets = passedSecrets || await getPppoeSecrets(routerId || undefined);
-    
-    // 2. Get the adminId of the router
-    let routerAdminId = 1;
-    if (routerId) {
-      const routerRow = await db.query.mikrotiks.findFirst({
-        where: eq(mikrotiks.id, routerId),
-        columns: { adminId: true }
-      });
-      routerAdminId = routerRow?.adminId || 1;
+    // Global lock to prevent concurrent duplication
+    if (globalForSync.__isSyncingSecrets) {
+      console.log(`[Sync] Sync already in progress, skipping concurrent execution.`);
+      return;
     }
+    globalForSync.__isSyncingSecrets = true;
 
-    // 3. Fetch customers from DB for this Admin to prevent duplicates
-    const dbCustomers = await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.role, "customer"),
-          eq(users.adminId, routerAdminId)
-        )
-      );
-
-    const finalRouterId = routerId || null;
-
-    const defaultHashedPassword =
-      "$2b$12$9mgzlniYFoY0qfZF1Xyx0OXTPULdCMzpvV4ha2334CDP1ZVxbOwKm"; // password123
-
-    for (const secret of secrets) {
-      // Find if this secret name is already registered as a PPPoE username
-      const exists = dbCustomers.find(
-        (c) => c.pppoeUsername?.toLowerCase() === secret.name.toLowerCase()
-      );
-
-      if (exists) {
-        // Sync status: if disabled on MikroTik, set status = expired in DB
-        const routerExpired = secret.disabled === "true";
-        const currentExpired = exists.status === "expired";
-        
-        if (routerExpired !== currentExpired || exists.mikrotikId !== finalRouterId) {
-          await db
-            .update(users)
-            .set({ 
-              status: routerExpired ? "expired" : "active",
-              mikrotikId: finalRouterId
-            })
-            .where(eq(users.id, exists.id));
-        }
-      } else {
-        // If not registered, automatically import it
-        // Ensure a unique phone number (use the secret name or append random suffix)
-        const allDbCustomers = await db.select({ phone: users.phone }).from(users).where(eq(users.role, "customer"));
-        const phoneExists = allDbCustomers.some(
-          (c) => c.phone.toLowerCase() === secret.name.toLowerCase()
-        );
-        const uniquePhone = phoneExists 
-          ? `${secret.name}-${Math.floor(1000 + Math.random() * 9000)}`
-          : secret.name;
-
-        const rawPassword = secret.password || "password123";
-        const hashedPassword = await bcrypt.hash(rawPassword, 12);
-
-        await db.insert(users).values({
-          name: secret.name,
-          phone: uniquePhone,
-          password: hashedPassword,
-          pppoeUsername: secret.name,
-          status: secret.disabled === "true" ? "expired" : "active",
-          role: "customer",
-          approvalStatus: "approved",
-          mikrotikId: finalRouterId,
-          adminId: routerAdminId,
+    try {
+      // 1. Fetch secrets from MikroTik
+      const secrets = passedSecrets || await getPppoeSecrets(routerId || undefined);
+      
+      // 2. Get the adminId of the router
+      let routerAdminId = 1;
+      if (routerId) {
+        const routerRow = await db.query.mikrotiks.findFirst({
+          where: eq(mikrotiks.id, routerId),
+          columns: { adminId: true }
         });
+        routerAdminId = routerRow?.adminId || 1;
       }
+
+      // 3. Fetch customers from DB for this Admin to prevent duplicates
+      const dbCustomers = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.role, "customer"),
+            eq(users.adminId, routerAdminId)
+          )
+        );
+
+      const finalRouterId = routerId || null;
+
+      const defaultHashedPassword =
+        "$2b$12$9mgzlniYFoY0qfZF1Xyx0OXTPULdCMzpvV4ha2334CDP1ZVxbOwKm"; // password123
+
+      for (const secret of secrets) {
+        // Find if this secret name is already registered as a PPPoE username
+        const exists = dbCustomers.find(
+          (c) => c.pppoeUsername?.toLowerCase() === secret.name.toLowerCase()
+        );
+
+        if (exists) {
+          // Sync status: if disabled on MikroTik, set status = expired in DB
+          const routerExpired = secret.disabled === "true";
+          const currentExpired = exists.status === "expired";
+          
+          if (routerExpired !== currentExpired || exists.mikrotikId !== finalRouterId) {
+            await db
+              .update(users)
+              .set({ 
+                status: routerExpired ? "expired" : "active",
+                mikrotikId: finalRouterId
+              })
+              .where(eq(users.id, exists.id));
+          }
+        } else {
+          // If not registered, automatically import it
+          // Ensure a unique phone number (use the secret name or append random suffix)
+          const allDbCustomers = await db.select({ phone: users.phone }).from(users).where(eq(users.role, "customer"));
+          const phoneExists = allDbCustomers.some(
+            (c) => c.phone.toLowerCase() === secret.name.toLowerCase()
+          );
+          const uniquePhone = phoneExists 
+            ? `${secret.name}-${Math.floor(1000 + Math.random() * 9000)}`
+            : secret.name;
+
+          const rawPassword = secret.password || "password123";
+          const hashedPassword = await bcrypt.hash(rawPassword, 12);
+
+          await db.insert(users).values({
+            name: secret.name,
+            phone: uniquePhone,
+            password: hashedPassword,
+            pppoeUsername: secret.name,
+            status: secret.disabled === "true" ? "expired" : "active",
+            role: "customer",
+            approvalStatus: "approved",
+            mikrotikId: finalRouterId,
+            adminId: routerAdminId,
+          }).onConflictDoNothing();
+        }
+      }
+    } finally {
+      globalForSync.__isSyncingSecrets = false;
     }
   } catch (err) {
     console.error("Auto-sync MikroTik secrets error:", err);

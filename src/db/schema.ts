@@ -21,7 +21,7 @@ export const users = pgTable("users", {
   photoUrl: text("photo_url"),
   nidUrl: text("nid_url"),
   nidNumber: varchar("nid_number", { length: 50 }),
-  pppoeUsername: varchar("pppoe_username", { length: 255 }),
+  pppoeUsername: varchar("pppoe_username", { length: 255 }).unique(),
   macAddress: varchar("mac_address", { length: 100 }),
   ipAddress: varchar("ip_address", { length: 50 }),
   packageId: integer("package_id"),
