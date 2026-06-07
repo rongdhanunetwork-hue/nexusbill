@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { users, packages } from "@/db/schema";
-import { eq, asc, and, isNull } from "drizzle-orm";
+import { users, packages, dataUsage, payments, invoices, transactions, tickets } from "@/db/schema";
+import { eq, asc, and, isNull, inArray } from "drizzle-orm";
 import { getSession, getAdminIdForSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
-import { syncCustomerToMikrotik } from "@/lib/sync";
+import { syncCustomerToMikrotik, syncDeleteCustomerFromMikrotik } from "@/lib/sync";
 import { insertAuditLog } from "@/lib/audit";
 
 // GET /api/admin/customers — list customers (filtered by role)
@@ -146,6 +146,80 @@ export async function POST(req: Request) {
     return NextResponse.json(customer, { status: 201 });
   } catch (err) {
     console.error("Create customer error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+// DELETE /api/admin/customers — bulk delete customers
+export async function DELETE(req: Request) {
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "reseller")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const adminId = await getAdminIdForSession(session);
+
+  try {
+    const body = await req.json();
+    const { ids } = body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: "No customer IDs provided" }, { status: 400 });
+    }
+
+    // Filter IDs to ensure they belong to this admin/reseller
+    const targetCustomers = await db.select()
+      .from(users)
+      .where(
+        and(
+          eq(users.role, "customer"),
+          inArray(users.id, ids),
+          session.role === "reseller"
+            ? and(eq(users.resellerId, session.userId), eq(users.adminId, adminId))
+            : and(eq(users.adminId, adminId), isNull(users.resellerId))
+        )
+      );
+
+    const validIds = targetCustomers.map(c => c.id);
+
+    if (validIds.length === 0) {
+      return NextResponse.json({ error: "No valid customers found for deletion" }, { status: 404 });
+    }
+
+    // Sync deletion of PPPoE secrets on MikroTik
+    for (const customer of targetCustomers) {
+      if (customer.pppoeUsername) {
+        try {
+          await syncDeleteCustomerFromMikrotik(customer.pppoeUsername, customer.mikrotikId);
+        } catch (err) {
+          console.error(`Failed to delete MikroTik secret for ${customer.pppoeUsername}:`, err);
+        }
+      }
+    }
+
+    // Delete dependent tables to maintain DB integrity
+    await db.delete(dataUsage).where(inArray(dataUsage.userId, validIds));
+    await db.delete(payments).where(inArray(payments.userId, validIds));
+    await db.delete(invoices).where(inArray(invoices.userId, validIds));
+    await db.delete(transactions).where(inArray(transactions.customerId, validIds));
+    await db.delete(tickets).where(inArray(tickets.userId, validIds));
+
+    // Delete users from users table
+    await db.delete(users).where(inArray(users.id, validIds));
+
+    // Log action to audit trails
+    await insertAuditLog(
+      session.userId,
+      "BULK_DELETE_CUSTOMERS",
+      `Bulk deleted ${validIds.length} customer(s). IDs: ${validIds.join(", ")}`
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: `Successfully deleted ${validIds.length} customer(s).`,
+    });
+  } catch (err) {
+    console.error("Bulk delete customers error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

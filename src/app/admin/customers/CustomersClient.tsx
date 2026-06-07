@@ -249,6 +249,12 @@ export default function CustomersClient({
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    setSelectedCustomerIds([]);
+  }, [searchTerm, selectedAreaId, selectedPackageId, statusFilter, currentPage]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedAreaId, selectedPackageId, statusFilter]);
@@ -322,6 +328,10 @@ export default function CustomersClient({
     return matchesSearch && matchesStatus && matchesArea && matchesPackage;
     });
   }, [customersList, searchTerm, selectedAreaId, selectedPackageId, statusFilter, activeSessionMap, areasList]);
+
+  const paginatedCustomers = useMemo(() => {
+    return filteredCustomers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  }, [filteredCustomers, currentPage, pageSize]);
 
   // Calculate values for Recharge Modal
   // If admin selected a new package, use that package's price for calculation
@@ -508,6 +518,52 @@ const handleImportSubmit = async () => {
         formData.append("id", String(id));
         deleteCustomerAction(formData).then(() => {
           window.location.reload();
+        });
+      }
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedCustomerIds.length === 0) return;
+
+    const isConfirm = await showConfirm({
+      title: "Bulk Delete Customers",
+      message: `Are you sure you want to delete ${selectedCustomerIds.length} selected customer(s)? This action is permanent and will remove their MikroTik secrets.`,
+      danger: true,
+      confirmText: "Delete All"
+    });
+
+    if (isConfirm) {
+      try {
+        const res = await fetch("/api/admin/customers", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ids: selectedCustomerIds }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          await showAlert({
+            title: "Success",
+            message: data.message || "Customers deleted successfully.",
+            type: "success",
+          });
+          setSelectedCustomerIds([]);
+          window.location.reload();
+        } else {
+          await showAlert({
+            title: "Error",
+            message: data.error || "Failed to delete customers.",
+            type: "error",
+          });
+        }
+      } catch (err) {
+        await showAlert({
+          title: "Error",
+          message: "Network error occurred.",
+          type: "error",
         });
       }
     }
@@ -702,6 +758,15 @@ const handleImportSubmit = async () => {
             Total: {filteredCustomers.length}
           </div>
           <div className="flex gap-2">
+            {selectedCustomerIds.length > 0 && role !== "employee" && (
+              <button
+                onClick={handleBulkDelete}
+                className="px-4 py-2 bg-rose-500/20 text-rose-400 border border-rose-500/50 rounded-xl hover:bg-rose-500/30 text-xs font-bold transition-all flex items-center gap-2 animate-pulse"
+                title="Delete selected customers"
+              >
+                <Trash size={14} /> ডিলিট ({selectedCustomerIds.length})
+              </button>
+            )}
             <button
               onClick={downloadPDF}
               className="px-4 py-2 bg-white/5 text-gray-300 border border-white/10 rounded-xl hover:bg-white/10 text-xs font-bold transition-all flex items-center gap-2"
@@ -776,7 +841,20 @@ const handleImportSubmit = async () => {
         <table className="w-full text-left border-collapse min-w-[900px]">
           <thead>
             <tr className="border-b border-white/10 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-white/5">
-              <th className="p-5 w-16 text-center">#</th>
+              <th className="p-5 w-16 text-center no-print-col">
+                <input
+                  type="checkbox"
+                  checked={paginatedCustomers.length > 0 && paginatedCustomers.every(c => selectedCustomerIds.includes(c.id))}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedCustomerIds(paginatedCustomers.map(c => c.id));
+                    } else {
+                      setSelectedCustomerIds([]);
+                    }
+                  }}
+                  className="rounded bg-slate-850 border-white/15 text-neon-blue focus:ring-neon-blue focus:ring-1 cursor-pointer w-4 h-4"
+                />
+              </th>
               <th className="p-5">মোবাইল/ঠিকানা (Customer Info)</th>
               <th className="p-5">প্যাকেজ (Connection/Package)</th>
               <th className="p-5">বিল/ব্যালেন্স (Bill / Balance)</th>
@@ -800,9 +878,7 @@ const handleImportSubmit = async () => {
                   </td>
                 </motion.tr>
               ) : (
-                filteredCustomers
-                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                  .map((customer, index) => {
+                paginatedCustomers.map((customer, index) => {
                     const globalIndex = (currentPage - 1) * pageSize + index;
                     const daysLeft = getDaysLeft(customer.expireDate);
                     const activeSession = customer.pppoeUsername ? activeSessionMap.get(customer.pppoeUsername!.toLowerCase()) || null : null;
@@ -819,9 +895,20 @@ const handleImportSubmit = async () => {
                         transition={{ duration: 0.2 }}
                         className="hover:bg-white/5 transition-colors group"
                       >
-                        {/* Serial Number */}
-                        <td className="p-5 text-center text-gray-500 font-mono text-xs">
-                          {globalIndex + 1}
+                        {/* Checkbox Column */}
+                        <td className="p-5 text-center no-print-col">
+                          <input
+                            type="checkbox"
+                            checked={selectedCustomerIds.includes(customer.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCustomerIds(prev => [...prev, customer.id]);
+                              } else {
+                                setSelectedCustomerIds(prev => prev.filter(id => id !== customer.id));
+                              }
+                            }}
+                            className="rounded bg-slate-850 border-white/15 text-neon-blue focus:ring-neon-blue focus:ring-1 cursor-pointer w-4 h-4"
+                          />
                         </td>
 
                       {/* 1. Customer Info */}

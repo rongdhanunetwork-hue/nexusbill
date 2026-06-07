@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { users, payments, invoices, mikrotiks, olts, dataUsage, expenses } from "@/db/schema";
 import { eq, sql, and, isNull } from "drizzle-orm";
 import AdminDashboardClient from "./AdminDashboardClient";
-// syncMikrotikSecrets removed — customers must be created manually via the portal
+import { syncMikrotikSecrets } from "@/lib/sync";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -18,8 +18,10 @@ export default async function AdminDashboard() {
 
   const adminId = session.userId;
 
-  // NOTE: syncMikrotikSecrets removed — auto-importing PPPoE secrets as customers
-  // was creating junk entries with no real name/phone. Customers must be created manually.
+  // Sync MikroTik secrets to DB in the background
+  syncMikrotikSecrets().catch((err) => {
+    console.error("Background MikroTik sync error:", err);
+  });
 
   const bdTime = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
   const d = new Date(bdTime);

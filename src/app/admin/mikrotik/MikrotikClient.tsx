@@ -113,6 +113,7 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
   const [addingRouter, setAddingRouter] = useState(false);
   const [editingRouter, setEditingRouter] = useState<RouterDb | null>(null);
   const [testingRouterId, setTestingRouterId] = useState<number | null>(null);
+  const [showAddRouterModal, setShowAddRouterModal] = useState(false);
 
   // OLTs tab states
   const [olts, setOlts] = useState<OltDb[]>([]);
@@ -453,6 +454,7 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
         showToast("Router registered successfully!", true);
         (e.target as HTMLFormElement).reset();
         await fetchRouters();
+        setShowAddRouterModal(false);
         if (newRouter && newRouter.id) {
           setSelectedRouterId(newRouter.id);
           setActiveTab("live");
@@ -514,20 +516,46 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
     }
   }
 
+  async function handleTestRouter(id: number) {
+    setTestingRouterId(id);
+    try {
+      const res = await fetch(`/api/admin/mikrotik/routers/${id}`, {
+        method: "POST",
+      });
+      const d = await res.json();
+      if (res.ok && d.success) {
+        if (d.ok) {
+          showToast(`Connected successfully! RouterOS Version: ${d.version}`, true);
+        } else {
+          showToast(`Connection failed: ${d.error}`, false);
+        }
+      } else {
+        showToast(d.error || "Failed to run connection test", false);
+      }
+    } catch {
+      showToast("Network error during connection test", false);
+    } finally {
+      setTestingRouterId(null);
+    }
+  }
+
   async function handleEditRouter(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!editingRouter) return;
     const form = new FormData(e.currentTarget);
-    const body = {
+    const body: Record<string, any> = {
       name: String(form.get("name") || "").trim(),
       ipAddress: String(form.get("ipAddress") || "").trim(),
       apiPort: Number(form.get("apiPort")) || 80,
       username: String(form.get("username") || "admin").trim(),
-      password: String(form.get("password") || "").trim(),
     };
+    const password = String(form.get("password") || "").trim();
+    if (password) {
+      body.password = password;
+    }
 
-    if (!body.name || !body.ipAddress || !body.password) {
-      showToast("Required fields: Name, IP Address, Password", false);
+    if (!body.name || !body.ipAddress) {
+      showToast("Required fields: Name, IP Address", false);
       return;
     }
 
@@ -542,7 +570,6 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
         showToast("Router updated successfully!", true);
         setEditingRouter(null);
         fetchRouters();
-        fetchLiveData();
       } else {
         const d = await res.json();
         showToast(d.error || "Failed to update router", false);
@@ -554,25 +581,6 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
     }
   }
 
-  async function handleTestRouter(id: number) {
-    setTestingRouterId(id);
-    try {
-      const res = await fetch(`/api/admin/mikrotik/routers/${id}`, {
-        method: "POST",
-      });
-      const d = await res.json();
-      if (res.ok && d.success) {
-        showToast(d.message || "Test completed successfully!", d.ok);
-        fetchRouters();
-      } else {
-        showToast(d.error || "Failed to run connection test", false);
-      }
-    } catch {
-      showToast("Network error during test connection", false);
-    } finally {
-      setTestingRouterId(null);
-    }
-  }
 
   async function handleAddOlt(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -1046,143 +1054,202 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
 
       {/* Tab: Routers List */}
       {activeTab === "routers" && (
-        <div className={(role === "admin" || role === "reseller") ? "grid lg:grid-cols-3 gap-8" : "space-y-6"}>
-          <div className={(role === "admin" || role === "reseller") ? "lg:col-span-2 space-y-6" : "space-y-6"}>
-            <div className="glass-card overflow-hidden">
-              <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">Registered Routers</h2>
-                {routersLoading && <Loader2 size={18} className="animate-spin text-gray-400" />}
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-white/10 text-xs text-gray-400 uppercase bg-white/5">
-                      <th className="p-4">Router Info</th>
-                      <th className="p-4">IP Address</th>
-                      <th className="p-4">API Port</th>
-                      <th className="p-4">Status</th>
-                      {(role === "admin" || role === "reseller") && <th className="p-4 text-right">Action</th>}
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/5 border border-white/10 p-5 rounded-2xl">
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                <Server className="text-neon-blue" size={22} />
+                MikroTik Router Management
+                <span className="text-sm font-normal text-gray-400 bg-slate-800 border border-white/5 px-2.5 py-0.5 rounded-full">
+                  Total: {routers.length}
+                </span>
+              </h2>
+              <p className="text-xs text-gray-400 mt-1">Manage, test connection status, and monitor registered MikroTik routers.</p>
+            </div>
+            {role !== "employee" && (
+              <button
+                onClick={() => setShowAddRouterModal(true)}
+                className="bg-neon-blue/20 text-neon-blue border border-neon-blue/40 hover:bg-neon-blue/35 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-neon-blue/20"
+              >
+                <Plus size={18} /> Add New Router
+              </button>
+            )}
+          </div>
+
+          <div className="glass-card overflow-hidden">
+            <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Registered Routers</h2>
+              {routersLoading && <Loader2 size={18} className="animate-spin text-gray-400" />}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-white/10 text-xs text-gray-400 uppercase bg-white/5">
+                    <th className="p-4">Router Info</th>
+                    <th className="p-4">IP Address</th>
+                    <th className="p-4">API Port</th>
+                    <th className="p-4">Status</th>
+                    {(role === "admin" || role === "reseller") && <th className="p-4 text-right">Action</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {routersLoading && routers.length === 0 ? (
+                    <tr>
+                      <td colSpan={(role === "admin" || role === "reseller") ? 5 : 4} className="p-8 text-center text-gray-500"><Loader2 size={24} className="animate-spin mx-auto mb-2 text-neon-blue" /> Loading routers...</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {routersLoading && routers.length === 0 ? (
-                      <tr>
-                        <td colSpan={(role === "admin" || role === "reseller") ? 5 : 4} className="p-8 text-center text-gray-500"><Loader2 size={24} className="animate-spin mx-auto mb-2 text-neon-blue" /> Loading routers...</td>
-                      </tr>
-                    ) : routers.length === 0 ? (
-                      <tr>
-                        <td colSpan={(role === "admin" || role === "reseller") ? 5 : 4} className="p-8 text-center text-gray-500">No routers registered yet.</td>
-                      </tr>
-                    ) : (
-                      routers.map((router) => (
-                        <tr key={router.id} className="hover:bg-white/5">
-                          <td className="p-4">
+                  ) : routers.length === 0 ? (
+                    <tr>
+                      <td colSpan={(role === "admin" || role === "reseller") ? 5 : 4} className="p-8 text-center text-gray-500">No routers registered yet.</td>
+                    </tr>
+                  ) : (
+                    routers.map((router) => (
+                      <tr key={router.id} className="hover:bg-white/5">
+                        <td className="p-4">
+                          <button
+                            onClick={() => {
+                              setSelectedRouterId(router.id);
+                              setActiveTab("live");
+                            }}
+                            className="text-left font-bold text-white hover:text-neon-blue hover:underline transition-all flex items-center gap-1.5 cursor-pointer"
+                            title="Click to connect and open Live Control"
+                          >
+                            <Server size={14} className="text-gray-400" />
+                            {router.name}
+                          </button>
+                        </td>
+                        <td className="p-4">
+                          <button
+                            onClick={() => {
+                              setSelectedRouterId(router.id);
+                              setActiveTab("live");
+                            }}
+                            className="text-left font-mono text-gray-300 hover:text-neon-blue hover:underline transition-all cursor-pointer"
+                            title="Click to connect and open Live Control"
+                          >
+                            {router.ipAddress}
+                          </button>
+                        </td>
+                        <td className="p-4 text-gray-300 font-mono">{router.apiPort}</td>
+                        <td className="p-4">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${router.status ? "bg-neon-green/20 text-neon-green border border-neon-green/20" : "bg-red-500/20 text-red-400 border border-red-500/20"}`}>
+                            {router.status ? "Active" : "Disabled"}
+                          </span>
+                        </td>
+                        {(role === "admin" || role === "reseller") && (
+                          <td className="p-4 text-right flex justify-end gap-2">
                             <button
-                              onClick={() => {
-                                setSelectedRouterId(router.id);
-                                setActiveTab("live");
-                              }}
-                              className="text-left font-bold text-white hover:text-neon-blue hover:underline transition-all flex items-center gap-1.5 cursor-pointer"
-                              title="Click to connect and open Live Control"
+                              onClick={() => setEditingRouter(router)}
+                              title="Edit Router"
+                              className="p-1.5 border border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10 rounded-lg transition-colors cursor-pointer"
                             >
-                              <Server size={14} className="text-gray-400" />
-                              {router.name}
+                              <Edit size={15} />
+                            </button>
+                            <button
+                              onClick={() => handleTestRouter(router.id)}
+                              disabled={testingRouterId === router.id}
+                              title="Test Connection"
+                              className="p-1.5 border border-sky-500/30 text-sky-400 hover:bg-sky-500/10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                            >
+                              {testingRouterId === router.id ? <Loader2 size={15} className="animate-spin" /> : <Activity size={15} />}
+                            </button>
+                            <button
+                              onClick={() => handleToggleRouter(router.id, router.status)}
+                              title={router.status ? "Deactivate Router" : "Activate Router"}
+                              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${router.status ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30" : "bg-neon-green/20 text-neon-green hover:bg-neon-green/30 border-neon-green/30"}`}
+                            >
+                              <Power size={15} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRouter(router.id)}
+                              title="Delete Router"
+                              className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors cursor-pointer"
+                            >
+                              <Trash size={15} />
                             </button>
                           </td>
-                          <td className="p-4">
-                            <button
-                              onClick={() => {
-                                setSelectedRouterId(router.id);
-                                setActiveTab("live");
-                              }}
-                              className="text-left font-mono text-gray-300 hover:text-neon-blue hover:underline transition-all cursor-pointer"
-                              title="Click to connect and open Live Control"
-                            >
-                              {router.ipAddress}
-                            </button>
-                          </td>
-                          <td className="p-4 text-gray-300 font-mono">{router.apiPort}</td>
-                          <td className="p-4">
-                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${router.status ? "bg-neon-green/20 text-neon-green border border-neon-green/20" : "bg-red-500/20 text-red-400 border border-red-500/20"}`}>
-                              {router.status ? "Active" : "Disabled"}
-                            </span>
-                          </td>
-                          {(role === "admin" || role === "reseller") && (
-                            <td className="p-4 text-right flex justify-end gap-2">
-                              <button
-                                onClick={() => setEditingRouter(router)}
-                                title="Edit Router"
-                                className="p-1.5 border border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10 rounded-lg transition-colors"
-                              >
-                                <Edit size={15} />
-                              </button>
-                              <button
-                                onClick={() => handleTestRouter(router.id)}
-                                disabled={testingRouterId === router.id}
-                                title="Test Connection"
-                                className="p-1.5 border border-sky-500/30 text-sky-400 hover:bg-sky-500/10 rounded-lg transition-colors disabled:opacity-50"
-                              >
-                                {testingRouterId === router.id ? <Loader2 size={15} className="animate-spin" /> : <Activity size={15} />}
-                              </button>
-                              <button
-                                onClick={() => handleToggleRouter(router.id, router.status)}
-                                title={router.status ? "Deactivate Router" : "Activate Router"}
-                                className={`p-1.5 rounded-lg border transition-colors ${router.status ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30" : "bg-neon-green/20 text-neon-green hover:bg-neon-green/30 border-neon-green/30"}`}
-                              >
-                                <Power size={15} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteRouter(router.id)}
-                                title="Delete Router"
-                                className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors"
-                              >
-                                <Trash size={15} />
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                        )}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {(role === "admin" || role === "reseller") && (
-            <div className="space-y-6">
-              <form onSubmit={handleAddRouter} className="glass-card p-6 space-y-4">
-                <h3 className="text-lg font-semibold text-white border-b border-white/10 pb-3 flex items-center gap-2"><Plus size={18} className="text-neon-blue" /> Add Router</h3>
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1.5">Router Name</label>
-                  <input name="name" required placeholder="e.g. Core MikroTik" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1.5">IP Address / Domain</label>
-                  <input name="ipAddress" required placeholder="e.g. bd2.mikrovpn.xyz" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1.5">API REST Port</label>
-                  <input name="apiPort" type="number" defaultValue={13065} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1.5">Username</label>
-                  <input name="username" defaultValue="admin" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1.5">Password</label>
-                  <input name="password" type="password" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-white" />
-                </div>
-                <button
-                  type="submit"
-                  disabled={addingRouter}
-                  className="w-full py-3 bg-neon-blue/20 text-neon-blue border border-neon-blue/30 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-neon-blue/30 transition-colors"
+          {/* Modal: Register New Router */}
+          <AnimatePresence>
+            {showAddRouterModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="bg-[#1e293b] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-left"
                 >
-                  {addingRouter ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Save Router
-                </button>
-              </form>
-            </div>
-          )}
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Plus className="text-neon-blue" size={20} /> Register New Router
+                    </h3>
+                    <button 
+                      onClick={() => setShowAddRouterModal(false)}
+                      className="text-gray-400 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleAddRouter} className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-300 mb-1.5">Router Name</label>
+                      <input name="name" required placeholder="e.g. Core MikroTik" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">IP Address / Domain</label>
+                        <input name="ipAddress" required placeholder="e.g. bd2.mikrovpn.xyz" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">API REST Port</label>
+                        <input name="apiPort" type="number" defaultValue="13065" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Username</label>
+                        <input name="username" defaultValue="admin" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Password</label>
+                        <input name="password" type="password" required placeholder="password" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                      </div>
+                    </div>
+
+                    {/* Footer Buttons */}
+                    <div className="flex justify-end gap-3 pt-4 border-t border-white/10 bg-white/2 px-6 py-4 -mx-6 -mb-6">
+                      <button 
+                        type="button" 
+                        onClick={() => setShowAddRouterModal(false)}
+                        className="px-5 py-2.5 border border-white/10 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm transition-all cursor-pointer"
+                      >
+                        Close
+                      </button>
+                      <button 
+                        type="submit" 
+                        disabled={addingRouter}
+                        className="px-5 py-2.5 bg-neon-blue text-white hover:bg-neon-blue-600 rounded-xl font-bold text-sm transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                      >
+                        {addingRouter && <Loader2 size={16} className="animate-spin" />}
+                        Save Router
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 

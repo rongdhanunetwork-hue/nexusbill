@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { mikrotiks, users } from "@/db/schema";
 import { getSession, getAdminIdForSession } from "@/lib/auth";
 import { eq, isNull, and } from "drizzle-orm";
+import { syncMikrotikSecrets } from "@/lib/sync";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,11 @@ export async function POST(req: Request) {
     resellerId: session.role === "reseller" ? session.userId : null,
     adminId,
   }).returning();
+
+  // Trigger initial import of secrets from this new router
+  syncMikrotikSecrets(undefined, router.id, true).catch(err => {
+    console.error("Error during initial router secrets import:", err);
+  });
 
   return NextResponse.json(router, { status: 201 });
 }

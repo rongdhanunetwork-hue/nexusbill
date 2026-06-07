@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession, getAdminIdForSession } from "@/lib/auth";
 import { getRouterDetails } from "@/lib/mikrotik";
-// syncMikrotikSecrets removed — auto-importing PPPoE secrets created junk entries
+import { syncMikrotikSecrets } from "@/lib/sync";
 import { db } from "@/db";
 import { users, mikrotiks } from "@/db/schema";
 import { inArray, eq, and } from "drizzle-orm";
@@ -84,7 +84,7 @@ export async function GET(req: Request) {
       try {
         const details = await getRouterDetails(routerId);
         if (details.secrets && details.secrets.length > 0) {
-          // NOTE: syncMikrotikSecrets removed — was creating junk customer entries
+          await syncMikrotikSecrets(details.secrets, routerId);
           allSecrets.push(...details.secrets);
         }
         if (details.active && details.active.length > 0) {
