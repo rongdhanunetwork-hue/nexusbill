@@ -96,8 +96,8 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
               })
               .where(eq(users.id, exists.id));
           }
-        } else if (isInitialImport) {
-          // If not registered, automatically import it ONLY on initial router registration
+        } else {
+          // If not registered, automatically import it
           // Ensure a unique phone number (use the secret name or append random suffix)
           const allDbCustomers = await db.select({ phone: users.phone }).from(users).where(eq(users.role, "customer"));
           const phoneExists = allDbCustomers.some(
@@ -165,11 +165,34 @@ export async function syncCustomerToMikrotik(
       if (pkg) {
         // Normalize speed, e.g. "10 Mbps" -> "10mbps"
         const normSpeed = pkg.speed.toLowerCase().replace(/\s+/g, "");
+        // Extract just the number from speed, e.g. "10 Mbps" -> "10"
+        const speedNumber = pkg.speed.replace(/[^0-9]/g, "");
         try {
           const routerProfiles = await getPppoeProfiles(finalRouterId);
-          const hasProfile = routerProfiles.some(p => p.name.toLowerCase() === normSpeed);
-          if (hasProfile) {
-            profile = normSpeed;
+          
+          // Strategy 1: Exact match on normalized speed (e.g. "10mbps")
+          const exactMatch = routerProfiles.find(p => p.name.toLowerCase() === normSpeed);
+          
+          if (exactMatch) {
+            profile = exactMatch.name;
+          } else if (speedNumber) {
+            // Strategy 2: Match by speed number pattern (e.g. "10" matches "10M-POOL", "10mbps", "10M")
+            // Look for profiles that start with the speed number followed by a non-digit
+            const numberMatch = routerProfiles.find(p => {
+              const pName = p.name.toLowerCase();
+              // Skip "default", "default-encryption", "Expired", "Block" etc.
+              if (pName === "default" || pName === "default-encryption" || pName === "expired" || pName === "block") return false;
+              // Check if profile name starts with the speed number
+              const profileNumber = p.name.replace(/[^0-9]/g, "");
+              return profileNumber === speedNumber;
+            });
+            
+            if (numberMatch) {
+              profile = numberMatch.name;
+              console.log(`[Sync] Profile matched by speed number: "${pkg.speed}" → "${numberMatch.name}" on router ${finalRouterId}`);
+            } else {
+              console.log(`[Sync] ⚠️ No matching profile found for speed "${pkg.speed}" (normalized: "${normSpeed}", number: "${speedNumber}") on router ${finalRouterId}. Available profiles: ${routerProfiles.map(p => p.name).join(', ')}`);
+            }
           }
         } catch (err) {
           console.error("Failed to fetch router profiles in syncCustomerToMikrotik:", err);

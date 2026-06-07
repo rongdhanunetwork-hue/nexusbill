@@ -336,7 +336,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
               <div>
                 <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Select Package</label>
                 <select
-                  value={customer.packageId || ""}
+                  value={selectedPackage ? selectedPackage.id : ""}
                   onChange={(e) => handlePackageChange(e.target.value)}
                   className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
                 >

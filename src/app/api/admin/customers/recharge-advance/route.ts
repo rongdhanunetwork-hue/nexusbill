@@ -146,7 +146,7 @@ export async function POST(req: Request) {
       await syncCustomerToMikrotik(
         customer.pppoeUsername,
         undefined, // password stays same
-        customer.packageId,
+        updateFields.packageId || customer.packageId,
         "active",
         customer.mikrotikId
       );

@@ -1130,6 +1130,66 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                   </tbody>
                 </table>
               </div>
+              {/* Active Sessions Pagination */}
+              {liveData && liveData.active.length > 0 && (
+                <div className="p-4 border-t border-white/10 bg-white/2 flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <div className="text-xs text-gray-400">
+                    Showing <span className="font-semibold text-white">{(Math.min(activePage, Math.max(1, Math.ceil(liveData.active.length / activePageSize))) - 1) * activePageSize + 1}</span> to{" "}
+                    <span className="font-semibold text-white">
+                      {Math.min(Math.min(activePage, Math.max(1, Math.ceil(liveData.active.length / activePageSize))) * activePageSize, liveData.active.length)}
+                    </span>{" "}
+                    of <span className="font-semibold text-white">{liveData.active.length}</span> sessions
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setActivePage((prev) => Math.max(prev - 1, 1))}
+                      disabled={Math.min(activePage, Math.max(1, Math.ceil(liveData.active.length / activePageSize))) === 1}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all cursor-pointer"
+                    >
+                      Previous
+                    </button>
+                    
+                    {(() => {
+                      const totalPages = Math.ceil(liveData.active.length / activePageSize);
+                      const currentActPage = Math.min(activePage, totalPages);
+                      const pages = [];
+                      const maxVisible = 5;
+                      
+                      let start = Math.max(1, currentActPage - 2);
+                      let end = Math.min(totalPages, start + maxVisible - 1);
+                      
+                      if (end - start < maxVisible - 1) {
+                        start = Math.max(1, end - maxVisible + 1);
+                      }
+                      
+                      for (let i = start; i <= end; i++) {
+                        pages.push(
+                          <button
+                            key={i}
+                            onClick={() => setActivePage(i)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                              currentActPage === i
+                                ? "bg-neon-blue text-slate-950 font-bold border-neon-blue shadow-lg shadow-neon-blue/20"
+                                : "bg-white/5 hover:bg-white/10 border-white/10 text-gray-300 hover:text-white"
+                            }`}
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+                      return pages;
+                    })()}
+                    
+                    <button
+                      onClick={() => setActivePage((prev) => Math.min(prev + 1, Math.ceil(liveData.active.length / activePageSize)))}
+                      disabled={Math.min(activePage, Math.max(1, Math.ceil(liveData.active.length / activePageSize))) === Math.ceil(liveData.active.length / activePageSize)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
