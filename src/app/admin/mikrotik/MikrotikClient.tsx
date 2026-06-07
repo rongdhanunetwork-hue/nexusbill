@@ -99,6 +99,18 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
   const [liveLoading, setLiveLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Pagination states for Live Tab tables
+  const [secretsPage, setSecretsPage] = useState(1);
+  const [activePage, setActivePage] = useState(1);
+  const secretsPageSize = 10;
+  const activePageSize = 10;
+
+  // Reset page numbers when router changes
+  useEffect(() => {
+    setSecretsPage(1);
+    setActivePage(1);
+  }, [selectedRouterId]);
+
   // Edit secret state
   const [editingSecret, setEditingSecret] = useState<PppoeSecret | null>(null);
   const [editSecretForm, setEditSecretForm] = useState({ password: "", profile: "" });
@@ -924,75 +936,143 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                       <td colSpan={5} className="p-8 text-center text-gray-500">No PPPoE users on router.</td>
                     </tr>
                   ) : (
-                    liveData?.secrets.map((secret) => {
-                      const isOnline = activeNames.has(secret.name);
-                      const isDisabled = secret.disabled === "true";
-                      const isActioning = actionLoading === secret[".id"];
-                      return (
-                        <tr key={secret[".id"]} className="hover:bg-white/5 transition-colors">
-                          <td className="p-4 text-white font-mono font-semibold">{secret.name}</td>
-                          <td className="p-4 text-gray-300 text-sm">{secret.profile || "default"}</td>
-                          <td className="p-4">
-                            {isOnline ? (
-                              <span className="flex items-center gap-1.5 text-neon-green text-sm">
-                                <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
-                                Online
+                    (() => {
+                      const totalSecrets = liveData?.secrets || [];
+                      const totalSecretsPages = Math.max(1, Math.ceil(totalSecrets.length / secretsPageSize));
+                      const currentSecretsPage = Math.min(secretsPage, totalSecretsPages);
+                      const startIndex = (currentSecretsPage - 1) * secretsPageSize;
+                      const paginatedSecrets = totalSecrets.slice(startIndex, startIndex + secretsPageSize);
+
+                      return paginatedSecrets.map((secret) => {
+                        const isOnline = activeNames.has(secret.name);
+                        const isDisabled = secret.disabled === "true";
+                        const isActioning = actionLoading === secret[".id"];
+                        return (
+                          <tr key={secret[".id"]} className="hover:bg-white/5 transition-colors">
+                            <td className="p-4 text-white font-mono font-semibold">{secret.name}</td>
+                            <td className="p-4 text-gray-300 text-sm">{secret.profile || "default"}</td>
+                            <td className="p-4">
+                              {isOnline ? (
+                                <span className="flex items-center gap-1.5 text-neon-green text-sm">
+                                  <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
+                                  Online
+                                </span>
+                              ) : (
+                                <span className="text-gray-500 text-sm">Offline</span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase ${isDisabled ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-neon-green/20 text-neon-green border border-neon-green/30"}`}>
+                                {isDisabled ? <><WifiOff size={10} /> Disabled</> : <><Wifi size={10} /> Enabled</>}
                               </span>
-                            ) : (
-                              <span className="text-gray-500 text-sm">Offline</span>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase ${isDisabled ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-neon-green/20 text-neon-green border border-neon-green/30"}`}>
-                              {isDisabled ? <><WifiOff size={10} /> Disabled</> : <><Wifi size={10} /> Enabled</>}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            {(role === "admin" || role === "reseller") ? (
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => toggleUser(secret)}
-                                  disabled={isActioning}
-                                  title={isDisabled ? "Enable" : "Disable"}
-                                  className={`flex items-center justify-center p-2 rounded-lg border transition-colors disabled:opacity-50 ${isDisabled
-                                    ? "bg-neon-green/20 text-neon-green border-neon-green/30 hover:bg-neon-green/30"
-                                    : "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
-                                    }`}
-                                >
-                                  {isActioning ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                  ) : (
-                                    <Power size={14} />
-                                  )}
-                                </button>
-                                <button
-                                  onClick={() => startEditSecret(secret)}
-                                  disabled={isActioning}
-                                  title="Edit User"
-                                  className="flex items-center justify-center p-2 rounded-lg bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 transition-colors disabled:opacity-50"
-                                >
-                                  <Edit size={14} />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteSecret(secret[".id"], secret.name)}
-                                  disabled={isActioning}
-                                  title="Delete User from Router"
-                                  className="flex items-center justify-center p-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/35 transition-colors disabled:opacity-50"
-                                >
-                                  <Trash size={14} />
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-gray-500 font-mono">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
+                            </td>
+                            <td className="p-4">
+                              {(role === "admin" || role === "reseller") ? (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => toggleUser(secret)}
+                                    disabled={isActioning}
+                                    title={isDisabled ? "Enable" : "Disable"}
+                                    className={`flex items-center justify-center p-2 rounded-lg border transition-colors disabled:opacity-50 ${isDisabled
+                                      ? "bg-neon-green/20 text-neon-green border-neon-green/30 hover:bg-neon-green/30"
+                                      : "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
+                                      }`}
+                                  >
+                                    {isActioning ? (
+                                      <Loader2 size={14} className="animate-spin" />
+                                    ) : (
+                                      <Power size={14} />
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => startEditSecret(secret)}
+                                    disabled={isActioning}
+                                    title="Edit User"
+                                    className="flex items-center justify-center p-2 rounded-lg bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 transition-colors disabled:opacity-50"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteSecret(secret[".id"], secret.name)}
+                                    disabled={isActioning}
+                                    title="Delete User from Router"
+                                    className="flex items-center justify-center p-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/35 transition-colors disabled:opacity-50"
+                                  >
+                                    <Trash size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-gray-500 font-mono">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()
                   )}
                 </tbody>
               </table>
             </div>
+            {/* Secrets Pagination */}
+            {liveData && liveData.secrets.length > 0 && (
+              <div className="p-4 border-t border-white/10 bg-white/2 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="text-xs text-gray-400">
+                  Showing <span className="font-semibold text-white">{(Math.min(secretsPage, Math.max(1, Math.ceil(liveData.secrets.length / secretsPageSize))) - 1) * secretsPageSize + 1}</span> to{" "}
+                  <span className="font-semibold text-white">
+                    {Math.min(Math.min(secretsPage, Math.max(1, Math.ceil(liveData.secrets.length / secretsPageSize))) * secretsPageSize, liveData.secrets.length)}
+                  </span>{" "}
+                  of <span className="font-semibold text-white">{liveData.secrets.length}</span> secrets
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setSecretsPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={Math.min(secretsPage, Math.max(1, Math.ceil(liveData.secrets.length / secretsPageSize))) === 1}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  
+                  {(() => {
+                    const totalPages = Math.ceil(liveData.secrets.length / secretsPageSize);
+                    const currentSecPage = Math.min(secretsPage, totalPages);
+                    const pages = [];
+                    const maxVisible = 5;
+                    
+                    let start = Math.max(1, currentSecPage - 2);
+                    let end = Math.min(totalPages, start + maxVisible - 1);
+                    
+                    if (end - start < maxVisible - 1) {
+                      start = Math.max(1, end - maxVisible + 1);
+                    }
+                    
+                    for (let i = start; i <= end; i++) {
+                      pages.push(
+                        <button
+                          key={i}
+                          onClick={() => setSecretsPage(i)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                            currentSecPage === i
+                              ? "bg-neon-blue text-slate-950 font-bold border-neon-blue shadow-lg shadow-neon-blue/20"
+                              : "bg-white/5 hover:bg-white/10 border-white/10 text-gray-300 hover:text-white"
+                          }`}
+                        >
+                          {i}
+                        </button>
+                      );
+                    }
+                    return pages;
+                  })()}
+                  
+                  <button
+                    onClick={() => setSecretsPage((prev) => Math.min(prev + 1, Math.ceil(liveData.secrets.length / secretsPageSize)))}
+                    disabled={Math.min(secretsPage, Math.max(1, Math.ceil(liveData.secrets.length / secretsPageSize))) === Math.ceil(liveData.secrets.length / secretsPageSize)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Active online sessions table */}
@@ -1014,31 +1094,39 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {liveData.active.map((session) => (
-                      <tr key={session[".id"]} className="hover:bg-white/5">
-                        <td className="p-4 text-white font-mono">{session.name}</td>
-                        <td className="p-4 text-neon-blue font-mono text-sm">{session.address}</td>
-                        <td className="p-4 text-gray-300 text-sm">{session.uptime}</td>
-                        <td className="p-4 text-gray-400 text-xs font-mono">{session["caller-id"]}</td>
-                        {(role === "admin" || role === "reseller") && (
-                          <td className="p-4 text-right">
-                            <button
-                              onClick={() => handleDisconnectActive(session[".id"], session.name)}
-                              disabled={actionLoading === session[".id"]}
-                              title="Disconnect Session (Force Reconnect)"
-                              className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors disabled:opacity-50 inline-flex items-center gap-1 text-xs font-semibold"
-                            >
-                              {actionLoading === session[".id"] ? (
-                                <Loader2 size={12} className="animate-spin" />
-                              ) : (
-                                <LogOut size={12} />
-                              )}
-                              Kick
-                            </button>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
+                    {(() => {
+                      const totalActive = liveData.active || [];
+                      const totalActivePages = Math.max(1, Math.ceil(totalActive.length / activePageSize));
+                      const currentActivePage = Math.min(activePage, totalActivePages);
+                      const startIndex = (currentActivePage - 1) * activePageSize;
+                      const paginatedActive = totalActive.slice(startIndex, startIndex + activePageSize);
+
+                      return paginatedActive.map((session) => (
+                        <tr key={session[".id"]} className="hover:bg-white/5">
+                          <td className="p-4 text-white font-mono">{session.name}</td>
+                          <td className="p-4 text-neon-blue font-mono text-sm">{session.address}</td>
+                          <td className="p-4 text-gray-300 text-sm">{session.uptime}</td>
+                          <td className="p-4 text-gray-400 text-xs font-mono">{session["caller-id"]}</td>
+                          {(role === "admin" || role === "reseller") && (
+                            <td className="p-4 text-right">
+                              <button
+                                onClick={() => handleDisconnectActive(session[".id"], session.name)}
+                                disabled={actionLoading === session[".id"]}
+                                title="Disconnect Session (Force Reconnect)"
+                                className="p-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-colors disabled:opacity-50 inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                              >
+                                {actionLoading === session[".id"] ? (
+                                  <Loader2 size={12} className="animate-spin" />
+                                ) : (
+                                  <LogOut size={12} />
+                                )}
+                                Kick
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ));
+                    })()}
                   </tbody>
                 </table>
               </div>
