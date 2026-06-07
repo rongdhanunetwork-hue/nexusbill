@@ -496,7 +496,7 @@ export async function findDeviceOnRouter(routerId: number, opts: { ip?: string; 
       const leases = await client.write(["/ip/dhcp-server/lease/print"]);
       for (const l of leases as any[]) {
         const lIp = String(l.address || "").toLowerCase();
-        const lMac = String(l.mac-address || l.mac || "").toLowerCase().replace(/[:\-]/g, "");
+        const lMac = String(l["mac-address"] || l.mac || "").toLowerCase().replace(/[:\-]/g, "");
         if ((ip && lIp === ip) || (mac && lMac === mac)) {
           return { type: 'dhcp-lease', routerId, entry: l };
         }

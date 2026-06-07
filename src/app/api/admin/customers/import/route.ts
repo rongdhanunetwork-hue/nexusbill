@@ -133,7 +133,7 @@ export async function POST(req: Request) {
     }
     for (const [key, dupes] of pppoeMap) {
       if (dupes.length > 1) {
-        dupes.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+        dupes.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         const keepId = dupes[0].id;
         for (let i = 1; i < dupes.length; i++) {
           await db.delete(users).where(eq(users.id, dupes[i].id)).catch(() => {});

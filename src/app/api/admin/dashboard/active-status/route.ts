@@ -57,7 +57,7 @@ export async function GET() {
         try {
           return await getPppoeActive(routerId);
         } catch (err) {
-          console.error(`Attempt ${i+1} failed for router ${routerId}:`, err?.message || err);
+          console.error(`Attempt ${i+1} failed for router ${routerId}:`, err instanceof Error ? err.message : String(err));
           if (i < attempts - 1) await new Promise(r => setTimeout(r, 1000));
         }
       }

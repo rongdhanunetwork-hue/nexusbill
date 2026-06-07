@@ -19,7 +19,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const customer = await db.query.users.findFirst({
       where: eq(users.id, customerId),
-      columns: { status: true, pppoeUsername: true, onuMac: true, routerModel: true, ipAddress: true, macAddress: true }
+      columns: { status: true, pppoeUsername: true, onuMac: true, routerModel: true, ipAddress: true, macAddress: true, mikrotikId: true }
     });
 
     if (!customer) return NextResponse.json({ error: "Customer not found" }, { status: 404 });
