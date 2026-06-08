@@ -124,23 +124,7 @@ export default function CustomersClient({
     setCustomersList(allCustomers);
   }, [allCustomers]);
 
-  // Load paginated customers from server to avoid fetching full dataset client-side
-  useEffect(() => {
-    const loadPaged = async () => {
-      try {
-        const res = await fetch('/api/admin/customers?page=1&pageSize=200');
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setCustomersList(data);
-        } else if (data && Array.isArray(data.items)) {
-          setCustomersList(data.items);
-        }
-      } catch (e) {
-        // ignore and keep initial list
-      }
-    };
-    loadPaged();
-  }, []);
+  // loadPaged removed to prevent overwriting allCustomers with partial data
 
   useEffect(() => {
     const refreshData = () => {
@@ -274,8 +258,8 @@ export default function CustomersClient({
   const filteredCustomers = useMemo(() => {
     return customersList.filter((customer) => {
     const matchesSearch =
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone.includes(searchTerm) ||
+      (customer.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (customer.phone || "").includes(searchTerm) ||
       (customer.pppoeUsername || "").toLowerCase().includes(searchTerm.toLowerCase());
 
     const samePppoeCustomers = customersList
@@ -1261,10 +1245,10 @@ const handleImportSubmit = async () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#1e293b] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-left"
+              className="bg-[#1e293b] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-left flex flex-col max-h-[90vh]"
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5">
+              <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5 shrink-0">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <Zap size={18} className="text-neon-green" /> রিচার্জ করুন
                 </h3>
@@ -1276,7 +1260,7 @@ const handleImportSubmit = async () => {
                 </button>
               </div>
 
-              <form onSubmit={handleRechargeSubmit} className="p-6 space-y-5">
+              <form onSubmit={handleRechargeSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
                 {/* Customer Details Table Info */}
                 <div className="overflow-hidden rounded-xl border border-white/5 bg-slate-900/60 text-xs">
                   <table className="w-full text-left border-collapse">

@@ -18,7 +18,7 @@ async function getRouterConfig(routerId?: number) {
         };
       }
     } catch (err) {
-      console.error(`Failed to load router config for ID ${routerId}:`, err);
+      console.warn(`Failed to load router config for ID ${routerId}:`, err);
     }
   }
   return {
@@ -39,7 +39,7 @@ async function getClient(routerId?: number) {
     timeout: parseInt(process.env.MIKROTIK_API_TIMEOUT || '8'),
   });
   client.on("error", (err) => {
-    console.error("MikroTik socket error caught:", err);
+    console.warn("MikroTik socket error caught:", err.message);
   });
   return client;
 }
@@ -83,7 +83,7 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
     if (data && data.length > 0) return data[0] as unknown as SystemResource;
     return null;
   } catch (err) {
-    console.error('getSystemResource error:', err);
+    console.warn('getSystemResource error:', err);
     return null;
   } finally {
     try { await client.close(); } catch {}
@@ -385,7 +385,7 @@ export async function getPppoeTraffic(username: string, routerId?: number): Prom
     }
     return { rxBps: 0, txBps: 0, bytesIn, bytesOut };
   } catch (err) {
-    console.error("getPppoeTraffic error:", err);
+    console.warn("getPppoeTraffic error:", err);
     try {
       const client2 = await getClient(routerId);
       await client2.connect();
@@ -403,7 +403,7 @@ export async function getPppoeTraffic(username: string, routerId?: number): Prom
         };
       }
     } catch (err2) {
-      console.error("getPppoeTraffic fallback error:", err2);
+      console.warn("getPppoeTraffic fallback error:", err2);
     }
     return null;
   } finally {
@@ -454,7 +454,7 @@ export async function getRouterDetails(routerId?: number): Promise<{
       status: { ok: true, version: (resourceData[0] as any)?.version },
     };
   } catch (err) {
-    console.error("getRouterDetails error:", err);
+    console.warn("getRouterDetails error:", String(err));
     return {
       secrets: [],
       active: [],
@@ -521,7 +521,7 @@ export async function findDeviceOnRouter(routerId: number, opts: { ip?: string; 
 
     return null;
   } catch (err) {
-    console.error('findDeviceOnRouter error:', err);
+    console.warn('findDeviceOnRouter error:', err);
     return null;
   } finally {
     try { await client.close(); } catch {}
@@ -543,11 +543,11 @@ export async function findDeviceAcrossRouters(opts: { ip?: string; mac?: string 
         }
       } catch (e) {
         // continue to next router
-        console.error(`Error scanning router ${r.id}`, e);
+        console.warn(`Error scanning router ${r.id}`, e);
       }
     }
   } catch (err) {
-    console.error('findDeviceAcrossRouters error:', err);
+    console.warn('findDeviceAcrossRouters error:', err);
   }
   return null;
 }
@@ -581,7 +581,7 @@ export async function suspendUsers(usernames: string[], routerId?: number): Prom
       }
     }
   } catch (err) {
-    console.error("suspendUsers error:", err);
+    console.warn("suspendUsers error:", err);
   } finally {
     try {
       await client.close();

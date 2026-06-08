@@ -27,7 +27,7 @@ async function deleteCustomer(formData: FormData) {
       try {
         await syncDeleteCustomerFromMikrotik(customer.pppoeUsername, customer.mikrotikId);
       } catch (err) {
-        console.error("Failed to remove customer from MikroTik on delete:", err);
+        console.warn("Failed to remove customer from MikroTik on delete:", err);
       }
     }
     await db.delete(users).where(eq(users.id, id));
@@ -50,18 +50,18 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
     .then((routers) => {
       for (const r of routers) {
         syncMikrotikSecrets(undefined, r.id).catch((err) => {
-          console.error(`Background MikroTik sync error on router ${r.id}:`, err);
+          console.warn(`Background MikroTik sync error on router ${r.id}:`, err);
         });
       }
       // If admin is default admin (adminId = 1), also sync the default router (null)
       if (session.userId === 1) {
         syncMikrotikSecrets(undefined, null).catch((err) => {
-          console.error("Background MikroTik sync error on default router:", err);
+          console.warn("Background MikroTik sync error on default router:", err);
         });
       }
     })
     .catch((err) => {
-      console.error("Failed to fetch routers for background sync:", err);
+      console.warn("Failed to fetch routers for background sync:", err);
     });
 
   const allCustomers = await db.query.users.findMany({

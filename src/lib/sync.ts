@@ -29,12 +29,12 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
       const activeRouters = await db.select({ id: mikrotiks.id }).from(mikrotiks).where(eq(mikrotiks.status, true));
       for (const router of activeRouters) {
         await syncMikrotikSecrets(undefined, router.id, isInitialImport).catch((err) => {
-          console.error(`Error syncing secrets for router ${router.id}:`, err);
+          console.warn(`Error syncing secrets for router ${router.id}:`, err);
         });
       }
       // Also run for default router (routerId = null)
       await syncMikrotikSecrets(undefined, null, isInitialImport).catch((err) => {
-        console.error("Error syncing default router secrets:", err);
+        console.warn("Error syncing default router secrets:", err);
       });
       return;
     }
@@ -127,7 +127,7 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
       globalForSync.__isSyncingSecrets = false;
     }
   } catch (err) {
-    console.error("Auto-sync MikroTik secrets error:", err);
+    console.warn("Auto-sync MikroTik secrets error:", err);
   }
 }
 
@@ -195,7 +195,7 @@ export async function syncCustomerToMikrotik(
             }
           }
         } catch (err) {
-          console.error("Failed to fetch router profiles in syncCustomerToMikrotik:", err);
+          console.warn("Failed to fetch router profiles in syncCustomerToMikrotik:", err);
         }
       }
     }
@@ -235,10 +235,10 @@ export async function syncCustomerToMikrotik(
         console.log(`Kicked active session for "${pppoeUsername}" to apply changes instantly on router ${finalRouterId}.`);
       }
     } catch (err) {
-      console.error(`Failed to disconnect active session for "${pppoeUsername}" on router ${finalRouterId}:`, err);
+      console.warn(`Failed to disconnect active session for "${pppoeUsername}" on router ${finalRouterId}:`, err);
     }
   } catch (err) {
-    console.error(`Failed to sync customer "${pppoeUsername}" to MikroTik:`, err);
+    console.warn(`Failed to sync customer "${pppoeUsername}" to MikroTik:`, err);
   }
 }
 
@@ -264,7 +264,7 @@ export async function syncDeleteCustomerFromMikrotik(pppoeUsername: string, rout
       console.log(`Successfully deleted MikroTik secret for "${pppoeUsername}" on router ${finalRouterId}`);
     }
   } catch (err) {
-    console.error(`Failed to delete MikroTik secret for "${pppoeUsername}":`, err);
+    console.warn(`Failed to delete MikroTik secret for "${pppoeUsername}":`, err);
   }
 }
 
@@ -317,7 +317,7 @@ export async function checkAndSuspendExpiredUsers() {
       console.log(`[Expiration Checker] Suspended user: ${user.name} (PPPoE: ${user.pppoeUsername || "N/A"})`);
     }
   } catch (err) {
-    console.error("[Expiration Checker] Error checking expired users:", err);
+    console.warn("[Expiration Checker] Error checking expired users:", err);
   }
 }
 
@@ -331,7 +331,7 @@ function loadSessionCache(): Map<string, { bytesIn: number; bytesOut: number; up
       return new Map(Object.entries(parsed));
     }
   } catch (err) {
-    console.error("Failed to load session traffic cache:", err);
+    console.warn("Failed to load session traffic cache:", err);
   }
   return new Map();
 }
@@ -341,7 +341,7 @@ function saveSessionCache(cache: Map<string, { bytesIn: number; bytesOut: number
     const obj = Object.fromEntries(cache.entries());
     fs.writeFileSync(CACHE_FILE, JSON.stringify(obj, null, 2), "utf-8");
   } catch (err) {
-    console.error("Failed to save session traffic cache:", err);
+    console.warn("Failed to save session traffic cache:", err);
   }
 }
 
@@ -388,7 +388,7 @@ export async function trackCustomerDataUsage() {
       await trackRouterUsage(undefined);
     }
   } catch (err) {
-    console.error("trackCustomerDataUsage error:", err);
+    console.warn("trackCustomerDataUsage error:", err);
   }
 }
 
@@ -517,7 +517,7 @@ async function trackRouterUsage(routerId?: number) {
       saveSessionCache(lastSessionTraffic);
     }
   } catch (err) {
-    console.error(`trackRouterUsage error for router ${routerId}:`, err);
+    console.warn(`trackRouterUsage error for router ${routerId}:`, err);
   }
 }
 
@@ -525,19 +525,19 @@ export function startExpirationChecker() {
   console.log("[Expiration Checker] Initializing background tasks (runs every 30s)...");
   // Run immediately on boot
   checkAndSuspendExpiredUsers().catch(err => {
-    console.error("[Expiration Checker] Initial run failed:", err);
+    console.warn("[Expiration Checker] Initial run failed:", err);
   });
   trackCustomerDataUsage().catch(err => {
-    console.error("[Data Usage Accumulator] Initial run failed:", err);
+    console.warn("[Data Usage Accumulator] Initial run failed:", err);
   });
 
   // Setup interval
   setInterval(() => {
     checkAndSuspendExpiredUsers().catch(err => {
-      console.error("[Expiration Checker] Interval run failed:", err);
+      console.warn("[Expiration Checker] Interval run failed:", err);
     });
     trackCustomerDataUsage().catch(err => {
-      console.error("[Data Usage Accumulator] Interval run failed:", err);
+      console.warn("[Data Usage Accumulator] Interval run failed:", err);
     });
   }, 30000); // 30 seconds
 }

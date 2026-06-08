@@ -39,7 +39,7 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
       }
     }
   } catch (err) {
-    console.error("Failed to check active session and secrets for user in profile page:", err);
+    console.warn("Failed to check active session and secrets for user in profile page:", err);
   }
 
   const customerPayments = await db.query.payments.findMany({ where: eq(payments.userId, customerId), orderBy: [desc(payments.createdAt)], limit: 8 });
