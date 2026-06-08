@@ -231,7 +231,7 @@ export default function CustomersClient({
 
   const [statusFilter, setStatusFilter] = useState(getInitialStatus());
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
 
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
 
@@ -825,19 +825,22 @@ const handleImportSubmit = async () => {
         <table className="w-full text-left border-collapse min-w-[900px]">
           <thead>
             <tr className="border-b border-white/10 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-white/5">
-              <th className="p-5 w-16 text-center no-print-col">
-                <input
-                  type="checkbox"
-                  checked={paginatedCustomers.length > 0 && paginatedCustomers.every(c => selectedCustomerIds.includes(c.id))}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedCustomerIds(paginatedCustomers.map(c => c.id));
-                    } else {
-                      setSelectedCustomerIds([]);
-                    }
-                  }}
-                  className="rounded bg-slate-850 border-white/15 text-neon-blue focus:ring-neon-blue focus:ring-1 cursor-pointer w-4 h-4"
-                />
+              <th className="p-5 w-24 no-print-col">
+                <div className="flex items-center gap-3 justify-center">
+                  <input
+                    type="checkbox"
+                    checked={paginatedCustomers.length > 0 && paginatedCustomers.every(c => selectedCustomerIds.includes(c.id))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedCustomerIds(paginatedCustomers.map(c => c.id));
+                      } else {
+                        setSelectedCustomerIds([]);
+                      }
+                    }}
+                    className="rounded bg-slate-850 border-white/15 text-neon-blue focus:ring-neon-blue focus:ring-1 cursor-pointer w-4 h-4"
+                  />
+                  <span className="text-gray-500 w-4 text-center">#</span>
+                </div>
               </th>
               <th className="p-5">মোবাইল/ঠিকানা (Customer Info)</th>
               <th className="p-5">প্যাকেজ (Connection/Package)</th>
@@ -880,19 +883,24 @@ const handleImportSubmit = async () => {
                         className="hover:bg-white/5 transition-colors group"
                       >
                         {/* Checkbox Column */}
-                        <td className="p-5 text-center no-print-col">
-                          <input
-                            type="checkbox"
-                            checked={selectedCustomerIds.includes(customer.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedCustomerIds(prev => [...prev, customer.id]);
-                              } else {
-                                setSelectedCustomerIds(prev => prev.filter(id => id !== customer.id));
-                              }
-                            }}
-                            className="rounded bg-slate-850 border-white/15 text-neon-blue focus:ring-neon-blue focus:ring-1 cursor-pointer w-4 h-4"
-                          />
+                        <td className="p-5 no-print-col">
+                          <div className="flex items-center gap-3 justify-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedCustomerIds.includes(customer.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedCustomerIds(prev => [...prev, customer.id]);
+                                } else {
+                                  setSelectedCustomerIds(prev => prev.filter(id => id !== customer.id));
+                                }
+                              }}
+                              className="rounded bg-slate-850 border-white/15 text-neon-blue focus:ring-neon-blue focus:ring-1 cursor-pointer w-4 h-4"
+                            />
+                            <span className="text-gray-400 font-mono text-[10px] w-4 text-left">
+                              {(currentPage - 1) * pageSize + index + 1}
+                            </span>
+                          </div>
                         </td>
 
                       {/* 1. Customer Info */}
@@ -1177,15 +1185,34 @@ const handleImportSubmit = async () => {
       </div>
 
       {/* Pagination Controls */}
-      {filteredCustomers.length > pageSize && (
-        <div className="flex items-center justify-between p-5 border-t border-white/5 bg-white/2 no-print-col mt-4">
-          <div className="text-xs text-gray-400">
+      <div className="flex items-center justify-between p-5 border-t border-white/5 bg-white/2 no-print-col mt-4">
+        <div className="flex items-center gap-4 text-xs text-gray-400">
+          <div>
             Showing <span className="font-semibold text-white">{(currentPage - 1) * pageSize + 1}</span> to{" "}
             <span className="font-semibold text-white">
               {Math.min(currentPage * pageSize, filteredCustomers.length)}
             </span>{" "}
             of <span className="font-semibold text-white">{filteredCustomers.length}</span> customers
           </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="pageSizeSelect">Rows per page:</label>
+            <select
+              id="pageSizeSelect"
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="bg-slate-900 border border-white/10 rounded px-2 py-1 text-white focus:outline-none focus:border-neon-blue"
+            >
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={500}>500</option>
+              <option value={1000000}>All</option>
+            </select>
+          </div>
+        </div>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -1235,7 +1262,6 @@ const handleImportSubmit = async () => {
             </button>
           </div>
         </div>
-      )}
 
       {/* 4th Image - Advanced Recharge Popup Modal */}
       <AnimatePresence>

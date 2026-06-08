@@ -10,9 +10,9 @@
     "uptime": "2h24m34s"
   },
   "0-rdn-amanat-1042": {
-    "bytesIn": 0,
-    "bytesOut": 0,
-    "uptime": "49m50s"
+    "bytesIn": 132924,
+    "bytesOut": 385931,
+    "uptime": "17m26s"
   },
   "0-rdn-3": {
     "bytesIn": 393920530,
@@ -1293,5 +1293,15 @@
     "bytesIn": 352490,
     "bytesOut": 3211170,
     "uptime": "10m57s"
+  },
+  "0-rdn-1": {
+    "bytesIn": 40758987,
+    "bytesOut": 323804819,
+    "uptime": "27m9s"
+  },
+  "3-rdn-amanat-1042": {
+    "bytesIn": 136110,
+    "bytesOut": 391687,
+    "uptime": "25m23s"
   }
 }
