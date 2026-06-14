@@ -3,7 +3,8 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
-import { getPppoeSecrets, syncCustomerToMikrotik } from "@/lib/sync";
+import { syncCustomerToMikrotik } from "@/lib/sync";
+import { getPppoeSecrets } from "@/lib/mikrotik";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();

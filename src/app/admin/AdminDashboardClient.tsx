@@ -374,7 +374,7 @@ export default function AdminDashboardClient({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}
               className="glass-card p-5 flex items-center gap-4 hover:-translate-y-1 transition-all cursor-pointer select-none h-full"
-              onClick={stat.onClick}
+              onClick={(stat as any).onClick}
             >
               <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center ${stat.color} shadow-lg ${stat.glow}`}>
                 <stat.icon size={24} />
@@ -388,7 +388,7 @@ export default function AdminDashboardClient({
           if (stat.href) {
             return <Link href={stat.href} key={stat.name} className="block">{cardContent}</Link>;
           }
-          return <div key={stat.name} className="block" onClick={stat.onClick}>{cardContent}</div>;
+          return <div key={stat.name} className="block" onClick={(stat as any).onClick}>{cardContent}</div>;
         })}
       </div>
 
