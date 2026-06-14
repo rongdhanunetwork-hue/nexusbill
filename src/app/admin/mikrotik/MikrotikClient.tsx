@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Router, RadioTower, Activity, Wifi, WifiOff, Plus, Power,
   RefreshCw, CheckCircle2, AlertTriangle, Loader2, Server, Trash, ShieldAlert,
-  Edit, LogOut, X, FileText
+  Edit, LogOut, X, FileText, DatabaseBackup
 } from "lucide-react";
 import { usePopup } from "@/components/ui/PopupProvider";
 
@@ -125,6 +125,7 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
   const [addingRouter, setAddingRouter] = useState(false);
   const [editingRouter, setEditingRouter] = useState<RouterDb | null>(null);
   const [testingRouterId, setTestingRouterId] = useState<number | null>(null);
+  const [restoringRouterId, setRestoringRouterId] = useState<number | null>(null);
   const [showAddRouterModal, setShowAddRouterModal] = useState(false);
 
   // OLTs tab states
@@ -500,6 +501,36 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
       }
     } catch {
       showToast("Network error", false);
+    }
+  }
+
+  async function handleRestoreUsers(id: number) {
+    const isConfirm = await showConfirm({
+      title: "Restore Missing Users",
+      message: "Are you sure you want to recreate all missing database users on this router?",
+      confirmText: "Restore",
+    });
+    if (!isConfirm) return;
+
+    showToast("Restoring users, please wait...", true);
+    setRestoringRouterId(id);
+
+    try {
+      const res = await fetch(`/api/admin/mikrotik/routers/${id}/restore`, { method: "POST" });
+      const d = await res.json();
+      if (res.ok) {
+        showToast(d.message || "Users restored successfully!", true);
+        if (d.restoredCount > 0) {
+          fetchRouters();
+          if (activeTab === "live" && selectedRouterId === id) fetchLiveData();
+        }
+      } else {
+        showToast(d.error || "Failed to restore users", false);
+      }
+    } catch {
+      showToast("Network error while restoring", false);
+    } finally {
+      setRestoringRouterId(null);
     }
   }
 
@@ -1299,6 +1330,14 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                               className="p-1.5 border border-sky-500/30 text-sky-400 hover:bg-sky-500/10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                             >
                               {testingRouterId === router.id ? <Loader2 size={15} className="animate-spin" /> : <Activity size={15} />}
+                            </button>
+                            <button
+                              onClick={() => handleRestoreUsers(router.id)}
+                              disabled={restoringRouterId === router.id}
+                              title="Restore Missing Users"
+                              className="p-1.5 border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                            >
+                              {restoringRouterId === router.id ? <Loader2 size={15} className="animate-spin" /> : <DatabaseBackup size={15} />}
                             </button>
                             <button
                               onClick={() => handleToggleRouter(router.id, router.status)}

@@ -53,11 +53,15 @@ export async function POST(req: Request) {
     let newExpireDate: Date;
 
     if (customExpireDate) {
-      newExpireDate = new Date(customExpireDate);
+      let d = customExpireDate;
+      if (typeof d === 'string' && !d.includes('Z') && !d.includes('+')) d += '+06:00';
+      newExpireDate = new Date(d);
     } else {
       let baseDate = new Date();
       if (customBaseDate) {
-        baseDate = new Date(customBaseDate);
+        let d = customBaseDate;
+        if (typeof d === 'string' && !d.includes('Z') && !d.includes('+')) d += '+06:00';
+        baseDate = new Date(d);
       } else {
         const isCustomerActive = customer.status === "active" && customer.expireDate && new Date(customer.expireDate) > baseDate;
         if (isCustomerActive && renewBack) {
@@ -69,7 +73,7 @@ export async function POST(req: Request) {
       const numDuration = Number(duration) || 1;
 
       if (billingType === "monthly") {
-        newExpireDate.setMonth(newExpireDate.getMonth() + numDuration);
+        newExpireDate.setDate(newExpireDate.getDate() + (numDuration * 30));
       } else {
         newExpireDate.setDate(newExpireDate.getDate() + numDuration);
       }

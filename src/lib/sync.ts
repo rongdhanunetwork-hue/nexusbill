@@ -242,8 +242,36 @@ export async function syncCustomerToMikrotik(
   }
 }
 
-export async function syncDeleteCustomerFromMikrotik(pppoeUsername: string, routerId?: number | null) {
+export async function syncDeleteCustomerFromMikrotik(pppoeUsername: string, routerId?: number | null, excludeIds?: number[]) {
   try {
+    // 1. Safety check to prevent deleting secrets that are still in use by other customers (e.g., due to duplicate PPPoE usernames)
+    if (pppoeUsername) {
+      let countQuery;
+      if (excludeIds && excludeIds.length > 0) {
+        // Find if there are any other customers using this PPPoE username EXCEPT the ones being deleted
+        const { notInArray, eq, and, sql } = require("drizzle-orm");
+        countQuery = db.select({ count: sql<number>`cast(count(*) as int)` })
+          .from(users)
+          .where(and(eq(users.pppoeUsername, pppoeUsername), notInArray(users.id, excludeIds)));
+      } else {
+        // If excludeIds is not provided, we assume this is called BEFORE db.delete. 
+        // So there should be at most 1 user (the one being deleted) for it to be safe to delete.
+        const { eq, sql } = require("drizzle-orm");
+        countQuery = db.select({ count: sql<number>`cast(count(*) as int)` })
+          .from(users)
+          .where(eq(users.pppoeUsername, pppoeUsername));
+      }
+
+      const countResult = await countQuery;
+      const count = countResult[0]?.count || 0;
+      const threshold = (excludeIds && excludeIds.length > 0) ? 0 : 1;
+
+      if (count > threshold) {
+        console.log(`[Safety Check] Skipping MikroTik secret deletion for "${pppoeUsername}". Reason: ID is still in use by other active customers in the database.`);
+        return;
+      }
+    }
+
     const user = await db.query.users.findFirst({
       where: eq(users.pppoeUsername, pppoeUsername),
       columns: { mikrotikId: true, adminId: true }

@@ -23,7 +23,7 @@ async function deleteCustomer(formData: FormData) {
 
     if (customer.pppoeUsername) {
       try {
-        await syncDeleteCustomerFromMikrotik(customer.pppoeUsername);
+        await syncDeleteCustomerFromMikrotik(customer.pppoeUsername, customer.mikrotikId, [id]);
       } catch (err) {
         console.error("Failed to remove customer from MikroTik on delete:", err);
       }

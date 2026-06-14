@@ -56,16 +56,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.photoUrl !== undefined) updateData.photoUrl = body.photoUrl || null;
     if (body.nidUrl !== undefined) updateData.nidUrl = body.nidUrl || null;
     if (body.nidNumber !== undefined) updateData.nidNumber = body.nidNumber?.trim() || null;
-    if (body.createdAt !== undefined) updateData.createdAt = body.createdAt ? new Date(body.createdAt + (body.createdAt.includes('Z') ? '' : 'Z')) : null;
-    if (body.expireDate !== undefined) updateData.expireDate = body.expireDate ? new Date(body.expireDate + (body.expireDate.includes('Z') ? '' : 'Z')) : null;
-    if (body.dob !== undefined) updateData.dob = body.dob ? new Date(body.dob + (body.dob.includes('Z') ? '' : 'Z')) : null;
+    const parseLocalTime = (dateStr: any) => {
+      if (!dateStr) return null;
+      let d = String(dateStr);
+      if (!d.includes('Z') && !d.includes('+')) d += '+06:00';
+      return new Date(d);
+    };
+
+    if (body.createdAt !== undefined) updateData.createdAt = parseLocalTime(body.createdAt);
+    if (body.expireDate !== undefined) updateData.expireDate = parseLocalTime(body.expireDate);
+    if (body.dob !== undefined) updateData.dob = parseLocalTime(body.dob);
     if (body.status) updateData.status = body.status;
     if (body.approvalStatus) updateData.approvalStatus = body.approvalStatus;
     if (body.mikrotikId !== undefined) updateData.mikrotikId = body.mikrotikId ? Number(body.mikrotikId) : null;
     if (body.areaId !== undefined) updateData.areaId = body.areaId ? Number(body.areaId) : null;
     if (body.customerType !== undefined) updateData.customerType = body.customerType || "pppoe";
     if (body.connectionFee !== undefined) updateData.connectionFee = body.connectionFee ? String(body.connectionFee) : "0";
-    if (body.promiseDate !== undefined) updateData.promiseDate = body.promiseDate ? new Date(body.promiseDate + (body.promiseDate.includes('Z') ? '' : 'Z')) : null;
+    if (body.promiseDate !== undefined) updateData.promiseDate = parseLocalTime(body.promiseDate);
     if (body.note !== undefined) updateData.note = body.note || null;
     if (body.balance !== undefined) updateData.balance = body.balance ? String(body.balance) : "0";
     if (body.autoRenew !== undefined) updateData.autoRenew = Boolean(body.autoRenew);
@@ -104,7 +111,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
       if (oldUsername && oldUsername !== newUsername) {
         // Username changed or removed. Delete the old secret.
-        await syncDeleteCustomerFromMikrotik(oldUsername, oldCustomer.mikrotikId);
+        await syncDeleteCustomerFromMikrotik(oldUsername, oldCustomer.mikrotikId, [customerId]);
       }
 
       if (newUsername) {
@@ -156,7 +163,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
   if (customer.pppoeUsername) {
     // Delete secret from MikroTik
-    await syncDeleteCustomerFromMikrotik(customer.pppoeUsername, customer.mikrotikId);
+    await syncDeleteCustomerFromMikrotik(customer.pppoeUsername, customer.mikrotikId, [customerId]);
   }
 
   await db.delete(users).where(eq(users.id, customerId));

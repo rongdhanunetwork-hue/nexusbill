@@ -222,6 +222,7 @@ export default function CustomersClient({
     if (initialStatus === "new_month") return "New This Month";
     if (initialStatus === "paid_month") return "Paid (Month)";
     if (initialStatus === "unpaid_month") return "Unpaid (Month)";
+    if (initialStatus === "today_expire") return "Today Expiring";
     const formatted = initialStatus.charAt(0).toUpperCase() + initialStatus.slice(1).toLowerCase();
     if (["All Status", "Active", "Online", "Offline", "Expired", "Upcoming"].includes(formatted)) {
       return formatted;
@@ -287,12 +288,9 @@ export default function CustomersClient({
       displayStatus = "offline";
     }
 
-    const isUpcoming = customer.status === "active" && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
-
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    const isNewThisMonth = customer.createdAt && new Date(customer.createdAt) >= startOfMonth;
+    const isUpcoming = !isExpired && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
+    const isTodayExpiring = customer.expireDate ? new Date(customer.expireDate).toDateString() === new Date().toDateString() : false;
+    const isNewThisMonth = customer.createdAt && new Date(customer.createdAt).getMonth() === new Date().getMonth() && new Date(customer.createdAt).getFullYear() === new Date().getFullYear();
 
     const matchesStatus =
       statusFilter === "All Status" ||
@@ -301,6 +299,7 @@ export default function CustomersClient({
       (statusFilter === "Offline" && displayStatus === "offline") ||
       (statusFilter === "Expired" && isExpired) ||
       (statusFilter === "Upcoming" && isUpcoming) ||
+      (statusFilter === "Today Expiring" && isTodayExpiring) ||
       (statusFilter === "Auto Renew Enabled" && customer.autoRenew === true) ||
       (statusFilter === "New This Month" && !!isNewThisMonth) ||
       (statusFilter === "Paid (Month)" && customer.status === "active" && !isExpired) ||
@@ -395,8 +394,15 @@ export default function CustomersClient({
       }
       setCustomBaseDate(defaultBase);
 
+      const isStartingToday = defaultBase === todayStr;
       const expDateObj = new Date(defaultBase);
-      expDateObj.setMonth(expDateObj.getMonth() + 1);
+      // ISP standard: 30 days fixed. If starting today, day 1 is today, so we add 29 to end on the 30th day.
+      if (isStartingToday) {
+        expDateObj.setDate(expDateObj.getDate() + 29);
+      } else {
+        expDateObj.setDate(expDateObj.getDate() + 30);
+      }
+      
       const yyyy = expDateObj.getFullYear();
       const mm = String(expDateObj.getMonth() + 1).padStart(2, '0');
       const dd = String(expDateObj.getDate()).padStart(2, '0');
@@ -785,6 +791,7 @@ const handleImportSubmit = async () => {
             <option value="Online" className="bg-slate-800">Online Now</option>
             <option value="Offline" className="bg-slate-800">Offline</option>
             <option value="Expired" className="bg-slate-800">Expired</option>
+            <option value="Today Expiring" className="bg-slate-800">Today Expiring</option>
             <option value="Upcoming" className="bg-slate-800">Upcoming Expire (7 Days)</option>
             <option value="Auto Renew Enabled" className="bg-slate-800">Auto Renew Enabled</option>
             <option value="New This Month" className="bg-slate-800">New This Month</option>
@@ -821,7 +828,7 @@ const handleImportSubmit = async () => {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto min-h-[400px]">
         <table className="w-full text-left border-collapse min-w-[900px]">
           <thead>
             <tr className="border-b border-white/10 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-white/5">
@@ -1437,10 +1444,15 @@ const handleImportSubmit = async () => {
                         // Recalculate expiry date automatically
                         if (newBase) {
                           const expDateObj = new Date(newBase);
+                          const todayStr = new Date().toISOString().split("T")[0];
+                          const isStartingToday = newBase === todayStr;
+                          
                           if (billingType === "monthly") {
-                            expDateObj.setMonth(expDateObj.getMonth() + 1);
+                            expDateObj.setDate(expDateObj.getDate() + (isStartingToday ? 29 : 30));
                           } else {
-                            expDateObj.setDate(expDateObj.getDate() + (parseInt(rechargeDays) || 1));
+                            const days = parseInt(rechargeDays) || 1;
+                            const daysToAdd = isStartingToday && days > 0 ? days - 1 : days;
+                            expDateObj.setDate(expDateObj.getDate() + Math.max(0, daysToAdd));
                           }
                           const yyyy = expDateObj.getFullYear();
                           const mm = String(expDateObj.getMonth() + 1).padStart(2, '0');
@@ -1489,8 +1501,12 @@ const handleImportSubmit = async () => {
                         // Dynamically update customExpireDate based on number of days from baseDate
                         if (customBaseDate) {
                           const base = new Date(customBaseDate);
+                          const todayStr = new Date().toISOString().split("T")[0];
+                          const isStartingToday = customBaseDate === todayStr;
                           const numDays = parseInt(daysVal) || 0;
-                          base.setDate(base.getDate() + numDays);
+                          const daysToAdd = isStartingToday && numDays > 0 ? numDays - 1 : numDays;
+                          
+                          base.setDate(base.getDate() + Math.max(0, daysToAdd));
                           const yyyy = base.getFullYear();
                           const mm = String(base.getMonth() + 1).padStart(2, '0');
                           const dd = String(base.getDate()).padStart(2, '0');

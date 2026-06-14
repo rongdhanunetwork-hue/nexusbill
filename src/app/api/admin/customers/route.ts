@@ -190,7 +190,7 @@ export async function DELETE(req: Request) {
     for (const customer of targetCustomers) {
       if (customer.pppoeUsername) {
         try {
-          await syncDeleteCustomerFromMikrotik(customer.pppoeUsername, customer.mikrotikId);
+          await syncDeleteCustomerFromMikrotik(customer.pppoeUsername, customer.mikrotikId, validIds);
         } catch (err) {
           console.error(`Failed to delete MikroTik secret for ${customer.pppoeUsername}:`, err);
         }
