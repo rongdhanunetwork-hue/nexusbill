@@ -11,7 +11,6 @@ interface Admin {
   phone: string;
   address: string | null;
   status: string;
-  status: string;
   createdAt: string | null;
   expireDate: string | null;
 }

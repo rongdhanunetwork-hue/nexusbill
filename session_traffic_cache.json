@@ -1300,19 +1300,19 @@
     "uptime": "38m44s"
   },
   "3-rdn-amanat-1042": {
-    "bytesIn": 189866467,
-    "bytesOut": 1920145984,
-    "uptime": "2h30s"
+    "bytesIn": 191773491,
+    "bytesOut": 1948188994,
+    "uptime": "2h9m32s"
   },
   "3-rdn-1": {
-    "bytesIn": 86094106,
-    "bytesOut": 1749690537,
-    "uptime": "1h22m42s"
+    "bytesIn": 92731661,
+    "bytesOut": 1852378880,
+    "uptime": "1h31m44s"
   },
   "3-rdn-mojib-1020": {
-    "bytesIn": 25999212,
-    "bytesOut": 89830802,
-    "uptime": "2h30s"
+    "bytesIn": 26000364,
+    "bytesOut": 89832318,
+    "uptime": "2h9m32s"
   },
   "0-rdn-mojib-1020": {
     "bytesIn": 25993568,
