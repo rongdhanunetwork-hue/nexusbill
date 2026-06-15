@@ -38,7 +38,8 @@ export async function POST(req: Request) {
     
     let newExpireDate = new Date(baseDate);
     const durationDays = customer.package?.durationDays || 30;
-    newExpireDate.setDate(newExpireDate.getDate() + durationDays);
+    newExpireDate.setDate(newExpireDate.getDate() + (durationDays - 1));
+    newExpireDate.setHours(23, 59, 59, 999);
 
     // Update customer DB
     await db.update(users)

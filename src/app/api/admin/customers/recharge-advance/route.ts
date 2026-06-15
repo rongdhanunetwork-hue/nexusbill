@@ -72,11 +72,15 @@ export async function POST(req: Request) {
       newExpireDate = new Date(baseDate);
       const numDuration = Number(duration) || 1;
 
+      let daysToAdd = 0;
       if (billingType === "monthly") {
-        newExpireDate.setDate(newExpireDate.getDate() + (numDuration * 30));
+        daysToAdd = numDuration * 30;
       } else {
-        newExpireDate.setDate(newExpireDate.getDate() + numDuration);
+        daysToAdd = numDuration;
       }
+      
+      newExpireDate.setDate(newExpireDate.getDate() + (daysToAdd - 1));
+      newExpireDate.setHours(23, 59, 59, 999);
     }
 
     // If Reseller, deduct balance

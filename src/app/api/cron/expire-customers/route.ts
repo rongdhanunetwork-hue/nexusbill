@@ -45,7 +45,8 @@ export async function GET(req: NextRequest) {
           // Calculate new expire date based on package duration
           const durationDays = customer.package?.durationDays || 30;
           const newExpireDate = new Date(customer.expireDate || now);
-          newExpireDate.setDate(newExpireDate.getDate() + durationDays);
+          newExpireDate.setDate(newExpireDate.getDate() + (durationDays - 1));
+          newExpireDate.setHours(23, 59, 59, 999);
 
           await db.update(users)
             .set({ 

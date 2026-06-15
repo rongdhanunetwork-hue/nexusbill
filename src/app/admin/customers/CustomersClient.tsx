@@ -249,8 +249,8 @@ export default function CustomersClient({
     if (!expireDate) return null;
     const exp = new Date(expireDate);
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    exp.setHours(0, 0, 0, 0);
+    // Do not zero out hours. We want the exact difference so that
+    // expiration at 23:59:59 yields exactly N days left.
     const diffTime = exp.getTime() - today.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
@@ -278,7 +278,7 @@ export default function CustomersClient({
     const daysLeft = getDaysLeft(customer.expireDate);
     // Only mark as expired if status is explicitly 'expired' OR has a past expireDate
     // NOT having expireDate with status='active' means new/not-yet-billed — NOT expired
-    const isExpired = customer.status === "expired" || (customer.expireDate && daysLeft !== null && daysLeft < 0);
+    const isExpired = customer.status === "expired" || (customer.expireDate && daysLeft !== null && daysLeft <= 0);
 
     let displayStatus: "online" | "active" | "offline" = "offline";
     if (activeSession) {

@@ -564,20 +564,29 @@ export async function suspendUsers(usernames: string[], routerId?: number): Prom
 
     for (const username of lowerUsernames) {
       const secret = secrets.find(s => s.name.toLowerCase() === username);
-      if (secret) {
-        await client.write([
-          "/ppp/secret/set",
-          `=.id=${secret[".id"]}`,
-          "=disabled=yes",
-        ]);
+      if (secret && secret.disabled !== "true") {
+        try {
+          await client.write([
+            "/ppp/secret/set",
+            `=.id=${secret[".id"]}`,
+            "=disabled=yes",
+          ]);
+        } catch (e) {
+          console.warn(`Failed to disable secret for ${username}:`, e);
+        }
       }
       
       const session = active.find(s => s.name.toLowerCase() === username);
       if (session) {
-        await client.write([
-          "/ppp/active/remove",
-          `=.id=${session[".id"]}`,
-        ]);
+        try {
+          await client.write([
+            "/ppp/active/remove",
+            `=.id=${session[".id"]}`,
+          ]);
+          console.log(`Successfully kicked active session for ${username}`);
+        } catch (e) {
+          console.warn(`Failed to remove active session for ${username}:`, e);
+        }
       }
     }
   } catch (err) {
