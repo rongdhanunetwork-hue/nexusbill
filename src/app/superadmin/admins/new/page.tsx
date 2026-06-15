@@ -20,6 +20,7 @@ export default function AddAdminPage() {
     const phone = String(form.get("phone") || "").trim();
     const password = String(form.get("password") || "").trim();
     const address = String(form.get("address") || "").trim();
+    const validityDays = parseInt(String(form.get("validityDays") || "30"));
 
     if (!name || !phone || !password || password.length < 6) {
       setError("All fields required. Password must be at least 6 characters.");
@@ -32,7 +33,7 @@ export default function AddAdminPage() {
     const res = await fetch("/api/superadmin/admins", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone, password, address }),
+      body: JSON.stringify({ name, phone, password, address, validityDays }),
     });
 
     const data = await res.json();
@@ -77,6 +78,13 @@ export default function AddAdminPage() {
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Address</label>
             <input name="address" placeholder="Admin address (optional)"
+              className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Account Validity (Days) *</label>
+            <input name="validityDays" type="number" required defaultValue="30" min="1"
               className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
           </div>

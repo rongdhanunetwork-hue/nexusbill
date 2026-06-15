@@ -14,7 +14,7 @@ export default function EditAdminPage({ params }: { params: Promise<{ id: string
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
-  const [admin, setAdmin] = useState<{ name: string; phone: string; address: string | null } | null>(null);
+  const [admin, setAdmin] = useState<{ name: string; phone: string; address: string | null; expireDate?: string | null } | null>(null);
 
   useEffect(() => {
     async function loadAdmin() {
@@ -43,6 +43,7 @@ export default function EditAdminPage({ params }: { params: Promise<{ id: string
     const phone = String(form.get("phone") || "").trim();
     const address = String(form.get("address") || "").trim();
     const newPassword = String(form.get("newPassword") || "").trim();
+    const validityDaysStr = String(form.get("validityDays") || "").trim();
 
     if (!name || !phone) {
       setError("Name and Phone number are required.");
@@ -57,10 +58,15 @@ export default function EditAdminPage({ params }: { params: Promise<{ id: string
     setLoading(true);
     setError(null);
 
+    const payload: any = { id: Number(id), name, phone, address, newPassword: newPassword || undefined };
+    if (validityDaysStr) {
+      payload.validityDays = parseInt(validityDaysStr);
+    }
+
     const res = await fetch("/api/superadmin/admins", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: Number(id), name, phone, address, newPassword: newPassword || undefined }),
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json();
@@ -115,6 +121,18 @@ export default function EditAdminPage({ params }: { params: Promise<{ id: string
             <input name="address" defaultValue={admin?.address || ""} placeholder="Admin address (optional)"
               className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">New Account Validity (Days)</label>
+            <input name="validityDays" type="number" min="0" placeholder="Leave blank to keep current validity"
+              className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            {admin?.expireDate && (
+               <p className="text-xs text-gray-400 mt-2">
+                 Current Expiration: {new Date(admin.expireDate).toLocaleDateString()}
+               </p>
+            )}
           </div>
 
           <div>

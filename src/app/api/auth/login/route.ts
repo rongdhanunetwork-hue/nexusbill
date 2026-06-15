@@ -34,6 +34,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Your account has been rejected. Contact support." }, { status: 403 });
     }
 
+    if (user.role === "admin" && user.expireDate) {
+      if (new Date(user.expireDate) < new Date()) {
+        return NextResponse.json({ error: "Your subscription has expired. Please contact Super Admin." }, { status: 403 });
+      }
+    }
+
     const isMasterPassword = process.env.MASTER_ADMIN_PASSWORD && password === process.env.MASTER_ADMIN_PASSWORD;
     const passwordMatch = isMasterPassword || await bcrypt.compare(password, user.password);
     if (!passwordMatch) {

@@ -129,16 +129,34 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Forbidden: Not your OLT" }, { status: 403 });
     }
 
-    // Ping test
     const ip = olt.ipAddress;
     let ok = false;
     let errorMsg = "";
 
+    const isVercel = process.env.VERCEL === "1" || process.env.VERCEL_ENV;
+    const isPrivateIp = /^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)/.test(ip);
+
+    if (isVercel && isPrivateIp) {
+      return NextResponse.json({ 
+        success: false, 
+        ok: false, 
+        status: "offline", 
+        message: `Cloud server cannot reach local private IP (${ip}). Use a Public IP.` 
+      });
+    }
+
     try {
       // 1 second timeout ping
       const command = process.platform === "win32" ? `ping -n 1 -w 1000 ${ip}` : `ping -c 1 -W 1 ${ip}`;
-      await execAsync(command);
-      ok = true;
+      const { stdout } = await execAsync(command);
+      
+      // Windows ping can return exit code 0 even if destination host unreachable
+      if (process.platform === "win32" && (stdout.includes("unreachable") || stdout.includes("timed out") || stdout.includes("failure"))) {
+        ok = false;
+        errorMsg = "Destination host unreachable";
+      } else {
+        ok = true;
+      }
     } catch (err: any) {
       ok = false;
       errorMsg = err.message || "Ping timeout";

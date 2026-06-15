@@ -7,6 +7,8 @@ import { Plus, Trash, Zap } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
+import SyncPackagesButton from "@/components/admin/SyncPackagesButton";
+
 export const dynamic = "force-dynamic";
 
 async function deletePackage(formData: FormData) {
@@ -57,7 +59,10 @@ export default async function PackagesPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-white tracking-wide">Package Management</h1>
-        <Link href="/admin/packages/new" className="bg-neon-blue/20 text-neon-blue border border-neon-blue/50 px-4 py-2 rounded-lg font-medium hover:bg-neon-blue/30 flex items-center gap-2"><Plus size={20} /> Create Package</Link>
+        <div className="flex items-center gap-3">
+          <SyncPackagesButton />
+          <Link href="/admin/packages/new" className="bg-neon-blue/20 text-neon-blue border border-neon-blue/50 px-4 py-2 rounded-lg font-medium hover:bg-neon-blue/30 flex items-center gap-2"><Plus size={20} /> Create Package</Link>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

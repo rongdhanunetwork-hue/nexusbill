@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     if (isNaN(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     const admin = await db.query.users.findFirst({
       where: eq(users.id, id),
-      columns: { id: true, name: true, phone: true, address: true, role: true, status: true, createdAt: true },
+      columns: { id: true, name: true, phone: true, address: true, role: true, status: true, createdAt: true, expireDate: true },
     });
     if (!admin || admin.role !== "admin") return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(admin);
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
   const admins = await db.query.users.findMany({
     where: eq(users.role, "admin"),
     orderBy: [desc(users.createdAt)],
-    columns: { id: true, name: true, phone: true, address: true, status: true, createdAt: true },
+    columns: { id: true, name: true, phone: true, address: true, status: true, createdAt: true, expireDate: true },
   });
 
   return NextResponse.json(admins);
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   const session = await checkSuperAdmin();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { name, phone, password, address } = await req.json();
+  const { name, phone, password, address, validityDays } = await req.json();
   if (!name || !phone || !password || password.length < 6) {
     return NextResponse.json({ error: "Invalid data. Password must be at least 6 characters." }, { status: 400 });
   }
@@ -52,6 +52,13 @@ export async function POST(req: Request) {
   if (existing) return NextResponse.json({ error: "Phone number already registered." }, { status: 409 });
 
   const hashed = await bcrypt.hash(password, 12);
+  
+  let expireDate = null;
+  if (validityDays) {
+    expireDate = new Date();
+    expireDate.setDate(expireDate.getDate() + parseInt(validityDays));
+  }
+
   const [newAdmin] = await db.insert(users).values({
     name: name.trim(),
     phone: phone.trim(),
@@ -61,6 +68,7 @@ export async function POST(req: Request) {
     approvalStatus: "approved",
     status: "active",
     walletBalance: "0",
+    expireDate: expireDate,
   }).returning({ id: users.id, name: users.name });
 
   return NextResponse.json({ success: true, admin: newAdmin });
@@ -71,7 +79,7 @@ export async function PATCH(req: Request) {
   const session = await checkSuperAdmin();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id, status, name, phone, address, newPassword } = await req.json();
+  const { id, status, name, phone, address, newPassword, validityDays } = await req.json();
   if (!id) return NextResponse.json({ error: "Missing admin ID" }, { status: 400 });
 
   const updateData: Record<string, any> = {};
@@ -81,6 +89,15 @@ export async function PATCH(req: Request) {
   if (address !== undefined) updateData.address = address;
   if (newPassword && newPassword.length >= 6) {
     updateData.password = await bcrypt.hash(newPassword, 12);
+  }
+  if (validityDays !== undefined) {
+    if (validityDays) {
+      const exp = new Date();
+      exp.setDate(exp.getDate() + parseInt(validityDays));
+      updateData.expireDate = exp;
+    } else {
+      updateData.expireDate = null;
+    }
   }
 
   await db.update(users).set(updateData).where(eq(users.id, id));

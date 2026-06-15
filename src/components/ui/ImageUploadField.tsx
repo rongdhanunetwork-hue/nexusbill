@@ -67,6 +67,9 @@ export default function ImageUploadField({ label, name, defaultValue, onChange }
           {uploading ? "Uploading..." : value ? "Image Uploaded Successfully" : "Select Image"}
         </label>
         
+        
+        <p className="text-[10px] text-gray-500 font-medium">Images are automatically resized and optimized (max 800x800px).</p>
+        
         {value && (
           <div className="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded-xl w-full max-w-sm">
             <div className="flex items-center gap-3">

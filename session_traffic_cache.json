@@ -10,9 +10,9 @@
     "uptime": "2h24m34s"
   },
   "0-rdn-amanat-1042": {
-    "bytesIn": 406029216,
-    "bytesOut": 7659574666,
-    "uptime": "3h17m12s"
+    "bytesIn": 13181756,
+    "bytesOut": 290751198,
+    "uptime": "29m41s"
   },
   "0-rdn-3": {
     "bytesIn": 393920530,
@@ -1295,18 +1295,23 @@
     "uptime": "10m57s"
   },
   "0-rdn-1": {
-    "bytesIn": 250950122,
-    "bytesOut": 1367526437,
-    "uptime": "3h17m10s"
+    "bytesIn": 71439006,
+    "bytesOut": 1223864721,
+    "uptime": "29m56s"
   },
   "3-rdn-amanat-1042": {
-    "bytesIn": 468254652,
-    "bytesOut": 9029630421,
-    "uptime": "3h40m43s"
+    "bytesIn": 18205139,
+    "bytesOut": 374766755,
+    "uptime": "1h6m43s"
   },
   "3-rdn-1": {
-    "bytesIn": 267101667,
-    "bytesOut": 1593253721,
-    "uptime": "3h40m41s"
+    "bytesIn": 109922831,
+    "bytesOut": 1983329628,
+    "uptime": "1h6m58s"
+  },
+  "3-rdn-mojib-1020": {
+    "bytesIn": 8262376,
+    "bytesOut": 31054115,
+    "uptime": "31m4s"
   }
 }

@@ -11,7 +11,9 @@ interface Admin {
   phone: string;
   address: string | null;
   status: string;
+  status: string;
   createdAt: string | null;
+  expireDate: string | null;
 }
 
 export default function SuperAdminAdminsPage() {
@@ -142,6 +144,7 @@ export default function SuperAdminAdminsPage() {
                 <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Admin</th>
                 <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Phone</th>
                 <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Validity</th>
                 <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Created</th>
                 <th className="text-right px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -176,6 +179,18 @@ export default function SuperAdminAdminsPage() {
                       }}>
                       {admin.status?.toUpperCase() || "ACTIVE"}
                     </span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    {(() => {
+                      if (!admin.expireDate) return <span className="text-xs text-gray-500">—</span>;
+                      const exp = new Date(admin.expireDate);
+                      const isExpired = exp < new Date();
+                      return (
+                        <span className={`text-xs font-semibold ${isExpired ? "text-red-400" : "text-neon-green"}`}>
+                          {exp.toLocaleDateString()} {isExpired ? "(Expired)" : ""}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-5 py-3.5 text-xs text-gray-500">
                     {admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : "—"}

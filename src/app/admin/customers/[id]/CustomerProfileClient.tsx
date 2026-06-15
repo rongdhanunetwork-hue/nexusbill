@@ -191,6 +191,22 @@ const [billType, setBillType] = useState<"bill" | "advance">("bill");
   const [resolvedRouterLoading, setResolvedRouterLoading] = useState(false);
   const [resolvedRouterError, setResolvedRouterError] = useState<string | null>(null);
   
+  const macForVendor = activeSession?.["caller-id"] || customer.macAddress;
+  const [macVendor, setMacVendor] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (macForVendor) {
+      fetch(`/api/admin/tools/mac-vendor?mac=${encodeURIComponent(macForVendor)}`)
+        .then(res => res.json())
+        .then(data => {
+           if (data.vendor && data.vendor !== "Unknown") {
+              setMacVendor(data.vendor);
+           }
+        })
+        .catch(() => {});
+    }
+  }, [macForVendor]);
+  
   const handleRechargeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rechargeCustomer) return;
@@ -943,7 +959,7 @@ useEffect(() => {
             <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
               <div className="flex-1">
                 <p className="text-xs text-gray-400 uppercase font-semibold">WiFi Router Brand</p>
-                <p className="font-semibold text-white mt-0.5">{wifiRouterVendor || wifiRouterModel}</p>
+                <p className="font-semibold text-white mt-0.5">{macVendor || wifiRouterVendor || (wifiRouterModel !== "Unknown" ? wifiRouterModel : null) || customer.routerModel || "Unknown"}</p>
               </div>
               <Wifi size={20} className="text-gray-500" />
             </div>

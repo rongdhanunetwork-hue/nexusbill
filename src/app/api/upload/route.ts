@@ -19,11 +19,21 @@ export async function POST(req: Request) {
     await mkdir(uploadDir, { recursive: true });
 
     // Generate unique filename
-    const ext = file.name.split(".").pop();
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${ext}`;
     const filepath = join(uploadDir, filename);
 
-    await writeFile(filepath, buffer);
+    // Only resize image formats
+    if (["jpg", "jpeg", "png", "webp"].includes(ext)) {
+      const sharp = require("sharp");
+      const resizedBuffer = await sharp(buffer)
+        .resize({ width: 800, height: 800, fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+      await writeFile(filepath, resizedBuffer);
+    } else {
+      await writeFile(filepath, buffer);
+    }
     const fileUrl = `/uploads/${filename}`;
 
     return NextResponse.json({ success: true, url: fileUrl });
