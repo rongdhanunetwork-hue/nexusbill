@@ -1523,8 +1523,8 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                           <span className="text-white font-bold">{olt.webPort || 80} ({olt.protocol || "HTTP"})</span>
                         </div>
                         <div className="flex justify-between items-center py-1">
-                          <span className="text-gray-500">Telnet Port:</span>
-                          <span className="text-white font-bold">{olt.connectionPort || 23}</span>
+                          <span className="text-gray-500">SNMP Port:</span>
+                          <span className="text-white font-bold">{olt.connectionPort || 161}</span>
                         </div>
                       </div>
                     </div>
@@ -1609,8 +1609,8 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                         <input name="ipAddress" required placeholder="e.g. 192.168.1.100" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Telnet Port</label>
-                        <input name="connectionPort" type="number" defaultValue="23" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">SNMP Port (e.g. 161)</label>
+                        <input name="connectionPort" type="number" defaultValue="161" required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
                       </div>
                     </div>
 
@@ -1752,8 +1752,8 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                         <input name="ipAddress" defaultValue={editingOlt.ipAddress} required placeholder="e.g. 192.168.1.100" className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">Telnet Port</label>
-                        <input name="connectionPort" type="number" defaultValue={editingOlt.connectionPort || 23} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
+                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">SNMP Port (e.g. 161)</label>
+                        <input name="connectionPort" type="number" defaultValue={editingOlt.connectionPort || 161} required className="w-full glass-input px-4 py-2.5 bg-slate-800 text-sm text-white" />
                       </div>
                     </div>
 

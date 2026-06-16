@@ -56,7 +56,8 @@ export async function POST(req: Request) {
   let expireDate = null;
   if (validityDays) {
     expireDate = new Date();
-    expireDate.setDate(expireDate.getDate() + parseInt(validityDays));
+    expireDate.setDate(expireDate.getDate() + (parseInt(validityDays) - 1));
+    expireDate.setHours(23, 59, 59, 999);
   }
 
   const [newAdmin] = await db.insert(users).values({
@@ -93,7 +94,8 @@ export async function PATCH(req: Request) {
   if (validityDays !== undefined) {
     if (validityDays) {
       const exp = new Date();
-      exp.setDate(exp.getDate() + parseInt(validityDays));
+      exp.setDate(exp.getDate() + (parseInt(validityDays) - 1));
+      exp.setHours(23, 59, 59, 999);
       updateData.expireDate = exp;
     } else {
       updateData.expireDate = null;

@@ -23,6 +23,7 @@
     "framer-motion": "^12.40.0",
     "jose": "^6.2.3",
     "lucide-react": "^1.16.0",
+    "net-snmp": "^3.26.3",
     "next": "16.2.5",
     "next-nprogress-bar": "^2.4.7",
     "node-routeros": "^1.6.8",
@@ -37,6 +38,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.17",
+    "@types/net-snmp": "^3.23.0",
     "@types/node": "22.19.15",
     "@types/pg": "8.18.0",
     "@types/react": "19.2.14",

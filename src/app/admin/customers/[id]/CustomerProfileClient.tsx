@@ -5,7 +5,7 @@ import Link from "next/link";
 import { 
   Edit, Phone, MapPin, Wifi, Package, CreditCard, IdCard, 
   ArrowLeft, Download, Upload, Clock, FileText, Activity, 
-  Loader2, Eye, EyeOff, Terminal, RotateCcw, Router, ShieldCheck, CheckCircle2, XCircle, Save, KeyRound, Search, Plus, MoreHorizontal, Zap, Trash, MessageSquare, ShieldAlert, X, Power, DollarSign, Calendar, Percent, RefreshCcw, UserPlus
+  Loader2, Eye, EyeOff, Terminal, RotateCcw, Router, ShieldCheck, CheckCircle2, XCircle, Save, KeyRound, Search, Plus, MoreHorizontal, Zap, Trash, MessageSquare, ShieldAlert, X, Power, DollarSign, Calendar, Percent, RefreshCcw, UserPlus, Server
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
 import { usePopup } from "@/components/ui/PopupProvider";
@@ -44,6 +44,7 @@ interface Customer {
   routerPassword?: string | null;
   routerModel?: string | null;
   mikrotikId?: number | null;
+  mikrotik?: { name: string } | null;
 }
 
 const toLocalDatetimeString = (dateInput: string | Date | null | undefined) => {
@@ -956,6 +957,14 @@ useEffect(() => {
             <Router size={18} className="text-neon-blue" /> Device Information
           </h3>
           <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+              <div className="flex-1">
+                <p className="text-xs text-gray-400 uppercase font-semibold">MikroTik / Company Router</p>
+                <p className="font-semibold text-white mt-0.5">{customer.mikrotik?.name || "Unknown Router"}</p>
+              </div>
+              <Server size={20} className="text-blue-500" />
+            </div>
+
             <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
               <div className="flex-1">
                 <p className="text-xs text-gray-400 uppercase font-semibold">WiFi Router Brand</p>

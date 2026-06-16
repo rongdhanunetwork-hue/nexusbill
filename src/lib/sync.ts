@@ -170,10 +170,15 @@ export async function syncCustomerToMikrotik(
         try {
           const routerProfiles = await getPppoeProfiles(finalRouterId);
           
+          // Strategy 0: Exact match on package name (since packages are synced from Mikrotik profiles)
+          const nameMatch = routerProfiles.find(p => p.name.toLowerCase() === pkg.name.toLowerCase());
+          
           // Strategy 1: Exact match on normalized speed (e.g. "10mbps")
           const exactMatch = routerProfiles.find(p => p.name.toLowerCase() === normSpeed);
           
-          if (exactMatch) {
+          if (nameMatch) {
+            profile = nameMatch.name;
+          } else if (exactMatch) {
             profile = exactMatch.name;
           } else if (speedNumber) {
             // Strategy 2: Match by speed number pattern (e.g. "10" matches "10M-POOL", "10mbps", "10M")

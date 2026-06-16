@@ -81,14 +81,8 @@ export async function GET(req: NextRequest) {
           continue; // Skip the expiration logic below
         }
 
-        // Expiration Logic
-        await db.update(users)
-          .set({ status: "expired" })
-          .where(eq(users.id, customer.id));
-
-        expiredCount++;
-
-        // Disable on MikroTik
+        // Disable on MikroTik FIRST
+        let mikrotikSuccess = true;
         if (customer.pppoeUsername) {
           try {
             const { syncCustomerToMikrotik } = await import("@/lib/sync");
@@ -101,9 +95,23 @@ export async function GET(req: NextRequest) {
             );
             mikrotikCount++;
           } catch (e) {
+            mikrotikSuccess = false;
             errors.push(`MikroTik error for ${customer.name}: ${e}`);
           }
         }
+
+        // If Mikrotik update failed (e.g. router offline due to power cut), 
+        // DO NOT mark as expired in DB so it will be retried on the next cron run
+        if (!mikrotikSuccess) {
+           continue; // Skip DB update and SMS for this user, wait for next run
+        }
+
+        // Expiration Logic in DB (Only happens if Mikrotik was successful or not needed)
+        await db.update(users)
+          .set({ status: "expired" })
+          .where(eq(users.id, customer.id));
+
+        expiredCount++;
 
         // Send SMS notification
         try {

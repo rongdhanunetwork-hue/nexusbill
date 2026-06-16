@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 import { syncMikrotikSecrets, syncDeleteCustomerFromMikrotik } from "@/lib/sync";
+import SyncCustomersButton from "@/components/admin/SyncCustomersButton";
 
 export const dynamic = "force-dynamic";
 
@@ -79,9 +80,12 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-white tracking-wide font-sans">Customer Management</h1>
-        <Link href="/admin/customers/new" className="bg-neon-blue/20 text-neon-blue border border-neon-blue/50 px-5 py-2.5 rounded-xl font-semibold hover:bg-neon-blue/30 flex items-center gap-2 transition-colors no-print">
-          <Plus size={20} /> Add Customer
-        </Link>
+        <div className="flex items-center gap-3">
+          <SyncCustomersButton />
+          <Link href="/admin/customers/new" className="bg-neon-blue/20 text-neon-blue border border-neon-blue/50 px-5 py-2.5 rounded-xl font-semibold hover:bg-neon-blue/30 flex items-center gap-2 transition-colors no-print">
+            <Plus size={20} /> Add Customer
+          </Link>
+        </div>
       </div>
 
       <CustomersClient 

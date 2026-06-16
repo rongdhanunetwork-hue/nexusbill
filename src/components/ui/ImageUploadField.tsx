@@ -12,8 +12,52 @@ export default function ImageUploadField({ label, name, defaultValue, onChange }
     if (!file) return;
 
     setUploading(true);
+
+    // Client-side image resize
+    let finalFile = file;
+    if (file.type.startsWith("image/")) {
+      try {
+        finalFile = await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const MAX_WIDTH = 500;
+            const MAX_HEIGHT = 500;
+            let width = img.width;
+            let height = img.height;
+
+            // Crop to square
+            const minDim = Math.min(width, height);
+            canvas.width = MAX_WIDTH;
+            canvas.height = MAX_HEIGHT;
+            const ctx = canvas.getContext("2d");
+            
+            if (ctx) {
+              const startX = (width - minDim) / 2;
+              const startY = (height - minDim) / 2;
+              ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, MAX_WIDTH, MAX_HEIGHT);
+              
+              canvas.toBlob((blob) => {
+                if (blob) {
+                  resolve(new File([blob], file.name, { type: "image/jpeg" }));
+                } else {
+                  resolve(file);
+                }
+              }, "image/jpeg", 0.85);
+            } else {
+              resolve(file);
+            }
+          };
+          img.onerror = () => resolve(file);
+          img.src = URL.createObjectURL(file);
+        });
+      } catch (err) {
+        console.warn("Client side resize failed", err);
+      }
+    }
+
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", finalFile);
 
     try {
       const res = await fetch("/api/upload", {
@@ -68,7 +112,7 @@ export default function ImageUploadField({ label, name, defaultValue, onChange }
         </label>
         
         
-        <p className="text-[10px] text-gray-500 font-medium">Images are automatically resized and optimized (max 800x800px).</p>
+        <p className="text-[10px] text-gray-500 font-medium">Images are automatically resized and cropped to a perfect square (500x500px).</p>
         
         {value && (
           <div className="flex items-center justify-between p-2 bg-white/5 border border-white/10 rounded-xl w-full max-w-sm">
