@@ -125,6 +125,11 @@ export default function CustomerProfileClient({
   const [showPassword, setShowPassword] = useState(false);
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
   const [rechargeCustomer, setRechargeCustomer] = useState<any | null>(null);
+  const [dueCustomer, setDueCustomer] = useState<any | null>(null);
+  const [dueAmount, setDueAmount] = useState<string>("");
+  const [dueMethod, setDueMethod] = useState<string>("Hand Cash");
+  const [dueNote, setDueNote] = useState<string>("");
+  const [dueLoading, setDueLoading] = useState(false);
 const [billType, setBillType] = useState<"bill" | "advance">("bill");
   const [billingType, setBillingType] = useState<"monthly" | "daily">("monthly");
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
@@ -636,7 +641,7 @@ useEffect(() => {
       {/* 1. Profile & Top Status */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Left Card: Identity */}
-        <div className="glass-card p-6 flex flex-col items-center justify-center relative overflow-hidden">
+        <div className="glass-card p-6 flex flex-col items-center justify-center relative overflow-visible">
           <div className="absolute top-4 left-4 z-50">
             <button
               onClick={() => setActiveDropdownId(activeDropdownId === customer.id ? null : customer.id)}
@@ -645,13 +650,26 @@ useEffect(() => {
               <MoreHorizontal size={18} /> <span className="text-xs font-bold">অ্যাকশন (Actions)</span>
             </button>
             {activeDropdownId === customer.id && (
-              <div className="absolute left-0 mt-2 w-56 rounded-xl bg-slate-900 border border-white/10 shadow-2xl z-50 py-1 text-left overflow-hidden">
+              <div className="absolute left-0 mt-2 w-56 max-h-60 overflow-y-auto custom-scrollbar rounded-xl bg-slate-900 border border-white/10 shadow-2xl z-50 py-1 text-left">
                 <button
                   onClick={() => { setRechargeCustomer(customer); setActiveDropdownId(null); }}
                   className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
                 >
                   <Zap size={13} className="text-neon-green" /> রিচার্জ করুন (Recharge)
                 </button>
+                {role !== "employee" && (
+                  <button
+                    onClick={() => {
+                      setDueCustomer(customer);
+                      const b = parseFloat(customer.balance || "0");
+                      setDueAmount(b < 0 ? Math.abs(b).toString() : "");
+                      setActiveDropdownId(null);
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                  >
+                    <DollarSign size={13} className="text-yellow-400" /> বকেয়া পরিশোধ (Pay Due)
+                  </button>
+                )}
                 <Link 
                   href={"/admin/customers/" + customer.id + "/edit"}
                   className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
@@ -1511,7 +1529,88 @@ useEffect(() => {
         )}
       </AnimatePresence>
 
-      
+      {/* Due Collection Popup Modal */}
+      <AnimatePresence>
+        {dueCustomer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#1e293b] border border-white/10 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden text-left flex flex-col"
+            >
+              <div className="flex items-center justify-between p-5 border-b border-white/10 bg-white/5">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <DollarSign size={18} className="text-yellow-400" /> বকেয়া পরিশোধ (Pay Due)
+                </h3>
+                <button onClick={() => setDueCustomer(null)} className="text-gray-400 hover:text-white transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setDueLoading(true);
+                try {
+                  const res = await fetch("/api/admin/customers/pay-due", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      userId: dueCustomer.id,
+                      amount: parseFloat(dueAmount),
+                      method: dueMethod,
+                      note: dueNote
+                    })
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                    await showAlert({ title: "Success", message: data.message, type: "success" });
+                    setDueCustomer(null);
+                    window.location.reload();
+                  } else {
+                    await showAlert({ title: "Error", message: data.error, type: "error" });
+                  }
+                } catch {
+                  await showAlert({ title: "Error", message: "Network error", type: "error" });
+                } finally {
+                  setDueLoading(false);
+                }
+              }} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1.5">গ্রাহক (Customer)</label>
+                  <input type="text" value={dueCustomer.name} disabled className="w-full glass-input px-3 py-2 bg-slate-800/50 text-xs text-gray-400 cursor-not-allowed border border-white/10" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1.5">পরিমাণ (Amount) *</label>
+                  <input type="number" required min="1" step="0.01" value={dueAmount} onChange={e => setDueAmount(e.target.value)} className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white focus:ring-neon-blue focus:ring-2 border border-white/10" placeholder="e.g. 500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1.5">মাধ্যম (Method)</label>
+                  <select value={dueMethod} onChange={e => setDueMethod(e.target.value)} className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white focus:ring-neon-blue focus:ring-2 border border-white/10">
+                    <option value="Hand Cash">Hand Cash</option>
+                    <option value="bKash">bKash</option>
+                    <option value="Nagad">Nagad</option>
+                    <option value="Bank">Bank</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1.5">নোট (Note)</label>
+                  <input type="text" value={dueNote} onChange={e => setDueNote(e.target.value)} className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white focus:ring-neon-blue focus:ring-2 border border-white/10" placeholder="Optional note" />
+                </div>
+                <div className="pt-4 flex gap-3">
+                  <button type="button" onClick={() => setDueCustomer(null)} className="flex-1 py-2.5 rounded-xl border border-white/10 text-white font-bold text-xs hover:bg-white/5 transition-all">
+                    বাতিল
+                  </button>
+                  <button type="submit" disabled={dueLoading} className="flex-1 py-2.5 rounded-xl bg-neon-blue text-slate-900 font-bold text-xs hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 shadow-lg shadow-neon-blue/20">
+                    {dueLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} 
+                    জমা নিন
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
 {/* Recharge Success Popup Modal */}
       <AnimatePresence>
         {rechargeSuccessMessage && (
