@@ -91,7 +91,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
         <div className="px-4 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(251,191,36,0.12)" }}>
           <div>
             <div className="text-base font-extrabold tracking-tight flex items-center gap-1.5" style={{ color: "#fbbf24" }}>
-              <ShieldCheck size={16} /> NexusBill
+              <ShieldCheck size={16} /> Rongdhunu DOT Net
             </div>
             <div className="text-[10px] font-semibold mt-0.5" style={{ color: "#d97706" }}>★ Super Admin Panel</div>
           </div>

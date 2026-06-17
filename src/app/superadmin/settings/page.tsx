@@ -31,9 +31,9 @@ export default function SuperAdminSettingsPage() {
       if (!res.ok) throw new Error("Failed to load settings");
       const data = await res.json();
       
-      setSystemName(data.system_name || "NexusBill ISP");
-      setAdminEmail(data.admin_email || "admin@nexusbill.com");
-      setAdminSignature(data.admin_signature || "NexusBill Team");
+      setSystemName(data.system_name || "Rongdhunu DOT Net");
+      setAdminEmail(data.admin_email || "admin@Rongdhunu DOT Net.com");
+      setAdminSignature(data.admin_signature || "Rongdhunu DOT Net Team");
       setCompanyLogo(data.company_logo || "");
       setBkashNumber(data.bkash_number || "");
       setBkashNumber2(data.bkash_number_2 || "");

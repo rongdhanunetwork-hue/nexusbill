@@ -177,7 +177,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="px-4 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
           <div>
             <div className="text-base font-extrabold tracking-tight" style={{ color: "#00f3ff", letterSpacing: "-0.02em" }}>
-              NexusBill ISP
+              Rongdhunu DOT Net
             </div>
             <div className="text-[10px] font-semibold mt-0.5" style={{ color: "#8b5cf6" }}>
               ◉ Admin Panel

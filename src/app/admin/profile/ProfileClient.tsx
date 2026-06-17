@@ -65,13 +65,13 @@ const CONTROL_PANEL_FEATURES = [
 export default function ProfileClient({ adminUser, totalCustomers, initialSettings }: Props) {
   const [activeTab, setActiveTab] = useState<"settings" | "profile" | "control_panel" | "qr_code">("profile");
   const [profileName, setProfileName] = useState(adminUser.name);
-  const [companyName, setCompanyName] = useState(initialSettings.system_name || "NexusBill ISP");
-  const [email, setEmail] = useState(initialSettings.admin_email || "admin@nexusbill.com");
+  const [companyName, setCompanyName] = useState(initialSettings.system_name || "Rongdhunu DOT Net");
+  const [email, setEmail] = useState(initialSettings.admin_email || "admin@Rongdhunu DOT Net.com");
   const [phone, setPhone] = useState(adminUser.phone);
   const [photoUrl, setPhotoUrl] = useState(adminUser.photoUrl || "");
   const [companyLogo, setCompanyLogo] = useState(initialSettings.company_logo || "");
   const [address, setAddress] = useState(adminUser.address || "");
-  const [signature, setSignature] = useState(initialSettings.admin_signature || "NexusBill Team");
+  const [signature, setSignature] = useState(initialSettings.admin_signature || "Rongdhunu DOT Net Team");
   
   const [uploadingImage, setUploadingImage] = useState(false);
 

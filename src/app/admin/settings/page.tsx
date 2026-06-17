@@ -170,7 +170,7 @@ export default function SettingsPage() {
           <Field
             label="System Name"
             name="system_name"
-            defaultValue={settings.system_name || "NexusBill ISP"}
+            defaultValue={settings.system_name || "Rongdhunu DOT Net"}
             placeholder="e.g. My ISP Name"
           />
           <Field

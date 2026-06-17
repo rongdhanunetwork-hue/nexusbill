@@ -65,7 +65,7 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
         <div className="px-4 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
           <div>
             <div className="text-base font-extrabold tracking-tight flex items-center gap-1.5" style={{ color: "#fb923c" }}>
-              <Headphones size={16} /> NexusBill
+              <Headphones size={16} /> Rongdhunu DOT Net
             </div>
             <div className="text-[10px] font-semibold mt-0.5" style={{ color: "#c2410c" }}>◉ Employee Panel</div>
           </div>

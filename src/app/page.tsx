@@ -17,7 +17,7 @@ export default function HomePage() {
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-neon-blue/20 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-[100px] pointer-events-none" />
       <motion.div initial={false} animate={{ opacity: 1 }} className="text-center mb-12 relative z-10">
-        <div className="flex justify-center mb-6"><div className="w-32 h-32 flex items-center justify-center"><img src="/img/logo.png" alt="Rongdhunu DOT Net Logo" className="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(0,243,255,0.5)]" /></div></div>
+        <div className="flex justify-center mb-2 mt-2"><div className="w-56 sm:w-72 flex items-center justify-center"><img src="/img/logo.png" alt="Rongdhunu DOT Net Logo" className="w-full h-auto object-contain drop-shadow-[0_0_20px_rgba(0,243,255,0.5)]" /></div></div>
         <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight">Rongdhunu DOT Net <span className="bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-green">ISP Billing</span></h1>
         <p className="text-xl text-gray-400 max-w-3xl mx-auto font-light mb-8">Admin, reseller, employee and customer portals for complete ISP billing management.</p>
         

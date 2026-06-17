@@ -100,7 +100,7 @@ export default function ResellerLayout({ children }: { children: React.ReactNode
         <div className="px-4 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
           <div>
             <div className="text-base font-extrabold tracking-tight flex items-center gap-1.5" style={{ color: "#a78bfa" }}>
-              <Store size={16} /> NexusBill
+              <Store size={16} /> Rongdhunu DOT Net
             </div>
             <div className="text-[10px] font-semibold mt-0.5" style={{ color: "#7c3aed" }}>◉ Reseller Panel</div>
           </div>

@@ -617,7 +617,7 @@ const handleImportSubmit = async () => {
 
   // Real SMS Sender
   const triggerSms = async (customer: Customer) => {
-    const msg = prompt(`Enter SMS message to send to ${customer.name} (${customer.phone}):`, `NexusBill ISP: Dear ${customer.name}, your subscription is active. Thank you.`);
+    const msg = prompt(`Enter SMS message to send to ${customer.name} (${customer.phone}):`, `Rongdhunu DOT Net: Dear ${customer.name}, your subscription is active. Thank you.`);
     if (!msg) return;
 
     try {

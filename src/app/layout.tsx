@@ -13,7 +13,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "NexusBill ISP | Billing Software",
+  title: "Rongdhunu DOT Net | Billing Software",
   description: "Advanced ISP Billing and Management System",
 };
 
