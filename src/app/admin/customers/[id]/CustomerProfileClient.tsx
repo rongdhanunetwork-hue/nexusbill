@@ -5,7 +5,7 @@ import Link from "next/link";
 import { 
   Edit, Phone, MapPin, Wifi, Package, CreditCard, IdCard, 
   ArrowLeft, Download, Upload, Clock, FileText, Activity, 
-  Loader2, Eye, EyeOff, Terminal, RotateCcw, Router, ShieldCheck, CheckCircle2, XCircle, Save, KeyRound, Search, Plus, MoreHorizontal, Zap, Trash, MessageSquare, ShieldAlert, X, Power, DollarSign, Calendar, Percent, RefreshCcw, UserPlus, Server
+  Loader2, Eye, EyeOff, Terminal, RotateCcw, Router, ShieldCheck, CheckCircle2, XCircle, Save, KeyRound, Search, Plus, MoreHorizontal, Zap, Trash, MessageSquare, ShieldAlert, X, Power, DollarSign, Calendar, Percent, RefreshCcw, UserPlus, Server, Check
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
 import { usePopup } from "@/components/ui/PopupProvider";
