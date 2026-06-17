@@ -18,7 +18,7 @@ export default function HomePage() {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-[100px] pointer-events-none" />
       <motion.div initial={false} animate={{ opacity: 1 }} className="text-center mb-12 relative z-10">
         <div className="flex justify-center mb-6"><div className="w-20 h-20 glass-panel rounded-3xl flex items-center justify-center text-neon-blue shadow-[0_0_30px_rgba(0,243,255,0.3)]"><Globe size={40} /></div></div>
-        <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight">Next-Gen <span className="bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-green">ISP Billing</span></h1>
+        <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight">Rongdhunu DOT Net <span className="bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-green">ISP Billing</span></h1>
         <p className="text-xl text-gray-400 max-w-3xl mx-auto font-light mb-8">Admin, reseller, employee and customer portals for complete ISP billing management.</p>
         
         {/* Discreet Super Admin portal link - Moved above the cards */}
