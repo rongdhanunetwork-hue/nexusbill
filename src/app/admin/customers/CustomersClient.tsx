@@ -5,7 +5,7 @@ import Link from "next/link";
 import { 
   Search, Edit, Trash, Wifi, WifiOff, Eye, Zap, Clock, 
   MoreHorizontal, X, Check, HelpCircle, AlertCircle, Save,
-  FileText, MessageSquare, ShieldAlert, LogOut, CheckCircle2, Download, FileUp, DollarSign
+  FileText, MessageSquare, ShieldAlert, LogOut, CheckCircle2, Download, FileUp, DollarSign, Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePopup } from "@/components/ui/PopupProvider";
