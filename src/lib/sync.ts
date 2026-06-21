@@ -83,18 +83,35 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
         );
 
         if (exists) {
-          // Sync status: if disabled on MikroTik, set status = expired in DB
+          // Prevent Router Hijacking: if customer is already assigned to a different router, ignore this secret
+          if (exists.mikrotikId !== null && exists.mikrotikId !== finalRouterId) {
+            console.warn(`[Sync] Conflict: Secret "${secret.name}" found on router ${finalRouterId}, but mapped to router ${exists.mikrotikId}. Skipping.`);
+            continue;
+          }
+
+          // Update mikrotikId in DB if it was previously null
+          if (exists.mikrotikId === null) {
+            await db.update(users).set({ mikrotikId: finalRouterId }).where(eq(users.id, exists.id));
+          }
+
+          // ENFORCE DB STATUS ON MIKROTIK (Self-Healing)
           const routerExpired = secret.disabled === "true";
-          const currentExpired = exists.status === "expired";
+          const dbExpired = exists.status === "expired";
           
-          if (routerExpired !== currentExpired || exists.mikrotikId !== finalRouterId) {
-            await db
-              .update(users)
-              .set({ 
-                status: routerExpired ? "expired" : "active",
-                mikrotikId: finalRouterId
-              })
-              .where(eq(users.id, exists.id));
+          if (routerExpired !== dbExpired) {
+            console.log(`[Sync Enforcer] Fixing status for ${secret.name}. DB is ${exists.status}, Router is disabled=${routerExpired}`);
+            try {
+              await updatePppoeSecret(secret[".id"], { disabled: dbExpired ? "yes" : "no" }, finalRouterId);
+              
+              if (dbExpired) {
+                // Kick them out immediately if they should be expired
+                const activeSessions = await getPppoeActive(finalRouterId);
+                const session = activeSessions.find(s => s.name.toLowerCase() === secret.name.toLowerCase());
+                if (session) await disconnectPppoeActive(session[".id"], finalRouterId);
+              }
+            } catch (err) {
+              console.warn(`[Sync Enforcer] Failed to fix status for ${secret.name}:`, err);
+            }
           }
         } else {
           // If not registered, automatically import it

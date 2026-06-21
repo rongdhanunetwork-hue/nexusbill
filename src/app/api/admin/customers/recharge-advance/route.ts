@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { userId, amount, due, billingType, duration, method, discount, note, renewBack, newPackageId, customBaseDate, customExpireDate } = body;
+    let { userId, amount, due, billingType, duration, method, discount, note, renewBack, newPackageId, customBaseDate, customExpireDate } = body;
 
     if (!userId || amount === undefined) {
       return NextResponse.json({ error: "User ID and amount are required" }, { status: 400 });
@@ -44,9 +44,30 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Reseller account not found" }, { status: 404 });
       }
       const balance = Number(reseller.walletBalance || 0);
-      if (balance < Number(amount)) {
-        return NextResponse.json({ error: "Insufficient balance in your reseller wallet" }, { status: 400 });
+
+      // SECURITY HOTFIX: Prevent resellers from manipulating the amount field
+      let expectedAmount = 0;
+      const targetPackage = customer.package;
+      if (targetPackage) {
+         const pkgPrice = Number(targetPackage.price || 0);
+         const numDuration = Number(duration) || 1;
+         if (billingType === "monthly") {
+            expectedAmount = pkgPrice * numDuration;
+         } else {
+            expectedAmount = (pkgPrice / 30) * numDuration;
+         }
       }
+      
+      // Resellers MUST pay the actual calculated price. 
+      // If they give a discount to the customer, they still pay the full wholesale/retail amount from their wallet.
+      const finalAmountToDeduct = expectedAmount;
+
+      if (balance < finalAmountToDeduct) {
+        return NextResponse.json({ error: `Insufficient balance. You need at least ৳${finalAmountToDeduct.toFixed(2)}` }, { status: 400 });
+      }
+      
+      // Override the frontend 'amount' with the secure backend calculated amount for the rest of the flow
+      amount = finalAmountToDeduct;
     }
 
     // Calculate new expiration date

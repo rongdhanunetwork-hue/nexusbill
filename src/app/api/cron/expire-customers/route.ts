@@ -44,7 +44,14 @@ export async function GET(req: NextRequest) {
           
           // Calculate new expire date based on package duration
           const durationDays = customer.package?.durationDays || 30;
-          const newExpireDate = new Date(customer.expireDate || now);
+          let baseDate = new Date(customer.expireDate || now);
+          
+          // BUG FIX: If the old expireDate is in the past, calculate from 'now' to prevent wallet drain!
+          if (baseDate < now) {
+             baseDate = new Date(now);
+          }
+
+          const newExpireDate = new Date(baseDate);
           newExpireDate.setDate(newExpireDate.getDate() + (durationDays - 1));
           newExpireDate.setHours(23, 59, 59, 999);
 
@@ -101,9 +108,10 @@ export async function GET(req: NextRequest) {
         }
 
         // If Mikrotik update failed (e.g. router offline due to power cut), 
-        // DO NOT mark as expired in DB so it will be retried on the next cron run
+        // we STILL mark them as expired in the DB. The Self-Healing Sync background task
+        // will automatically disconnect them from Mikrotik when the router comes back online!
         if (!mikrotikSuccess) {
-           continue; // Skip DB update and SMS for this user, wait for next run
+           console.warn(`[Cron] Mikrotik sync failed for ${customer.name}, but continuing with DB expiration.`);
         }
 
         // Expiration Logic in DB (Only happens if Mikrotik was successful or not needed)
