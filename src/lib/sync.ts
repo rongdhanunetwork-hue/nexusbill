@@ -101,13 +101,13 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
           if (routerExpired !== dbExpired) {
             console.log(`[Sync Enforcer] Fixing status for ${secret.name}. DB is ${exists.status}, Router is disabled=${routerExpired}`);
             try {
-              await updatePppoeSecret(secret[".id"], { disabled: dbExpired ? "yes" : "no" }, finalRouterId);
+              await updatePppoeSecret(secret[".id"], { disabled: dbExpired ? "yes" : "no" }, finalRouterId || undefined);
               
               if (dbExpired) {
                 // Kick them out immediately if they should be expired
-                const activeSessions = await getPppoeActive(finalRouterId);
+                const activeSessions = await getPppoeActive(finalRouterId || undefined);
                 const session = activeSessions.find(s => s.name.toLowerCase() === secret.name.toLowerCase());
-                if (session) await disconnectPppoeActive(session[".id"], finalRouterId);
+                if (session) await disconnectPppoeActive(session[".id"], finalRouterId || undefined);
               }
             } catch (err) {
               console.warn(`[Sync Enforcer] Failed to fix status for ${secret.name}:`, err);
