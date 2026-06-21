@@ -227,6 +227,7 @@ export default function CustomersClient({
     if (initialStatus === "new_month") return "New This Month";
     if (initialStatus === "paid_month") return "Paid (Month)";
     if (initialStatus === "unpaid_month") return "Unpaid (Month)";
+    if (initialStatus === "pending_approval") return "Pending Approval";
     if (initialStatus === "today_expire") return "Today Expiring";
     const formatted = initialStatus.charAt(0).toUpperCase() + initialStatus.slice(1).toLowerCase();
     if (["All Status", "Active", "Online", "Offline", "Expired", "Upcoming"].includes(formatted)) {
@@ -307,6 +308,7 @@ export default function CustomersClient({
       (statusFilter === "Today Expiring" && isTodayExpiring) ||
       (statusFilter === "Auto Renew Enabled" && customer.autoRenew === true) ||
       (statusFilter === "New This Month" && !!isNewThisMonth) ||
+      (statusFilter === "Pending Approval" && customer.approvalStatus === "pending") ||
       (statusFilter === "Paid (Month)" && customer.status === "active" && !isExpired) ||
       (statusFilter === "Unpaid (Month)" && isExpired);
 
@@ -802,6 +804,7 @@ const handleImportSubmit = async () => {
             <option value="New This Month" className="bg-slate-800">New This Month</option>
             <option value="Paid (Month)" className="bg-slate-800">Paid (Month)</option>
             <option value="Unpaid (Month)" className="bg-slate-800">Unpaid (Month)</option>
+            <option value="Pending Approval" className="bg-slate-800 text-yellow-400 font-bold">Pending Approval</option>
           </select>
 
           <select

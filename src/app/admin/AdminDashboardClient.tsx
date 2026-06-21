@@ -256,7 +256,8 @@ export default function AdminDashboardClient({
       </div>
 
       {/* Tier 1 Primary Financial Indicators */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {role !== "employee" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Link href={`${basePath}/customers?status=unpaid_month`} className="block group">
           <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-6 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
@@ -309,9 +310,11 @@ export default function AdminDashboardClient({
           </motion.div>
         </Link>
       </div>
+      )}
 
       {/* Tier 2 Secondary Indicators */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {role !== "employee" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Link href={`${basePath}/billing`} className="block group">
           <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-5 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
@@ -364,6 +367,7 @@ export default function AdminDashboardClient({
           </motion.div>
         </Link>
       </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { users, settings } from "@/db/schema";
+import { eq, desc, and } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 
@@ -26,7 +26,16 @@ export async function GET(req: Request) {
       columns: { id: true, name: true, phone: true, address: true, role: true, status: true, createdAt: true, expireDate: true },
     });
     if (!admin || admin.role !== "admin") return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(admin);
+    
+    const adminSettings = await db.query.settings.findMany({
+      where: eq(settings.adminId, id)
+    });
+    const map: Record<string, string> = {};
+    for (const row of adminSettings) {
+      if (row.key && row.value != null) map[row.key] = row.value;
+    }
+
+    return NextResponse.json({ ...admin, settings: map });
   }
 
   const admins = await db.query.users.findMany({
@@ -80,7 +89,7 @@ export async function PATCH(req: Request) {
   const session = await checkSuperAdmin();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id, status, name, phone, address, newPassword, validityDays } = await req.json();
+  const { id, status, name, phone, address, newPassword, validityDays, subscriptionSettings } = await req.json();
   if (!id) return NextResponse.json({ error: "Missing admin ID" }, { status: 400 });
 
   const updateData: Record<string, any> = {};
@@ -103,6 +112,20 @@ export async function PATCH(req: Request) {
   }
 
   await db.update(users).set(updateData).where(eq(users.id, id));
+
+  if (subscriptionSettings) {
+    for (const [key, value] of Object.entries(subscriptionSettings)) {
+      const existing = await db.query.settings.findFirst({
+        where: and(eq(settings.key, key), eq(settings.adminId, id))
+      });
+      if (existing) {
+        await db.update(settings).set({ value: String(value) }).where(eq(settings.id, existing.id));
+      } else {
+        await db.insert(settings).values({ key, value: String(value), adminId: id });
+      }
+    }
+  }
+
   return NextResponse.json({ success: true });
 }
 

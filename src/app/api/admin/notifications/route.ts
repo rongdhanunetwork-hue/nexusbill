@@ -40,7 +40,7 @@ export async function GET() {
       notifications.push({
         id: "pending-approvals",
         text: `${approvalCount.count} new registration(s) pending approval`,
-        link: "/admin/customers",
+        link: "/admin/customers?status=pending_approval",
       });
     }
 

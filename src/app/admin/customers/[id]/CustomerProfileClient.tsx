@@ -363,7 +363,12 @@ useEffect(() => {
   const { rxPower, txPower, temperature: onuTemp, voltage: onuVoltage, distance: onuDistance, uptime: onuUptime, routerModel: wifiRouterModel, routerVendor: wifiRouterVendor, isRxGood } = onuData;
 
   useEffect(() => {
-    fetch("/api/admin/areas").then(r => r.json()).then(setAreas).catch(() => {});
+    fetch("/api/admin/areas")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setAreas(data);
+      })
+      .catch(() => {});
   }, []);
 
   const [liveData, setLiveData] = useState<{ name: string; download: number; upload: number }[]>(() => 
@@ -388,9 +393,9 @@ useEffect(() => {
         const data = await res.json();
         if (res.ok && data.isOnline) {
           // txBps = router sends to client = download speed for client
-          dl = parseFloat((data.txBps / 1000000).toFixed(3));
+          dl = parseFloat((data.txBps / 1048576).toFixed(3));
           // rxBps = router receives from client = upload speed for client
-          ul = parseFloat((data.rxBps / 1000000).toFixed(3));
+          ul = parseFloat((data.rxBps / 1048576).toFixed(3));
           // bytesIn/Out from MikroTik = actual session bytes (most accurate)
           // MikroTik: bytes-in = data received by router FROM client (client upload)
           //           bytes-out = data sent by router TO client (client download)
@@ -409,8 +414,8 @@ useEffect(() => {
       setLiveDownloadRate(dl);
       setLiveUploadRate(ul);
 
-      const dlBytes = Math.round((dl * 1000000) / 8);
-      const ulBytes = Math.round((ul * 1000000) / 8);
+      const dlBytes = Math.round((dl * 1048576) / 8);
+      const ulBytes = Math.round((ul * 1048576) / 8);
       setAccumulatedDownloadBytes((p) => p + dlBytes);
       setAccumulatedUploadBytes((p) => p + ulBytes);
 
@@ -429,8 +434,8 @@ useEffect(() => {
   function formatSpeed(val: any) {
     const rate = parseFloat(val);
     if (isNaN(rate) || rate < 0.001) return "0 Kbps";
-    if (rate < 1) return `${Math.round(rate * 1000)} Kbps`;
-    return `${rate.toFixed(1)} Mbps`;
+    if (rate < 1) return `${Math.round(rate * 1024)} Kbps`;
+    return `${rate.toFixed(2)} Mbps`;
   }
 
   function formatSpeedNumberOnly(val: number) {

@@ -73,6 +73,16 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
   const [address, setAddress] = useState(adminUser.address || "");
   const [signature, setSignature] = useState(initialSettings.admin_signature || "Rongdhunu DOT Net Team");
   
+  // Dynamic subscription settings
+  const [subPackage, setSubPackage] = useState(initialSettings.sub_package || "P7 (Unlimited Super Admin)");
+  const [subPackageRate, setSubPackageRate] = useState(initialSettings.sub_package_rate || "৳2,000.00");
+  const [subCustomerLimit, setSubCustomerLimit] = useState(initialSettings.sub_customer_limit || "1,000 Users");
+  const [subCustomerType, setSubCustomerType] = useState(initialSettings.sub_customer_type || "PPPoE / Static");
+  const [subPaymentStatus, setSubPaymentStatus] = useState(initialSettings.sub_payment_status || "Paid");
+  const [subSmsRateNonMasking, setSubSmsRateNonMasking] = useState(initialSettings.sub_sms_rate_non_masking || "৳0.30");
+  const [subSmsRateFixed, setSubSmsRateFixed] = useState(initialSettings.sub_sms_rate_fixed || "৳0.45");
+  const [subSmsRateMasking, setSubSmsRateMasking] = useState(initialSettings.sub_sms_rate_masking || "৳0.65");
+  
   const [uploadingImage, setUploadingImage] = useState(false);
 
   // Control Panel Permissions state
@@ -223,7 +233,7 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
           <User size={24} />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-wide">Saiful Online Ltd</h1>
+          <h1 className="text-2xl font-bold text-white tracking-wide">{companyName}</h1>
           <p className="text-xs text-gray-400 mt-1">Admin Profile & System Settings Control Panel</p>
         </div>
       </div>
@@ -269,7 +279,7 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
                   <Building className="text-neon-blue" size={18} /> Company Profile
                 </h2>
                 <div className="space-y-4">
-                  <DetailItem label="NetFee Id" value={String(adminUser.id)} />
+                  <DetailItem label="Admin ID" value={String(adminUser.id)} />
                   <DetailItem label="Company" value={companyName} />
                   <DetailItem label="Name" value={profileName} />
                   <DetailItem label="Mobile" value={phone} />
@@ -285,15 +295,15 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
                   <ShieldCheck className="text-neon-green" size={18} /> Subscription & Parameters
                 </h2>
                 <div className="space-y-4">
-                  <DetailItem label="Package" value="P7 (Unlimited Super Admin)" />
-                  <DetailItem label="Package Rate" value="৳2,000.00" />
-                  <DetailItem label="Customer Limit" value="1,000 Users" />
+                  <DetailItem label="Package" value={subPackage} />
+                  <DetailItem label="Package Rate" value={subPackageRate} />
+                  <DetailItem label="Customer Limit" value={subCustomerLimit} />
                   <DetailItem label="Total Customer" value={`${totalCustomers} Users`} />
-                  <DetailItem label="Customer Type" value="PPPoE / Static" />
-                  <DetailItem label="Payment status" value="Paid" badge="bg-neon-green/20 text-neon-green border-neon-green/30" />
-                  <DetailItem label="Non Masking SMS Rate" value="৳0.30" />
-                  <DetailItem label="Fixed Number SMS Rate" value="৳0.45" />
-                  <DetailItem label="Masking SMS Rate" value="৳0.65" />
+                  <DetailItem label="Customer Type" value={subCustomerType} />
+                  <DetailItem label="Payment status" value={subPaymentStatus} badge="bg-neon-green/20 text-neon-green border-neon-green/30" />
+                  <DetailItem label="Non Masking SMS Rate" value={subSmsRateNonMasking} />
+                  <DetailItem label="Fixed Number SMS Rate" value={subSmsRateFixed} />
+                  <DetailItem label="Masking SMS Rate" value={subSmsRateMasking} />
                 </div>
               </div>
             </div>

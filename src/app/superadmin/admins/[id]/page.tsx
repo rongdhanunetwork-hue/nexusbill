@@ -14,7 +14,7 @@ export default function EditAdminPage({ params }: { params: Promise<{ id: string
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
-  const [admin, setAdmin] = useState<{ name: string; phone: string; address: string | null; expireDate?: string | null } | null>(null);
+  const [admin, setAdmin] = useState<{ name: string; phone: string; address: string | null; expireDate?: string | null; settings?: Record<string, string> } | null>(null);
 
   useEffect(() => {
     async function loadAdmin() {
@@ -58,7 +58,23 @@ export default function EditAdminPage({ params }: { params: Promise<{ id: string
     setLoading(true);
     setError(null);
 
-    const payload: any = { id: Number(id), name, phone, address, newPassword: newPassword || undefined };
+    const payload: any = { 
+      id: Number(id), 
+      name, 
+      phone, 
+      address, 
+      newPassword: newPassword || undefined,
+      subscriptionSettings: {
+        sub_package: String(form.get("subPackage") || "").trim(),
+        sub_package_rate: String(form.get("subPackageRate") || "").trim(),
+        sub_customer_limit: String(form.get("subCustomerLimit") || "").trim(),
+        sub_customer_type: String(form.get("subCustomerType") || "").trim(),
+        sub_payment_status: String(form.get("subPaymentStatus") || "").trim(),
+        sub_sms_rate_non_masking: String(form.get("subSmsRateNonMasking") || "").trim(),
+        sub_sms_rate_fixed: String(form.get("subSmsRateFixed") || "").trim(),
+        sub_sms_rate_masking: String(form.get("subSmsRateMasking") || "").trim(),
+      }
+    };
     if (validityDaysStr) {
       payload.validityDays = parseInt(validityDaysStr);
     }
@@ -145,6 +161,60 @@ export default function EditAdminPage({ params }: { params: Promise<{ id: string
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
                 {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-6 border-t border-white/10 mt-6 space-y-4">
+          <h2 className="text-lg font-bold text-white mb-4">Subscription & Parameters</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Package Name</label>
+              <input name="subPackage" defaultValue={admin?.settings?.sub_package || "P7 (Unlimited Super Admin)"} 
+                className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Package Rate</label>
+              <input name="subPackageRate" defaultValue={admin?.settings?.sub_package_rate || "৳2,000.00"} 
+                className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Customer Limit</label>
+              <input name="subCustomerLimit" defaultValue={admin?.settings?.sub_customer_limit || "1,000 Users"} 
+                className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Customer Type</label>
+              <input name="subCustomerType" defaultValue={admin?.settings?.sub_customer_type || "PPPoE / Static"} 
+                className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Payment Status</label>
+              <input name="subPaymentStatus" defaultValue={admin?.settings?.sub_payment_status || "Paid"} 
+                className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Non Masking SMS Rate</label>
+              <input name="subSmsRateNonMasking" defaultValue={admin?.settings?.sub_sms_rate_non_masking || "৳0.30"} 
+                className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Fixed Number SMS Rate</label>
+              <input name="subSmsRateFixed" defaultValue={admin?.settings?.sub_sms_rate_fixed || "৳0.45"} 
+                className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Masking SMS Rate</label>
+              <input name="subSmsRateMasking" defaultValue={admin?.settings?.sub_sms_rate_masking || "৳0.65"} 
+                className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none placeholder-gray-600 transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
             </div>
           </div>
         </div>
