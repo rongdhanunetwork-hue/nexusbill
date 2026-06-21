@@ -111,6 +111,7 @@ export async function createPppoeSecret(data: {
   service?: string;
   profile?: string;
   comment?: string;
+  disabled?: string | boolean;
 }, routerId?: number): Promise<PppoeSecret> {
   const client = await getClient(routerId);
   try {
@@ -123,6 +124,10 @@ export async function createPppoeSecret(data: {
       `=profile=${data.profile || "default"}`,
       `=comment=${data.comment || ""}`,
     ];
+    if (data.disabled !== undefined) {
+      const val = data.disabled === "true" || data.disabled === "yes" || data.disabled === true ? "yes" : "no";
+      cmd.push(`=disabled=${val}`);
+    }
     const created = await client.write(cmd);
     return created[0] as unknown as PppoeSecret;
   } finally {

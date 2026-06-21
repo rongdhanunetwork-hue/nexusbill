@@ -225,6 +225,7 @@ export async function syncCustomerToMikrotik(
         password: plainTextPassword || "password123",
         profile,
         comment: "Created from Billing Software",
+        disabled: isDisabled,
       }, finalRouterId);
       console.log(`Successfully created MikroTik secret for "${pppoeUsername}" on router ${finalRouterId}`);
     }

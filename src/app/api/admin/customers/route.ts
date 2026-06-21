@@ -108,7 +108,7 @@ export async function POST(req: Request) {
       resellerId: session.role === "reseller" ? session.userId : (resellerId ? Number(resellerId) : null),
       role: "customer",
       approvalStatus: "approved",
-      status: status || "active",
+      status: status || "expired",
       expireDate: calculatedExpireDate,
       dob: dob ? new Date(dob + (dob.includes('Z') ? '' : 'Z')) : null,
       createdAt: createdAt ? new Date(createdAt + (createdAt.includes('Z') ? '' : 'Z')) : new Date(),
