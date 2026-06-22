@@ -63,8 +63,8 @@ export async function POST(req: Request) {
       photoUrl, nidUrl, macAddress, ipAddress,
       nidNumber, createdAt, expireDate, dob, resellerId,
       areaId, customerType, connectionFee, promiseDate, note, autoRenew,
-      oltId, ponPort, onuMac, routerModel, routerUsername, routerPassword,
-      alternatePhone, district, thana, discount, billingPosition, billingCycleDay,
+      oltId, tjBoxId, ponPort, onuMac, routerModel, routerUsername, routerPassword,
+      alternatePhone, division, district, thana, discount, billingPosition, billingCycleDay,
       connectionType, gpsCoordinates, joiningDate, status
     } = body;
 
@@ -119,6 +119,7 @@ export async function POST(req: Request) {
       note: note || null,
       autoRenew: autoRenew !== undefined ? Boolean(autoRenew) : false,
       oltId: oltId ? Number(oltId) : null,
+      tjBoxId: tjBoxId ? Number(tjBoxId) : null,
       ponPort: ponPort?.trim() || null,
       onuMac: onuMac?.trim() || null,
       routerModel: routerModel?.trim() || null,
@@ -126,8 +127,9 @@ export async function POST(req: Request) {
       routerPassword: routerPassword?.trim() || null,
       adminId,
       alternatePhone: alternatePhone?.trim() || null,
-      district: district || null,
-      thana: thana || null,
+      division: division?.trim() || null,
+      district: district?.trim() || null,
+      thana: thana?.trim() || null,
       discount: discount ? String(discount) : "0",
       billingPosition: billingPosition || "active_billable",
       billingCycleDay: billingCycleDay || "standard_30",

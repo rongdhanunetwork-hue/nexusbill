@@ -77,12 +77,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.balance !== undefined) updateData.balance = body.balance ? String(body.balance) : "0";
     if (body.autoRenew !== undefined) updateData.autoRenew = Boolean(body.autoRenew);
     if (body.oltId !== undefined) updateData.oltId = body.oltId ? Number(body.oltId) : null;
+    if (body.tjBoxId !== undefined) updateData.tjBoxId = body.tjBoxId ? Number(body.tjBoxId) : null;
     if (body.ponPort !== undefined) updateData.ponPort = body.ponPort?.trim() || null;
     if (body.onuMac !== undefined) updateData.onuMac = body.onuMac?.trim() || null;
     if (body.routerModel !== undefined) updateData.routerModel = body.routerModel?.trim() || null;
     if (body.routerUsername !== undefined) updateData.routerUsername = body.routerUsername?.trim() || null;
     if (body.routerPassword !== undefined) updateData.routerPassword = body.routerPassword?.trim() || null;
     if (body.alternatePhone !== undefined) updateData.alternatePhone = body.alternatePhone?.trim() || null;
+    if (body.division !== undefined) updateData.division = body.division?.trim() || null;
     if (body.district !== undefined) updateData.district = body.district || null;
     if (body.thana !== undefined) updateData.thana = body.thana || null;
     if (body.discount !== undefined) updateData.discount = body.discount ? String(body.discount) : "0";

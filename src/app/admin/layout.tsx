@@ -7,7 +7,7 @@ import {
   FileText, Settings, Megaphone, LogOut, ShieldAlert,
   Menu, X, Loader2, LifeBuoy, Bell, TrendingDown, UserCog,
   Layers, MessageSquare, History, TrendingUp, ChevronDown,
-  ChevronRight, Search, Wifi,
+  ChevronRight, Search, Wifi, Box,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { clsx } from "clsx";
@@ -37,6 +37,7 @@ const navigation: NavItem[] = [
   { name: "SMS Templates", href: "/admin/sms-templates", icon: MessageSquare },
   { name: "SMS Logs", href: "/admin/sms-log", icon: History },
   { name: "Areas & Pole Boxes", href: "/admin/areas", icon: Layers },
+  { name: "TJ Boxes / Splitters", href: "/admin/settings/tj-boxes", icon: Box },
   {
     name: "MikroTik", icon: Router,
     children: [

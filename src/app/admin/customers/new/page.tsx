@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft, Save, Loader2, Compass, AlertCircle, RefreshCw } from "lucide-react";
+import { BD_LOCATIONS } from "@/lib/bd-locations";
 import ImageUploadField from "@/components/ui/ImageUploadField";
 
 interface Package {
@@ -30,23 +31,13 @@ interface OltTjBox {
   name: string;
 }
 
-const DISTRICT_THANAS: Record<string, string[]> = {
-  Dhaka: ["Mirpur", "Uttara", "Gulshan", "Dhanmondi", "Badda", "Mohammadpur", "Khilgaon", "Tejgaon", "Ramna", "Savar", "Keraniganj", "Dhamrai"],
-  Chittagong: ["Panchlaish", "Double Mooring", "Kotwali", "Halishahar", "Patenga", "Hathazari", "Sitakunda", "Rangunia", "Patiya"],
-  Sylhet: ["Kotwali", "Shahparan", "South Surma", "Jaintiapur", "Beanibazar", "Golapganj", "Sreemangal"],
-  Rajshahi: ["Boalia", "Rajpara", "Motihar", "Shah Makhdum", "Paba", "Bagha", "Godagari"],
-  Khulna: ["Kotwali", "Sonadanga", "Khalishpur", "Daulatpur", "Khan Jahan Ali", "Rupsha"],
-  Barisal: ["Kotwali", "Airport", "South Surma", "Bakerganj", "Wazirpur"],
-  Rangpur: ["Kotwali", "Mithapukur", "Pirganj", "Kaunia", "Badarganj"],
-  Mymensingh: ["Kotwali", "Muktagachha", "Bhaluka", "Trishal", "Gafargaon"]
-};
-
 export default function AddCustomerPage() {
   const router = useRouter();
   const [packages, setPackages] = useState<Package[]>([]);
   const [routers, setRouters] = useState<RouterPop[]>([]);
   const [zones, setZones] = useState<AreaZone[]>([]);
   const [olts, setOlts] = useState<OltTjBox[]>([]);
+  const [tjBoxes, setTjBoxes] = useState<OltTjBox[]>([]);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +47,7 @@ export default function AddCustomerPage() {
   const [discount, setDiscount] = useState<number>(0);
   const [gpsCoordinates, setGpsCoordinates] = useState("");
   const [fetchingGps, setFetchingGps] = useState(false);
+  const [division, setDivision] = useState("");
   const [district, setDistrict] = useState("");
   const [thana, setThana] = useState("");
 
@@ -64,6 +56,7 @@ export default function AddCustomerPage() {
     fetch("/api/admin/mikrotik/routers").then(r => r.json()).then(data => { if (Array.isArray(data)) setRouters(data); }).catch(() => {});
     fetch("/api/admin/areas").then(r => r.json()).then(data => { if (Array.isArray(data)) setZones(data); }).catch(() => {});
     fetch("/api/admin/olts").then(r => r.json()).then(data => { if (Array.isArray(data)) setOlts(data); }).catch(() => {});
+    fetch("/api/admin/tj-boxes").then(r => r.json()).then(data => { if (Array.isArray(data)) setTjBoxes(data); }).catch(() => {});
   }, []);
 
   const selectedPkgPrice = selectedPackage ? parseFloat(selectedPackage.price) : 0;
@@ -115,6 +108,7 @@ export default function AddCustomerPage() {
       password,
       photoUrl: String(form.get("photoUrl") || "").trim(),
       address: String(form.get("address") || "").trim(),
+      division,
       district,
       thana,
       packageId: selectedPackage ? selectedPackage.id : null,
@@ -126,6 +120,7 @@ export default function AddCustomerPage() {
       mikrotikId: form.get("mikrotikId") ? Number(form.get("mikrotikId")) : null,
       areaId: form.get("areaId") ? Number(form.get("areaId")) : null,
       oltId: form.get("oltId") ? Number(form.get("oltId")) : null,
+      tjBoxId: form.get("tjBoxId") ? Number(form.get("tjBoxId")) : null,
       connectionType: String(form.get("connectionType") || "fiber"),
       customerType: String(form.get("customerType") || "home"),
       onuMac: String(form.get("onuMac") || "").trim(),
@@ -196,23 +191,38 @@ export default function AddCustomerPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Field label="PPPoE Password" name="password" placeholder="Set Mikrotik Password" type="password" />
               <ImageUploadField label="Profile Picture" name="photoUrl" />
-              <Field label="Address" name="address" placeholder="House, Street, Area info" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Division *</label>
+                <select
+                  required
+                  value={division}
+                  onChange={(e) => { setDivision(e.target.value); setDistrict(""); setThana(""); }}
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="" className="bg-slate-950">-- Select Division --</option>
+                  {Object.keys(BD_LOCATIONS).map(d => (
+                    <option key={d} value={d} className="bg-slate-950">{d}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">District *</label>
                 <select
                   required
                   value={district}
                   onChange={(e) => { setDistrict(e.target.value); setThana(""); }}
-                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                  disabled={!division}
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none disabled:opacity-50"
                 >
                   <option value="" className="bg-slate-950">-- Select District --</option>
-                  {Object.keys(DISTRICT_THANAS).map(d => (
+                  {division && Object.keys(BD_LOCATIONS[division] || {}).map(d => (
                     <option key={d} value={d} className="bg-slate-950">{d}</option>
                   ))}
                 </select>
@@ -228,11 +238,13 @@ export default function AddCustomerPage() {
                   className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none disabled:opacity-50"
                 >
                   <option value="" className="bg-slate-950">-- Select Thana --</option>
-                  {district && DISTRICT_THANAS[district].map(t => (
+                  {division && district && (BD_LOCATIONS[division][district] || []).map(t => (
                     <option key={t} value={t} className="bg-slate-950">{t}</option>
                   ))}
                 </select>
               </div>
+
+              <Field label="Village / Area *" name="address" required placeholder="Type village name..." />
             </div>
           </section>
 
@@ -351,7 +363,7 @@ export default function AddCustomerPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">TJ Box / Port</label>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">OLT / PON</label>
                 <select
                   name="oltId"
                   className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
@@ -359,6 +371,19 @@ export default function AddCustomerPage() {
                   <option value="" className="bg-slate-950">None</option>
                   {olts.map(o => (
                     <option key={o.id} value={o.id} className="bg-slate-950">⚡ {o.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">TJ Box / Splitter</label>
+                <select
+                  name="tjBoxId"
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="" className="bg-slate-950">None</option>
+                  {tjBoxes.map(b => (
+                    <option key={b.id} value={b.id} className="bg-slate-950">📦 {b.name}</option>
                   ))}
                 </select>
               </div>

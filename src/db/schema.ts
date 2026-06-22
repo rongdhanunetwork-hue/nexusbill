@@ -27,6 +27,7 @@ export const users = pgTable("users", {
   packageId: integer("package_id"),
   mikrotikId: integer("mikrotik_id"),
   oltId: integer("olt_id"),
+  tjBoxId: integer("tj_box_id"),
   resellerId: integer("reseller_id"),
   walletBalance: decimal("wallet_balance", { precision: 10, scale: 2 }).default("0"),
   status: varchar("status", { length: 50 }).default("active"), // active, offline, online, expired
@@ -52,6 +53,7 @@ export const users = pgTable("users", {
   routerPassword: varchar("router_password", { length: 255 }),
   adminId: integer("admin_id"),
   alternatePhone: varchar("alternate_phone", { length: 50 }),
+  division: varchar("division", { length: 100 }),
   district: varchar("district", { length: 100 }),
   thana: varchar("thana", { length: 100 }),
   discount: decimal("discount", { precision: 10, scale: 2 }).default("0"),
@@ -102,6 +104,17 @@ export const olts = pgTable("olts", {
   brand: varchar("brand", { length: 100 }).default("BDCOM EPON"),
   snmpCommunity: varchar("snmp_community", { length: 255 }).default("public"),
   timeout: integer("timeout").default(10),
+});
+
+export const tjBoxes = pgTable("tj_boxes", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  address: text("address"),
+  portCount: integer("port_count").default(8),
+  status: boolean("status").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  adminId: integer("admin_id"),
+  resellerId: integer("reseller_id"),
 });
 
 export const dataUsage = pgTable("data_usage", {
@@ -198,6 +211,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   olt: one(olts, {
     fields: [users.oltId],
     references: [olts.id],
+  }),
+  tjBox: one(tjBoxes, {
+    fields: [users.tjBoxId],
+    references: [tjBoxes.id],
   }),
   payments: many(payments),
   invoices: many(invoices),
