@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePopup } from "@/components/ui/PopupProvider";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface Customer {
   id: number;
@@ -118,6 +119,7 @@ export default function CustomersClient({
 
   const [liveActiveNames, setLiveActiveNames] = useState<string[]>(activePppoeNames || []);
   const [liveActiveSessions, setLiveActiveSessions] = useState<any[]>(activeSessions || []);
+  const [liveSecrets, setLiveSecrets] = useState<any[]>([]);
   const [customersList, setCustomersList] = useState<Customer[]>(allCustomers);
 
   useEffect(() => {
@@ -134,6 +136,9 @@ export default function CustomersClient({
           if (data.active && Array.isArray(data.active)) {
             setLiveActiveSessions(data.active);
             setLiveActiveNames(data.active.map((s: any) => s.name));
+          }
+          if (data.secrets && Array.isArray(data.secrets)) {
+            setLiveSecrets(data.secrets);
           }
           // NOTE: avoid re-fetching the full customers list on every poll —
           // keep the existing customersList in memory and only update active sessions.
@@ -156,6 +161,14 @@ export default function CustomersClient({
     });
     return map;
   }, [liveActiveSessions]);
+
+  const secretsMap = useMemo(() => {
+    const map = new Map<string, any>();
+    (liveSecrets || []).forEach((s: any) => {
+      if (s && s.name) map.set(String(s.name).toLowerCase(), s);
+    });
+    return map;
+  }, [liveSecrets]);
 
   const activeNamesSet = useMemo(() => new Set(activeSessionMap.keys()), [activeSessionMap]);
 
@@ -238,7 +251,7 @@ export default function CustomersClient({
 
   const [statusFilter, setStatusFilter] = useState(getInitialStatus());
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const pageSize = 20;
 
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
 
@@ -1031,7 +1044,17 @@ const handleImportSubmit = async () => {
                               </span>
                             )
                           ) : (() => {
-                            const offlineDur = formatOfflineDuration(customer.lastSeen, customer.createdAt);
+                            const pppoeUser = customer.pppoeUsername ? customer.pppoeUsername.toLowerCase() : null;
+                            const secret = pppoeUser ? secretsMap.get(pppoeUser) : null;
+                            // Prefer real MikroTik last-logged-out time, fallback to DB lastSeen
+                            let offlineTime = null;
+                            if (secret && secret["last-logged-out"]) {
+                              offlineTime = secret["last-logged-out"];
+                            } else {
+                              offlineTime = customer.lastSeen;
+                            }
+                            
+                            const offlineDur = formatOfflineDuration(offlineTime, customer.createdAt);
                             return (
                               <span className="inline-flex flex-col gap-0.5">
                                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-red-400 border offline-badge-blink">
@@ -1222,83 +1245,15 @@ const handleImportSubmit = async () => {
       </div>
 
       {/* Pagination Controls */}
-      <div className="flex items-center justify-between p-5 border-t border-white/5 bg-white/2 no-print-col mt-4">
-        <div className="flex items-center gap-4 text-xs text-gray-400">
-          <div>
-            Showing <span className="font-semibold text-white">{(currentPage - 1) * pageSize + 1}</span> to{" "}
-            <span className="font-semibold text-white">
-              {Math.min(currentPage * pageSize, filteredCustomers.length)}
-            </span>{" "}
-            of <span className="font-semibold text-white">{filteredCustomers.length}</span> customers
-          </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="pageSizeSelect">Rows per page:</label>
-            <select
-              id="pageSizeSelect"
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="bg-slate-900 border border-white/10 rounded px-2 py-1 text-white focus:outline-none focus:border-neon-blue"
-            >
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-              <option value={500}>500</option>
-              <option value={1000000}>All</option>
-            </select>
-          </div>
-        </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all"
-            >
-              Previous
-            </button>
-            
-            {/* Page numbers */}
-            {(() => {
-              const totalPages = Math.ceil(filteredCustomers.length / pageSize);
-              const pages = [];
-              const maxVisible = 5;
-              
-              let start = Math.max(1, currentPage - 2);
-              let end = Math.min(totalPages, start + maxVisible - 1);
-              
-              if (end - start < maxVisible - 1) {
-                start = Math.max(1, end - maxVisible + 1);
-              }
-              
-              for (let i = start; i <= end; i++) {
-                pages.push(
-                  <button
-                    key={i}
-                    onClick={() => setCurrentPage(i)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                      currentPage === i
-                        ? "bg-neon-blue text-slate-950 font-bold border-neon-blue shadow-lg shadow-neon-blue/20"
-                        : "bg-white/5 hover:bg-white/10 border-white/10 text-gray-300 hover:text-white"
-                    }`}
-                  >
-                    {i}
-                  </button>
-                );
-              }
-              return pages;
-            })()}
-            
-            <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Math.ceil(filteredCustomers.length / pageSize)))}
-              disabled={currentPage === Math.ceil(filteredCustomers.length / pageSize)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+      {filteredCustomers.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.max(1, Math.ceil(filteredCustomers.length / pageSize))}
+          totalItems={filteredCustomers.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
+      )}
 
       {/* 4th Image - Advanced Recharge Popup Modal */}
       <AnimatePresence>

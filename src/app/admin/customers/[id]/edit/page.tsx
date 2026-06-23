@@ -3,7 +3,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Loader2, Compass, AlertCircle, RefreshCw } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Compass, AlertCircle, RefreshCw, Eye, EyeOff } from "lucide-react";
 import ImageUploadField from "@/components/ui/ImageUploadField";
 
 interface Package {
@@ -91,6 +91,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   const [fetchingGps, setFetchingGps] = useState(false);
   const [district, setDistrict] = useState("");
   const [thana, setThana] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -284,12 +285,22 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">New Password</label>
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="Keep current password"
-                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
-                />
+                <div className="relative">
+                  <input
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Keep current password"
+                    className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
               <ImageUploadField label="Profile Picture" name="photoUrl" defaultValue={customer.photoUrl || ""} />
               <Field label="Address" name="address" defaultValue={customer.address || ""} placeholder="House, Street, Area info" />

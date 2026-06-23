@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Trash2
 } from "lucide-react";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface SmsLog {
   id: number;
@@ -32,6 +33,8 @@ export default function SmsLogPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   useEffect(() => {
     fetchLogs();
@@ -144,6 +147,8 @@ export default function SmsLogPage() {
 
     return matchesSearch && matchesStatus && matchesType;
   });
+
+  const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
@@ -303,7 +308,7 @@ export default function SmsLogPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredLogs.map((log) => (
+                    paginatedLogs.map((log) => (
                       <motion.tr
                         key={log.id}
                         initial={{ opacity: 0 }}
@@ -375,6 +380,17 @@ export default function SmsLogPage() {
               </tbody>
             </table>
           </div>
+          {filteredLogs.length > 0 && (
+            <div className="p-4 border-t border-white/10">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.max(1, Math.ceil(filteredLogs.length / pageSize))}
+                totalItems={filteredLogs.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -6,6 +6,7 @@ import {
   Users, Plus, Edit, Trash2, Wallet, Eye, EyeOff, X, Save,
   Loader2, CheckCircle2, AlertCircle, UserCheck, UserX, RefreshCw, ShieldCheck, ShieldAlert
 } from "lucide-react";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface User {
   id: number;
@@ -71,7 +72,16 @@ export default function UserManagementClient({
   const [addPermissions, setAddPermissions] = useState<string[]>([]);
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
+  const handleTabChange = (newTab: "reseller" | "employee") => {
+    setTab(newTab);
+    setCurrentPage(1);
+  };
+
   const list = tab === "reseller" ? resellers : employees;
+  const paginatedList = list.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleEditClick = (u: User) => {
     setEditUser(u);
@@ -99,7 +109,7 @@ export default function UserManagementClient({
       {/* Tabs */}
       <div className="flex gap-3">
         <button
-          onClick={() => setTab("reseller")}
+          onClick={() => handleTabChange("reseller")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition border ${
             tab === "reseller"
               ? "bg-purple-500/20 text-purple-300 border-purple-500/40"
@@ -109,7 +119,7 @@ export default function UserManagementClient({
           <Wallet size={16} /> Resellers ({resellers.length})
         </button>
         <button
-          onClick={() => setTab("employee")}
+          onClick={() => handleTabChange("employee")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition border ${
             tab === "employee"
               ? "bg-neon-blue/20 text-neon-blue border-neon-blue/40"
@@ -173,7 +183,7 @@ export default function UserManagementClient({
                     No {tab}s added yet. Click "Add {tab === "reseller" ? "Reseller" : "Employee"}" to create one.
                   </td>
                 </tr>
-              ) : list.map((u) => (
+              ) : paginatedList.map((u) => (
                 <tr key={u.id} className="hover:bg-white/5">
                   <td className="p-4">
                     <div className="font-semibold text-white">{u.name}</div>
@@ -234,6 +244,17 @@ export default function UserManagementClient({
               ))}
             </tbody>
           </table>
+          {list.length > 0 && (
+            <div className="p-4 border-t border-white/10">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.max(1, Math.ceil(list.length / pageSize))}
+                totalItems={list.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
         </div>
       </div>
 

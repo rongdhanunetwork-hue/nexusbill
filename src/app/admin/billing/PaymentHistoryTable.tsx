@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search, X } from "lucide-react";
 import RollbackButton from "./RollbackButton";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface Payment {
   id: number;
@@ -35,6 +36,10 @@ export default function PaymentHistoryTable({ payments, rollbackAction }: Props)
       (p.method || "").toLowerCase().includes(q)
     );
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+  const paginatedFiltered = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="glass-card overflow-hidden">
@@ -82,7 +87,7 @@ export default function PaymentHistoryTable({ payments, rollbackAction }: Props)
                 </td>
               </tr>
             ) : (
-              filtered.map((payment) => (
+              paginatedFiltered.map((payment) => (
                 <tr key={payment.id} className="hover:bg-white/5">
                   {/* Customer name + PPPoE */}
                   <td className="p-4">
@@ -129,11 +134,15 @@ export default function PaymentHistoryTable({ payments, rollbackAction }: Props)
         </table>
       </div>
 
-      {/* Footer showing count */}
-      {search && (
-        <div className="px-5 py-2.5 border-t border-white/5 text-xs text-gray-500">
-          {filtered.length} টি ফলাফল পাওয়া গেছে (মোট {payments.length} টির মধ্যে)
-        </div>
+      {/* Footer showing count and pagination */}
+      {filtered.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.max(1, Math.ceil(filtered.length / pageSize))}
+          totalItems={filtered.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       )}
     </div>
   );

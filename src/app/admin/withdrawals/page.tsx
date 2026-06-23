@@ -18,6 +18,7 @@ import {
   User
 } from "lucide-react";
 import { usePopup } from "@/components/ui/PopupProvider";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface ResellerInfo {
   id: number;
@@ -48,6 +49,9 @@ export default function AdminWithdrawalsPage() {
   const [adminNote, setAdminNote] = useState("");
   const [showModalId, setShowModalId] = useState<number | null>(null);
   const { showAlert } = usePopup();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   useEffect(() => {
     fetchRequests();
@@ -104,6 +108,8 @@ export default function AdminWithdrawalsPage() {
 
     return matchesSearch && matchesStatus;
   });
+
+  const paginatedRequests = filteredRequests.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
@@ -226,7 +232,7 @@ export default function AdminWithdrawalsPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredRequests.map((r) => (
+                  paginatedRequests.map((r) => (
                     <tr key={r.id} className="hover:bg-white/5 transition-colors">
                       {/* Reseller Info */}
                       <td className="px-6 py-4">
@@ -306,6 +312,17 @@ export default function AdminWithdrawalsPage() {
               </tbody>
             </table>
           </div>
+          {filteredRequests.length > 0 && (
+            <div className="p-4 border-t border-white/10">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.max(1, Math.ceil(filteredRequests.length / pageSize))}
+                totalItems={filteredRequests.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
         </div>
       )}
 

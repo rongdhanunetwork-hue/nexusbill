@@ -85,6 +85,7 @@ export default function CustomerProfileClient({
   isOnline,
   activeSession,
   plainTextPassword,
+  lastLoggedOut,
   role = "admin",
   currentCredit = 0,
   remainingDays = 0,
@@ -98,6 +99,7 @@ export default function CustomerProfileClient({
   isOnline: boolean;
   activeSession?: any;
   plainTextPassword?: string;
+  lastLoggedOut?: string;
   role?: "admin" | "reseller" | "employee";
   currentCredit?: number;
   remainingDays?: number;
@@ -726,13 +728,18 @@ useEffect(() => {
               </div>
             )}
           </div>
-          <div className="absolute top-4 right-4">
+          <div className="absolute top-4 right-4 text-right">
             <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase border ${
               isOnline ? "bg-neon-green/10 text-neon-green border-neon-green/30" : "bg-red-500/10 text-red-400 border-red-500/30"
             }`}>
               <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-neon-green animate-ping" : "bg-red-500"}`} />
               {isOnline ? "Connected" : "Disconnected"}
             </span>
+            {!isOnline && lastLoggedOut && (
+              <p className="text-[10px] text-gray-400 mt-1 font-mono bg-black/40 px-2 py-0.5 rounded border border-white/5">
+                Offline since: {lastLoggedOut}
+              </p>
+            )}
           </div>
           <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-neon-blue to-purple-500 flex items-center justify-center mb-4 text-3xl font-bold text-white shadow-lg shadow-neon-blue/20 overflow-hidden">
             <AvatarImage 

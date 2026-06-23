@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { PlusCircle, Trash2, TrendingDown, Calendar } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import ExpensesTable from "./ExpensesTable";
 
 export const dynamic = "force-dynamic";
 
@@ -193,34 +194,7 @@ export default async function ExpensesPage() {
               </tr>
             </thead>
             <tbody>
-              {allExpenses.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-500">
-                    No expense records yet.
-                  </td>
-                </tr>
-              ) : (
-                allExpenses.map((e) => (
-                  <tr key={e.id} className="border-b border-white/5 hover:bg-white/5">
-                    <td className="p-4 text-gray-300">{new Date(e.expenseDate).toLocaleDateString("en-BD")}</td>
-                    <td className="p-4">
-                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-300 border border-orange-500/30">
-                        {CATEGORIES.find((c) => c.value === e.category)?.label || e.category}
-                      </span>
-                    </td>
-                    <td className="p-4 text-gray-400 max-w-xs truncate">{e.note || "—"}</td>
-                    <td className="p-4 text-right font-bold text-red-400">৳{Number(e.amount).toFixed(2)}</td>
-                    <td className="p-4 text-center">
-                      <form action={deleteExpense}>
-                        <input type="hidden" name="id" value={e.id} />
-                        <button type="submit" className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition">
-                          <Trash2 size={14} />
-                        </button>
-                      </form>
-                    </td>
-                  </tr>
-                ))
-              )}
+              <ExpensesTable expenses={allExpenses} deleteAction={deleteExpense} />
             </tbody>
           </table>
         </div>

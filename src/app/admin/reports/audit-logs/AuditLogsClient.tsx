@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search, Activity, Calendar, ShieldAlert } from "lucide-react";
 import { motion } from "framer-motion";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface AuditLog {
   id: number;
@@ -20,6 +21,8 @@ interface AuditLog {
 export default function AuditLogsClient({ initialLogs }: { initialLogs: AuditLog[] }) {
   const [search, setSearch] = useState("");
   const [filterAction, setFilterAction] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   const filteredLogs = initialLogs.filter(log => {
     const matchesSearch = log.user?.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -30,6 +33,8 @@ export default function AuditLogsClient({ initialLogs }: { initialLogs: AuditLog
     
     return matchesSearch && matchesAction;
   });
+
+  const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const getActionColor = (action: string) => {
     if (action.includes("DELETE") || action.includes("REMOVE")) return "text-red-400 bg-red-500/20";
@@ -79,7 +84,7 @@ export default function AuditLogsClient({ initialLogs }: { initialLogs: AuditLog
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filteredLogs.map((log) => (
+              {paginatedLogs.map((log) => (
                 <tr key={log.id} className="hover:bg-white/5 transition-colors">
                   <td className="p-4 text-gray-400 font-mono text-xs whitespace-nowrap">
                     {log.createdAt ? new Date(log.createdAt).toLocaleString() : "N/A"}
@@ -118,6 +123,17 @@ export default function AuditLogsClient({ initialLogs }: { initialLogs: AuditLog
               )}
             </tbody>
           </table>
+          {filteredLogs.length > 0 && (
+            <div className="p-4 border-t border-white/10">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.max(1, Math.ceil(filteredLogs.length / pageSize))}
+                totalItems={filteredLogs.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

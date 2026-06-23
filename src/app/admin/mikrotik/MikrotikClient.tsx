@@ -8,6 +8,7 @@ import {
   Edit, LogOut, X, FileText, DatabaseBackup
 } from "lucide-react";
 import { usePopup } from "@/components/ui/PopupProvider";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface PppoeSecret {
   ".id": string;
@@ -99,11 +100,13 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
   const [liveLoading, setLiveLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Pagination states for Live Tab tables
+  // Pagination states for all tables
   const [secretsPage, setSecretsPage] = useState(1);
   const [activePage, setActivePage] = useState(1);
-  const secretsPageSize = 10;
-  const activePageSize = 10;
+  const [routersPage, setRoutersPage] = useState(1);
+  const [oltsPage, setOltsPage] = useState(1);
+  const [onusPage, setOnusPage] = useState(1);
+  const pageSize = 20;
 
   // Reset page numbers when router changes
   useEffect(() => {
@@ -210,6 +213,31 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
       fetchOlts();
     }
   }, [activeTab, selectedRouterId, fetchLiveData, fetchRouters, fetchOlts]);
+
+  // Auto-check OLT statuses in the background when olts are loaded
+  useEffect(() => {
+    if (activeTab === "olts" && olts.length > 0) {
+      // Create a background verification for all OLTs
+      let statusChanged = false;
+      const checkPromises = olts.map(olt => 
+        fetch(`/api/admin/olts/${olt.id}`, { method: "POST" })
+          .then(r => r.json())
+          .then(d => {
+            if (d.success && d.ok !== olt.status) {
+              statusChanged = true;
+            }
+          })
+          .catch(() => {})
+      );
+      
+      // If any status was updated during the background check, refetch the list silently
+      Promise.all(checkPromises).then(() => {
+        if (statusChanged) fetchOlts();
+      });
+    }
+    // We intentionally only want this to run when activeTab changes or when olts are initially loaded (length changes)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, olts.length]);
 
   useEffect(() => {
     if (editingOlt) {
@@ -969,10 +997,10 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                   ) : (
                     (() => {
                       const totalSecrets = liveData?.secrets || [];
-                      const totalSecretsPages = Math.max(1, Math.ceil(totalSecrets.length / secretsPageSize));
+                      const totalSecretsPages = Math.max(1, Math.ceil(totalSecrets.length / pageSize));
                       const currentSecretsPage = Math.min(secretsPage, totalSecretsPages);
-                      const startIndex = (currentSecretsPage - 1) * secretsPageSize;
-                      const paginatedSecrets = totalSecrets.slice(startIndex, startIndex + secretsPageSize);
+                      const startIndex = (currentSecretsPage - 1) * pageSize;
+                      const paginatedSecrets = totalSecrets.slice(startIndex, startIndex + pageSize);
 
                       return paginatedSecrets.map((secret) => {
                         const isOnline = activeNames.has(secret.name);
@@ -1046,63 +1074,13 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
             </div>
             {/* Secrets Pagination */}
             {liveData && liveData.secrets.length > 0 && (
-              <div className="p-4 border-t border-white/10 bg-white/2 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="text-xs text-gray-400">
-                  Showing <span className="font-semibold text-white">{(Math.min(secretsPage, Math.max(1, Math.ceil(liveData.secrets.length / secretsPageSize))) - 1) * secretsPageSize + 1}</span> to{" "}
-                  <span className="font-semibold text-white">
-                    {Math.min(Math.min(secretsPage, Math.max(1, Math.ceil(liveData.secrets.length / secretsPageSize))) * secretsPageSize, liveData.secrets.length)}
-                  </span>{" "}
-                  of <span className="font-semibold text-white">{liveData.secrets.length}</span> secrets
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setSecretsPage((prev) => Math.max(prev - 1, 1))}
-                    disabled={Math.min(secretsPage, Math.max(1, Math.ceil(liveData.secrets.length / secretsPageSize))) === 1}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all cursor-pointer"
-                  >
-                    Previous
-                  </button>
-                  
-                  {(() => {
-                    const totalPages = Math.ceil(liveData.secrets.length / secretsPageSize);
-                    const currentSecPage = Math.min(secretsPage, totalPages);
-                    const pages = [];
-                    const maxVisible = 5;
-                    
-                    let start = Math.max(1, currentSecPage - 2);
-                    let end = Math.min(totalPages, start + maxVisible - 1);
-                    
-                    if (end - start < maxVisible - 1) {
-                      start = Math.max(1, end - maxVisible + 1);
-                    }
-                    
-                    for (let i = start; i <= end; i++) {
-                      pages.push(
-                        <button
-                          key={i}
-                          onClick={() => setSecretsPage(i)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                            currentSecPage === i
-                              ? "bg-neon-blue text-slate-950 font-bold border-neon-blue shadow-lg shadow-neon-blue/20"
-                              : "bg-white/5 hover:bg-white/10 border-white/10 text-gray-300 hover:text-white"
-                          }`}
-                        >
-                          {i}
-                        </button>
-                      );
-                    }
-                    return pages;
-                  })()}
-                  
-                  <button
-                    onClick={() => setSecretsPage((prev) => Math.min(prev + 1, Math.ceil(liveData.secrets.length / secretsPageSize)))}
-                    disabled={Math.min(secretsPage, Math.max(1, Math.ceil(liveData.secrets.length / secretsPageSize))) === Math.ceil(liveData.secrets.length / secretsPageSize)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all cursor-pointer"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
+              <Pagination
+                currentPage={secretsPage}
+                totalPages={Math.max(1, Math.ceil(liveData.secrets.length / pageSize))}
+                totalItems={liveData.secrets.length}
+                pageSize={pageSize}
+                onPageChange={setSecretsPage}
+              />
             )}
           </div>
 
@@ -1127,10 +1105,10 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                   <tbody className="divide-y divide-white/5">
                     {(() => {
                       const totalActive = liveData.active || [];
-                      const totalActivePages = Math.max(1, Math.ceil(totalActive.length / activePageSize));
+                      const totalActivePages = Math.max(1, Math.ceil(totalActive.length / pageSize));
                       const currentActivePage = Math.min(activePage, totalActivePages);
-                      const startIndex = (currentActivePage - 1) * activePageSize;
-                      const paginatedActive = totalActive.slice(startIndex, startIndex + activePageSize);
+                      const startIndex = (currentActivePage - 1) * pageSize;
+                      const paginatedActive = totalActive.slice(startIndex, startIndex + pageSize);
 
                       return paginatedActive.map((session) => (
                         <tr key={session[".id"]} className="hover:bg-white/5">
@@ -1163,63 +1141,13 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
               </div>
               {/* Active Sessions Pagination */}
               {liveData && liveData.active.length > 0 && (
-                <div className="p-4 border-t border-white/10 bg-white/2 flex flex-col sm:flex-row justify-between items-center gap-4">
-                  <div className="text-xs text-gray-400">
-                    Showing <span className="font-semibold text-white">{(Math.min(activePage, Math.max(1, Math.ceil(liveData.active.length / activePageSize))) - 1) * activePageSize + 1}</span> to{" "}
-                    <span className="font-semibold text-white">
-                      {Math.min(Math.min(activePage, Math.max(1, Math.ceil(liveData.active.length / activePageSize))) * activePageSize, liveData.active.length)}
-                    </span>{" "}
-                    of <span className="font-semibold text-white">{liveData.active.length}</span> sessions
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => setActivePage((prev) => Math.max(prev - 1, 1))}
-                      disabled={Math.min(activePage, Math.max(1, Math.ceil(liveData.active.length / activePageSize))) === 1}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all cursor-pointer"
-                    >
-                      Previous
-                    </button>
-                    
-                    {(() => {
-                      const totalPages = Math.ceil(liveData.active.length / activePageSize);
-                      const currentActPage = Math.min(activePage, totalPages);
-                      const pages = [];
-                      const maxVisible = 5;
-                      
-                      let start = Math.max(1, currentActPage - 2);
-                      let end = Math.min(totalPages, start + maxVisible - 1);
-                      
-                      if (end - start < maxVisible - 1) {
-                        start = Math.max(1, end - maxVisible + 1);
-                      }
-                      
-                      for (let i = start; i <= end; i++) {
-                        pages.push(
-                          <button
-                            key={i}
-                            onClick={() => setActivePage(i)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                              currentActPage === i
-                                ? "bg-neon-blue text-slate-950 font-bold border-neon-blue shadow-lg shadow-neon-blue/20"
-                                : "bg-white/5 hover:bg-white/10 border-white/10 text-gray-300 hover:text-white"
-                            }`}
-                          >
-                            {i}
-                          </button>
-                        );
-                      }
-                      return pages;
-                    })()}
-                    
-                    <button
-                      onClick={() => setActivePage((prev) => Math.min(prev + 1, Math.ceil(liveData.active.length / activePageSize)))}
-                      disabled={Math.min(activePage, Math.max(1, Math.ceil(liveData.active.length / activePageSize))) === Math.ceil(liveData.active.length / activePageSize)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white disabled:opacity-35 disabled:hover:bg-white/5 transition-all cursor-pointer"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
+                <Pagination
+                  currentPage={activePage}
+                  totalPages={Math.max(1, Math.ceil(liveData.active.length / pageSize))}
+                  totalItems={liveData.active.length}
+                  pageSize={pageSize}
+                  onPageChange={setActivePage}
+                />
               )}
             </div>
           )}
@@ -1281,7 +1209,10 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                       <td colSpan={(role === "admin" || role === "reseller") ? 5 : 4} className="p-8 text-center text-gray-500">No routers registered yet.</td>
                     </tr>
                   ) : (
-                    routers.map((router) => (
+                    (() => {
+                      const startIndex = (routersPage - 1) * pageSize;
+                      const paginatedRouters = routers.slice(startIndex, startIndex + pageSize);
+                      return paginatedRouters.map((router) => (
                       <tr key={router.id} className="hover:bg-white/5">
                         <td className="p-4">
                           <button
@@ -1357,10 +1288,20 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                         )}
                       </tr>
                     ))
+                    })()
                   )}
                 </tbody>
               </table>
             </div>
+            {routers.length > 0 && (
+              <Pagination
+                currentPage={routersPage}
+                totalPages={Math.max(1, Math.ceil(routers.length / pageSize))}
+                totalItems={routers.length}
+                pageSize={pageSize}
+                onPageChange={setRoutersPage}
+              />
+            )}
           </div>
 
           {/* Modal: Register New Router */}
@@ -1476,8 +1417,12 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
               <p className="text-xs text-gray-500 mt-1">Click the "Add New OLT" button above to register a device.</p>
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {olts.map((olt) => {
+              {(() => {
+                const startIndex = (oltsPage - 1) * pageSize;
+                const paginatedOlts = olts.slice(startIndex, startIndex + pageSize);
+                return paginatedOlts.map((olt) => {
                 // Determine brand color
                 let brandColor = "bg-purple-500/15 text-purple-300 border-purple-500/20";
                 if (olt.brand?.toLowerCase().includes("vsol")) {
@@ -1564,14 +1509,27 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                           className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-xl border border-red-500/30 transition-all flex items-center justify-center cursor-pointer"
                           title="Delete OLT"
                         >
-                          <Trash size={15} />
+                  <Trash size={15} />
                         </button>
                       )}
                     </div>
                   </div>
-                );
-              })}
+                  );
+                })
+              })()}
             </div>
+            {olts.length > 0 && (
+              <div className="mt-6">
+                <Pagination
+                  currentPage={oltsPage}
+                  totalPages={Math.max(1, Math.ceil(olts.length / pageSize))}
+                  totalItems={olts.length}
+                  pageSize={pageSize}
+                  onPageChange={setOltsPage}
+                />
+              </div>
+            )}
+            </>
           )}
 
           {/* Modal: Register New OLT */}
@@ -2189,7 +2147,10 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-xs text-gray-300">
-                      {onusData.onus?.map((onu: any) => {
+                      {(() => {
+                        const startIndex = (onusPage - 1) * pageSize;
+                        const paginatedOnus = onusData.onus?.slice(startIndex, startIndex + pageSize) || [];
+                        return paginatedOnus.map((onu: any) => {
                         const isOffline = onu.status === "offline";
                         const powerNum = parseFloat(onu.rxPower);
                         
@@ -2229,10 +2190,20 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                             <td className="p-3 font-mono">{onu.uptime}</td>
                           </tr>
                         );
-                      })}
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
+                {onusData.onus && onusData.onus.length > 0 && (
+                  <Pagination
+                    currentPage={onusPage}
+                    totalPages={Math.max(1, Math.ceil(onusData.onus.length / pageSize))}
+                    totalItems={onusData.onus.length}
+                    pageSize={pageSize}
+                    onPageChange={setOnusPage}
+                  />
+                )}
               </div>
             ) : (
               <div className="py-8 text-center text-gray-500">Failed to load details.</div>

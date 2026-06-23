@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Users, Wifi, WifiOff, Clock, DollarSign, Activity, AlertTriangle, Router, RadioTower, Download, Upload, CalendarCheck, RefreshCw, MoreHorizontal, Eye, Edit, FileText, ShieldAlert } from "lucide-react";
+import { Users, Wifi, WifiOff, Clock, DollarSign, Activity, AlertTriangle, Router, RadioTower, Download, Upload, CalendarCheck, RefreshCw, MoreHorizontal, Eye, Edit, FileText, ShieldAlert, Cpu, HardDrive } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
@@ -46,6 +46,112 @@ function LiveBadge({ lastUpdated }: { lastUpdated: string | null }) {
       <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
       LIVE · {timeAgo}
     </span>
+  );
+}
+
+// ─── MikroTik Resources Widget ───────────────────────────────────────────────
+function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number }) {
+  const [resources, setResources] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchResources = async () => {
+      try {
+        const res = await fetch("/api/admin/dashboard/mikrotik-resources");
+        if (res.ok) {
+          const data = await res.json();
+          if (active) setResources(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch mikrotik resources", e);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    fetchResources();
+    return () => { active = false; };
+  }, [refreshTrigger]);
+
+  if (loading) {
+    return (
+      <div className="glass-card p-6 min-w-0 overflow-hidden mb-6 flex items-center justify-center h-32">
+        <span className="text-gray-500 animate-pulse flex items-center gap-2">
+          <Router size={20} className="animate-spin" /> Fetching MikroTik Data...
+        </span>
+      </div>
+    );
+  }
+
+  if (resources.length === 0) return null;
+
+  const formatBytes = (bytesStr?: string) => {
+    if (!bytesStr) return "0 MB";
+    const bytes = parseInt(bytesStr);
+    if (bytes > 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+      {resources.map((router) => {
+        const res = router.resource;
+        const totalMem = res?.["total-memory"] ? parseInt(res["total-memory"]) : 1;
+        const freeMem = res?.["free-memory"] ? parseInt(res["free-memory"]) : 0;
+        const usedMem = totalMem - freeMem;
+        const memPercent = (usedMem / totalMem) * 100;
+        
+        return (
+          <motion.div key={router.routerId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5 relative overflow-hidden">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`p-2 rounded-lg ${res ? "bg-neon-green/10 text-neon-green" : "bg-red-500/10 text-red-500"}`}>
+                <Router size={20} />
+              </div>
+              <div>
+                <h3 className="text-white font-semibold text-sm">{router.name}</h3>
+                <p className="text-xs text-gray-500">{router.ip}</p>
+              </div>
+              {res && (
+                <div className="ml-auto text-right">
+                  <span className="text-[10px] text-gray-400 block mb-0.5 uppercase tracking-wide">Uptime</span>
+                  <span className="text-xs font-mono text-neon-blue font-semibold">{res.uptime}</span>
+                </div>
+              )}
+            </div>
+
+            {res ? (
+              <div className="space-y-4">
+                {/* CPU Usage */}
+                <div>
+                  <div className="flex justify-between items-end mb-1.5">
+                    <span className="text-xs text-gray-400 flex items-center gap-1.5"><Cpu size={12} /> CPU Load</span>
+                    <span className="text-xs font-mono font-bold text-white">{res["cpu-load"]}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${parseInt(res["cpu-load"]) > 80 ? "bg-red-500" : parseInt(res["cpu-load"]) > 50 ? "bg-yellow-400" : "bg-neon-green"}`} style={{ width: `${res["cpu-load"]}%` }} />
+                  </div>
+                </div>
+
+                {/* Memory Usage */}
+                <div>
+                  <div className="flex justify-between items-end mb-1.5">
+                    <span className="text-xs text-gray-400 flex items-center gap-1.5"><HardDrive size={12} /> RAM Usage</span>
+                    <span className="text-[10px] text-gray-400 font-mono">{formatBytes(usedMem.toString())} / {formatBytes(res["total-memory"])}</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${memPercent > 80 ? "bg-red-500" : memPercent > 50 ? "bg-yellow-400" : "bg-neon-blue"}`} style={{ width: `${memPercent}%` }} />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="py-4 text-center">
+                <span className="text-xs text-red-400 font-semibold bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">Offline / Unreachable</span>
+              </div>
+            )}
+          </motion.div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -120,6 +226,7 @@ export default function AdminDashboardClient({
   const [mounted, setMounted] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -167,7 +274,10 @@ export default function AdminDashboardClient({
     } catch (e) {
       console.error("Dashboard stats fetch error:", e);
     } finally {
-      if (showRefreshing) setTimeout(() => setIsRefreshing(false), 600);
+      if (showRefreshing) {
+        setTimeout(() => setIsRefreshing(false), 600);
+        setRefreshTrigger(prev => prev + 1);
+      }
     }
   }, [apiEndpoint]);
 
@@ -369,6 +479,8 @@ export default function AdminDashboardClient({
       </div>
       )}
 
+      {/* MikroTik Resources Widget moved down */}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
@@ -395,6 +507,9 @@ export default function AdminDashboardClient({
           return <div key={stat.name} className="block" onClick={(stat as any).onClick}>{cardContent}</div>;
         })}
       </div>
+
+      {/* MikroTik Resources Widget */}
+      {role === "admin" && <MikrotikResourcesWidget refreshTrigger={refreshTrigger} />}
 
       {/* Graphs */}
       {role === "admin" && (

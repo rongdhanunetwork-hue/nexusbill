@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import {
   FileText, TrendingUp, Users, DollarSign, ArrowDown, ArrowUp, Calendar, TrendingDown, MessageSquare, Loader2
 } from "lucide-react";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface Payment {
   id: number;
@@ -79,6 +80,14 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
   const [bulkSmsLoading, setBulkSmsLoading] = useState(false);
   const [bulkSmsResult, setBulkSmsResult] = useState<string | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
+  const handleTabChange = (tab: "income" | "due" | "customer" | "ledger" | "expense") => {
+    setReportType(tab);
+    setCurrentPage(1);
+  };
+
   // Ledger Filter states
   const [filterReseller, setFilterReseller] = useState("");
   const [filterType, setFilterType] = useState("");
@@ -135,7 +144,7 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
       <div className="grid md:grid-cols-4 gap-6">
         {/* Income Card */}
         <button
-          onClick={() => setReportType("income")}
+          onClick={() => handleTabChange("income")}
           className={`glass-card p-6 text-left transition-all relative overflow-hidden border ${
             reportType === "income" ? "border-neon-blue bg-white/10 ring-1 ring-neon-blue/20" : "border-white/5"
           }`}
@@ -156,7 +165,7 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
 
         {/* Due Card */}
         <button
-          onClick={() => setReportType("due")}
+          onClick={() => handleTabChange("due")}
           className={`glass-card p-6 text-left transition-all relative overflow-hidden border ${
             reportType === "due" ? "border-orange-500 bg-white/10 ring-1 ring-orange-500/20" : "border-white/5"
           }`}
@@ -177,7 +186,7 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
 
         {/* Customer Card */}
         <button
-          onClick={() => setReportType("customer")}
+          onClick={() => handleTabChange("customer")}
           className={`glass-card p-6 text-left transition-all relative overflow-hidden border ${
             reportType === "customer" ? "border-neon-green bg-white/10 ring-1 ring-neon-green/20" : "border-white/5"
           }`}
@@ -198,7 +207,7 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
 
         {/* Ledger Card */}
         <button
-          onClick={() => setReportType("ledger")}
+          onClick={() => handleTabChange("ledger")}
           className={`glass-card p-6 text-left transition-all relative overflow-hidden border ${
             reportType === "ledger" ? "border-purple-500 bg-white/10 ring-1 ring-purple-500/20" : "border-white/5"
           }`}
@@ -220,7 +229,7 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
         {/* Expense Card — Admin only */}
         {role === "admin" && (
           <button
-            onClick={() => setReportType("expense")}
+            onClick={() => handleTabChange("expense")}
             className={`glass-card p-6 text-left transition-all relative overflow-hidden border ${
               reportType === "expense" ? "border-red-500 bg-white/10 ring-1 ring-red-500/20" : "border-white/5"
             }`}
@@ -262,37 +271,50 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
 
         <div className="overflow-x-auto">
           {reportType === "income" && (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-white/10 text-xs text-gray-400 uppercase tracking-wider bg-white/5">
-                  <th className="p-4">Customer</th>
-                  <th className="p-4">Amount</th>
-                  <th className="p-4">Method</th>
-                  <th className="p-4">Transaction ID</th>
-                  <th className="p-4">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {approvedPayments.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="p-8 text-center text-gray-500">No income history.</td>
+            <div>
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-white/10 text-xs text-gray-400 uppercase tracking-wider bg-white/5">
+                    <th className="p-4">Customer</th>
+                    <th className="p-4">Amount</th>
+                    <th className="p-4">Method</th>
+                    <th className="p-4">Transaction ID</th>
+                    <th className="p-4">Date</th>
                   </tr>
-                ) : (
-                  approvedPayments.map((p) => (
-                    <tr key={p.id} className="hover:bg-white/5">
-                      <td className="p-4">
-                        <div className="font-bold text-white">{p.user?.name || "Unknown"}</div>
-                        <div className="text-xs text-gray-400">{p.user?.phone}</div>
-                      </td>
-                      <td className="p-4 text-neon-blue font-bold">৳{p.amount}</td>
-                      <td className="p-4 text-gray-300 capitalize">{p.method}</td>
-                      <td className="p-4 text-gray-400 font-mono text-sm">{p.trxId}</td>
-                      <td className="p-4 text-gray-400">{p.createdAt ? new Date(p.createdAt).toLocaleString() : "N/A"}</td>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {approvedPayments.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-gray-500">No income history.</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    approvedPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p) => (
+                      <tr key={p.id} className="hover:bg-white/5">
+                        <td className="p-4">
+                          <div className="font-bold text-white">{p.user?.name || "Unknown"}</div>
+                          <div className="text-xs text-gray-400">{p.user?.phone}</div>
+                        </td>
+                        <td className="p-4 text-neon-blue font-bold">৳{p.amount}</td>
+                        <td className="p-4 text-gray-300 capitalize">{p.method}</td>
+                        <td className="p-4 text-gray-400 font-mono text-sm">{p.trxId}</td>
+                        <td className="p-4 text-gray-400">{p.createdAt ? new Date(p.createdAt).toLocaleString() : "N/A"}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+              {approvedPayments.length > 0 && (
+                <div className="p-4 border-t border-white/10">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.max(1, Math.ceil(approvedPayments.length / pageSize))}
+                    totalItems={approvedPayments.length}
+                    pageSize={pageSize}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              )}
+            </div>
           )}
 
           {reportType === "due" && (
@@ -331,7 +353,7 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
                     <td colSpan={5} className="p-8 text-center text-gray-500">No dues outstanding!</td>
                   </tr>
                 ) : (
-                  dueInvoices.map((i) => (
+                  dueInvoices.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((i) => (
                     <tr key={i.id} className="hover:bg-white/5">
                       <td className="p-4 text-white font-mono text-sm">INV-{i.id}</td>
                       <td className="p-4">
@@ -346,6 +368,17 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
                 )}
               </tbody>
             </table>
+            {dueInvoices.length > 0 && (
+              <div className="p-4 border-t border-white/10">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={Math.max(1, Math.ceil(dueInvoices.length / pageSize))}
+                  totalItems={dueInvoices.length}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
             </div>
           )}
 
@@ -376,7 +409,7 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
                     <td colSpan={4} className="p-8 text-center text-gray-500">No customers registered.</td>
                   </tr>
                 ) : (
-                  customers.map((c) => (
+                  customers.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c) => (
                     <tr key={c.id} className="hover:bg-white/5">
                       <td className="p-4 text-white font-bold">{c.name}</td>
                       <td className="p-4 text-gray-300 font-mono">{c.phone}</td>
@@ -395,6 +428,17 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
                 )}
               </tbody>
             </table>
+            {customers.length > 0 && (
+              <div className="p-4 border-t border-white/10">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={Math.max(1, Math.ceil(customers.length / pageSize))}
+                  totalItems={customers.length}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
             </div>
           )}
 
@@ -459,7 +503,7 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
                       <td colSpan={role === "reseller" ? 5 : 6} className="p-8 text-center text-gray-500">No transactions match the criteria.</td>
                     </tr>
                   ) : (
-                    filteredTx.map((tx) => (
+                    filteredTx.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((tx) => (
                       <tr key={tx.id} className="hover:bg-white/5 text-sm">
                         <td className="p-4 text-white font-mono">TX-{tx.id}</td>
                         {role !== "reseller" && (
@@ -500,6 +544,17 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
                   )}
                 </tbody>
               </table>
+              {filteredTx.length > 0 && (
+                <div className="p-4 border-t border-white/10">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.max(1, Math.ceil(filteredTx.length / pageSize))}
+                    totalItems={filteredTx.length}
+                    pageSize={pageSize}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -536,7 +591,7 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
                   {allExpenses.length === 0 ? (
                     <tr><td colSpan={4} className="p-8 text-center text-gray-500">No expense records yet. Add from Expenses page.</td></tr>
                   ) : (
-                    allExpenses.map((e) => (
+                    allExpenses.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((e) => (
                       <tr key={e.id} className="hover:bg-white/5">
                         <td className="p-4 text-gray-300">{new Date(e.expenseDate).toLocaleDateString()}</td>
                         <td className="p-4">
@@ -551,6 +606,17 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
                   )}
                 </tbody>
               </table>
+              {allExpenses.length > 0 && (
+                <div className="p-4 border-t border-white/10">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.max(1, Math.ceil(allExpenses.length / pageSize))}
+                    totalItems={allExpenses.length}
+                    pageSize={pageSize}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

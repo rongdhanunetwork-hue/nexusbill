@@ -4,6 +4,7 @@ import React, { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Compass, Box, Trash2, Plus, Layers, Search, ChevronRight, ChevronDown, List } from "lucide-react";
 import { usePopup } from "@/components/ui/PopupProvider";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface AreaItem {
   id: number;
@@ -24,6 +25,8 @@ export default function AreasClient({ initialAreas, createArea, deleteArea }: Ar
   const [activeTab, setActiveTab] = useState<"tree" | "list">("tree");
   const [searchQuery, setSearchQuery] = useState("");
   const { showConfirm, showAlert } = usePopup();
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
   
   // Form State
   const [name, setName] = useState("");
@@ -115,6 +118,8 @@ export default function AreasClient({ initialAreas, createArea, deleteArea }: Ar
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const paginatedAreas = filteredAreas.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-6">
@@ -325,7 +330,7 @@ export default function AreasClient({ initialAreas, createArea, deleteArea }: Ar
                         <td colSpan={5} className="p-8 text-center text-gray-500">No items found.</td>
                       </tr>
                     ) : (
-                      filteredAreas.map((item) => {
+                      paginatedAreas.map((item) => {
                         const parent = item.parentId ? areas.find(a => a.id === item.parentId) : null;
                         return (
                           <tr key={item.id} className="hover:bg-white/2 transition-colors text-sm">
@@ -357,6 +362,17 @@ export default function AreasClient({ initialAreas, createArea, deleteArea }: Ar
                     )}
                   </tbody>
                 </table>
+                {filteredAreas.length > 0 && (
+                  <div className="p-4 border-t border-white/10">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={Math.max(1, Math.ceil(filteredAreas.length / pageSize))}
+                      totalItems={filteredAreas.length}
+                      pageSize={pageSize}
+                      onPageChange={setCurrentPage}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

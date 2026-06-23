@@ -56,24 +56,19 @@ export default function ImageUploadField({ label, name, defaultValue, onChange }
       }
     }
 
-    const formData = new FormData();
-    formData.append("file", finalFile);
-
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.url) {
-        setValue(data.url);
-        if (onChange) onChange(data.url);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
+    // Use base64 for file storage instead of local API upload for Vercel compatibility
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setValue(base64String);
+      if (onChange) onChange(base64String);
       setUploading(false);
-    }
+    };
+    reader.onerror = () => {
+      console.error("Failed to read file");
+      setUploading(false);
+    };
+    reader.readAsDataURL(finalFile);
   }
 
   function handleRemove() {

@@ -6,6 +6,8 @@ import { CheckCircle, Clock, DollarSign, FileText, AlertTriangle } from "lucide-
 import type { ReactNode } from "react";
 import RollbackButton from "./RollbackButton";
 import PaymentHistoryTable from "./PaymentHistoryTable";
+import PendingPaymentsTable from "./PendingPaymentsTable";
+import DueInvoicesTable from "./DueInvoicesTable";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -366,25 +368,15 @@ export default async function BillingPage() {
       </div>
 
       <Table title="Pending Payment - Transaction ID Verify" headers={["Customer", "Amount", "Method", "Transaction ID", "Screenshot", "Actions"]}>
-        {pendingPayments.length === 0 ? <Empty colSpan={6} text="No pending payments." /> : pendingPayments.map(payment => (
-          <tr key={payment.id} className="hover:bg-white/5">
-            <td className="p-4"><div className="font-medium text-white">{payment.user?.name || "Unknown"}{payment.user?.role === "reseller" && <span className="ml-2 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">Reseller Credit</span>}</div><div className="text-sm text-gray-400">{payment.user?.phone}</div></td>
-            <td className="p-4 text-white font-bold">৳{payment.amount}</td>
-            <td className="p-4 text-gray-300 capitalize">{payment.method || "N/A"}</td>
-            <td className="p-4 text-neon-blue font-mono">{payment.trxId || "N/A"}</td>
-            <td className="p-4 text-gray-400">{payment.screenshotUrl ? "Uploaded" : "Optional/No"}</td>
-            <td className="p-4"><div className="flex gap-2">
-              <form action={approvePayment}><input type="hidden" name="paymentId" value={payment.id} /><input type="hidden" name="userId" value={payment.userId} /><input type="hidden" name="amount" value={payment.amount} /><button className="px-3 py-1.5 bg-neon-green/20 text-neon-green rounded-lg text-sm border border-neon-green/30">Approve</button></form>
-              <form action={rejectPayment}><input type="hidden" name="paymentId" value={payment.id} /><button className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm border border-red-500/30">Reject</button></form>
-            </div></td>
-          </tr>
-        ))}
+        <PendingPaymentsTable 
+          payments={pendingPayments}
+          approveAction={approvePayment}
+          rejectAction={rejectPayment}
+        />
       </Table>
 
       <Table title="Due List / Unpaid Bills" headers={["Invoice", "Customer", "Amount", "Due Date", "Status"]}>
-        {dueInvoices.length === 0 ? <Empty colSpan={5} text="No due invoices." /> : dueInvoices.map(invoice => (
-          <tr key={invoice.id} className="hover:bg-white/5"><td className="p-4 text-white font-mono">INV-{invoice.id}</td><td className="p-4 text-gray-300">{invoice.user?.name}</td><td className="p-4 text-white font-bold">৳{invoice.amount}</td><td className="p-4 text-gray-400">{invoice.dueDate?.toLocaleDateString()}</td><td className="p-4 text-orange-400 capitalize">{invoice.status}</td></tr>
-        ))}
+        <DueInvoicesTable invoices={dueInvoices} />
       </Table>
 
       <PaymentHistoryTable

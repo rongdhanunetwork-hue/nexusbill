@@ -20,6 +20,7 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
   let isOnline = false;
   let activeSession: any = null;
   let plainTextPassword = "";
+  let lastLoggedOut = "";
   try {
     const details = await getRouterDetails(customer.mikrotikId || undefined);
     const activeSessions = details.active;
@@ -36,6 +37,9 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
       );
       if (secretMatch && secretMatch.password) {
         plainTextPassword = secretMatch.password;
+      }
+      if (secretMatch && secretMatch["last-logged-out"]) {
+        lastLoggedOut = secretMatch["last-logged-out"];
       }
     }
   } catch (err) {
@@ -119,6 +123,7 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
       isOnline={isOnline}
       activeSession={activeSession}
       plainTextPassword={plainTextPassword}
+      lastLoggedOut={lastLoggedOut}
       currentCredit={currentCredit}
       remainingDays={remainingDays}
       monthlyDownloadGb={monthlyDownloadGb}
