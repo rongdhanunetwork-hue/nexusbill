@@ -43,6 +43,7 @@ const navigation: NavItem[] = [
     children: [
       { name: "Routers", href: "/admin/mikrotik" },
       { name: "PPPoE Users", href: "/admin/mikrotik/pppoe-users" },
+      { name: "IP Pools", href: "/admin/ip-pools" },
     ],
   },
   { name: "Notice", href: "/admin/notices", icon: Megaphone },
