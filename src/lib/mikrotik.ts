@@ -54,6 +54,7 @@ export interface PppoeSecret {
   profile?: string;
   disabled: string; // "true" | "false"
   comment?: string;
+  [key: string]: any; // Allow indexing for other MikroTik properties like "last-logged-out"
 }
 
 export interface PppoeActive {

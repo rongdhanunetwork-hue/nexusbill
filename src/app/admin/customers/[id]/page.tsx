@@ -38,8 +38,8 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
       if (secretMatch && secretMatch.password) {
         plainTextPassword = secretMatch.password;
       }
-      if (secretMatch && secretMatch["last-logged-out"]) {
-        lastLoggedOut = secretMatch["last-logged-out"];
+      if (secretMatch && (secretMatch as any)["last-logged-out"]) {
+        lastLoggedOut = (secretMatch as any)["last-logged-out"];
       }
     }
   } catch (err) {

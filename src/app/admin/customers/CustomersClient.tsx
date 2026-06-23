@@ -1048,8 +1048,8 @@ const handleImportSubmit = async () => {
                             const secret = pppoeUser ? secretsMap.get(pppoeUser) : null;
                             // Prefer real MikroTik last-logged-out time, fallback to DB lastSeen
                             let offlineTime = null;
-                            if (secret && secret["last-logged-out"]) {
-                              offlineTime = secret["last-logged-out"];
+                            if (secret && (secret as any)["last-logged-out"]) {
+                              offlineTime = (secret as any)["last-logged-out"];
                             } else {
                               offlineTime = customer.lastSeen;
                             }
