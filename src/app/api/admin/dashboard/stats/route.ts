@@ -45,26 +45,26 @@ export async function GET() {
       db.select({ count: sql<number>`cast(count(*) as int)` })
         .from(payments)
         .innerJoin(users, eq(payments.userId, users.id))
-        .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${todayStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
+        .where(sql`${payments.status} = 'approved' and (${payments.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Dhaka')::date >= ${todayStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
       db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` })
         .from(payments)
         .innerJoin(users, eq(payments.userId, users.id))
-        .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${todayStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
+        .where(sql`${payments.status} = 'approved' and (${payments.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Dhaka')::date >= ${todayStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
       db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` })
         .from(payments)
         .innerJoin(users, eq(payments.userId, users.id))
-        .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${startOfMonthStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
+        .where(sql`${payments.status} = 'approved' and (${payments.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Dhaka')::date >= ${startOfMonthStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
       db.select({ sum: sql<number>`cast(coalesce(sum(${invoices.amount}), 0) as int)` })
         .from(invoices)
         .innerJoin(users, eq(invoices.userId, users.id))
-        .where(sql`${invoices.status} in ('unpaid', 'due') and ${invoices.createdAt} >= ${startOfMonthStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
+        .where(sql`${invoices.status} in ('unpaid', 'due') and (${invoices.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Dhaka')::date >= ${startOfMonthStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
       db.select({ count: sql<number>`cast(count(*) as int)` }).from(mikrotiks).where(and(eq(mikrotiks.adminId, adminId), isNull(mikrotiks.resellerId))),
       db.select({ count: sql<number>`cast(count(*) as int)` }).from(olts).where(and(eq(olts.adminId, adminId), isNull(olts.resellerId))),
       db.select({ sum: sql<number>`cast(coalesce(sum(${expenses.amount}), 0) as int)` }).from(expenses).where(sql`${expenses.expenseDate} >= ${startOfMonthStr}::date and ${expenses.adminId} = ${adminId}`),
       db.select({ userId: payments.userId })
         .from(payments)
         .innerJoin(users, eq(payments.userId, users.id))
-        .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${startOfMonthStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
+        .where(sql`${payments.status} = 'approved' and (${payments.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Dhaka')::date >= ${startOfMonthStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
     ]);
 
     const getExpiredDaysCount = (days: number) => {
