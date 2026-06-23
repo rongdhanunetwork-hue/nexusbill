@@ -400,28 +400,31 @@ const lastSessionTraffic = loadSessionCache();
 
 function parseUptimeToSeconds(uptime: string): number {
   if (!uptime) return 0;
-  let days = 0;
-  let timePart = uptime;
-  if (uptime.includes("d")) {
-    const parts = uptime.split("d");
-    days = parseInt(parts[0]) || 0;
-    timePart = parts[1] || "";
+  let totalSeconds = 0;
+  
+  const wMatch = uptime.match(/(\d+)w/);
+  const dMatch = uptime.match(/(\d+)d/);
+  const hMatch = uptime.match(/(\d+)h/);
+  const mMatch = uptime.match(/(\d+)m/);
+  const sMatch = uptime.match(/(\d+)s/);
+
+  if (wMatch) totalSeconds += parseInt(wMatch[1]) * 7 * 86400;
+  if (dMatch) totalSeconds += parseInt(dMatch[1]) * 86400;
+  if (hMatch) totalSeconds += parseInt(hMatch[1]) * 3600;
+  if (mMatch) totalSeconds += parseInt(mMatch[1]) * 60;
+  if (sMatch) totalSeconds += parseInt(sMatch[1]);
+
+  // Fallback for HH:MM:SS format just in case
+  if (totalSeconds === 0 && uptime.includes(":")) {
+    const parts = uptime.split(":");
+    if (parts.length === 3) {
+      totalSeconds += (parseInt(parts[0]) || 0) * 3600;
+      totalSeconds += (parseInt(parts[1]) || 0) * 60;
+      totalSeconds += parseInt(parts[2]) || 0;
+    }
   }
-  const hms = timePart.split(":");
-  let hours = 0;
-  let minutes = 0;
-  let seconds = 0;
-  if (hms.length === 3) {
-    hours = parseInt(hms[0]) || 0;
-    minutes = parseInt(hms[1]) || 0;
-    seconds = parseInt(hms[2]) || 0;
-  } else if (hms.length === 2) {
-    minutes = parseInt(hms[0]) || 0;
-    seconds = parseInt(hms[1]) || 0;
-  } else if (hms.length === 1) {
-    seconds = parseInt(hms[0]) || 0;
-  }
-  return days * 86400 + hours * 3600 + minutes * 60 + seconds;
+
+  return totalSeconds;
 }
 
 export async function trackCustomerDataUsage() {

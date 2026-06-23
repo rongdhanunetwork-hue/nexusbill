@@ -70,7 +70,8 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
       }
     };
     fetchResources();
-    return () => { active = false; };
+    const interval = setInterval(fetchResources, 5000); // Real-time auto-refresh every 5s
+    return () => { active = false; clearInterval(interval); };
   }, [refreshTrigger]);
 
   if (loading) {
@@ -92,60 +93,66 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
+  const formatUptime = (uptimeStr?: string) => {
+    if (!uptimeStr) return "N/A";
+    let totalDays = 0;
+    const wMatch = uptimeStr.match(/(\d+)w/);
+    if (wMatch) totalDays += parseInt(wMatch[1]) * 7;
+    const dMatch = uptimeStr.match(/(\d+)d/);
+    if (dMatch) totalDays += parseInt(dMatch[1]);
+    const hMatch = uptimeStr.match(/(\d+)h/);
+    const h = hMatch ? parseInt(hMatch[1]) : 0;
+    const mMatch = uptimeStr.match(/(\d+)m/);
+    const m = mMatch ? parseInt(mMatch[1]) : 0;
+    
+    let parts = [];
+    if (totalDays > 0) parts.push(`${totalDays} Days`);
+    if (h > 0) parts.push(`${h} Hrs`);
+    if (m > 0) parts.push(`${m} Mins`);
+    if (parts.length === 0) return "Just now";
+    return parts.join(" ");
+  };
+
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+    <div className="mb-6">
       {resources.map((router) => {
         const res = router.resource;
         const totalMem = res?.["total-memory"] ? parseInt(res["total-memory"]) : 1;
         const freeMem = res?.["free-memory"] ? parseInt(res["free-memory"]) : 0;
         const usedMem = totalMem - freeMem;
-        const memPercent = (usedMem / totalMem) * 100;
         
         return (
-          <motion.div key={router.routerId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5 relative overflow-hidden">
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`p-2 rounded-lg ${res ? "bg-neon-green/10 text-neon-green" : "bg-red-500/10 text-red-500"}`}>
+          <motion.div key={router.routerId} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} 
+            className="p-3 sm:p-4 rounded-xl border border-neon-blue/20 bg-neon-blue/5 shadow-[0_0_15px_rgba(6,182,212,0.1)] flex flex-col sm:flex-row items-center justify-between gap-4 mt-2 mb-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-neon-blue/20 flex items-center justify-center text-neon-blue shrink-0">
                 <Router size={20} />
               </div>
               <div>
-                <h3 className="text-white font-semibold text-sm">{router.name}</h3>
-                <p className="text-xs text-gray-500">{router.ip}</p>
-              </div>
-              {res && (
-                <div className="ml-auto text-right">
-                  <span className="text-[10px] text-gray-400 block mb-0.5 uppercase tracking-wide">Uptime</span>
-                  <span className="text-xs font-mono text-neon-blue font-semibold">{res.uptime}</span>
+                <h3 className="font-bold text-white text-sm">MikroTik Router: {res?.["board-name"] || router.name}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${res ? "bg-neon-green" : "bg-red-500"}`}></div>
+                  <span className="text-[11px] text-gray-400 font-medium">{res ? "Online & Syncing Live" : "Offline"}</span>
                 </div>
-              )}
+              </div>
             </div>
 
-            {res ? (
-              <div className="space-y-4">
-                {/* CPU Usage */}
-                <div>
-                  <div className="flex justify-between items-end mb-1.5">
-                    <span className="text-xs text-gray-400 flex items-center gap-1.5"><Cpu size={12} /> CPU Load</span>
-                    <span className="text-xs font-mono font-bold text-white">{res["cpu-load"]}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${parseInt(res["cpu-load"]) > 80 ? "bg-red-500" : parseInt(res["cpu-load"]) > 50 ? "bg-yellow-400" : "bg-neon-green"}`} style={{ width: `${res["cpu-load"]}%` }} />
-                  </div>
+            {res && (
+              <div className="flex flex-wrap items-center gap-6 sm:gap-8">
+                <div className="flex flex-col">
+                  <span className="text-[11px] text-gray-500 uppercase font-semibold">CPU Load</span>
+                  <span className="text-lg font-bold text-white font-mono">{res["cpu-load"]}%</span>
                 </div>
-
-                {/* Memory Usage */}
-                <div>
-                  <div className="flex justify-between items-end mb-1.5">
-                    <span className="text-xs text-gray-400 flex items-center gap-1.5"><HardDrive size={12} /> RAM Usage</span>
-                    <span className="text-[10px] text-gray-400 font-mono">{formatBytes(usedMem.toString())} / {formatBytes(res["total-memory"])}</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${memPercent > 80 ? "bg-red-500" : memPercent > 50 ? "bg-yellow-400" : "bg-neon-blue"}`} style={{ width: `${memPercent}%` }} />
-                  </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] text-gray-500 uppercase font-semibold">Memory Usage</span>
+                  <span className="text-lg font-bold text-white font-mono">{formatBytes(usedMem.toString())} <span className="text-xs text-gray-500 font-sans">/ {formatBytes(res["total-memory"])}</span></span>
                 </div>
-              </div>
-            ) : (
-              <div className="py-4 text-center">
-                <span className="text-xs text-red-400 font-semibold bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">Offline / Unreachable</span>
+                <div className="flex flex-col">
+                  <span className="text-[11px] text-gray-500 uppercase font-semibold">Uptime</span>
+                  <span className="text-lg font-bold text-neon-blue font-sans tracking-wide">{formatUptime(res.uptime)}</span>
+                </div>
               </div>
             )}
           </motion.div>
@@ -365,6 +372,9 @@ export default function AdminDashboardClient({
         </button>
       </div>
 
+      {/* MikroTik Resources Widget moved to the top */}
+      {role === "admin" && <MikrotikResourcesWidget refreshTrigger={refreshTrigger} />}
+
       {/* Tier 1 Primary Financial Indicators */}
       {role !== "employee" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -508,8 +518,7 @@ export default function AdminDashboardClient({
         })}
       </div>
 
-      {/* MikroTik Resources Widget */}
-      {role === "admin" && <MikrotikResourcesWidget refreshTrigger={refreshTrigger} />}
+      {/* MikroTik Resources Widget moved to the top */}
 
       {/* Graphs */}
       {role === "admin" && (

@@ -171,9 +171,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* SIDEBAR */}
       <div className={clsx(
-        "fixed inset-y-0 left-0 z-30 flex flex-col border-r transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto print:hidden",
+        "fixed inset-y-0 left-0 z-30 flex flex-col border-r transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto print:hidden shadow-2xl lg:shadow-none",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )} style={{ width: 210, background: "#0d1117", borderColor: "rgba(255,255,255,0.06)" }}>
+      )} style={{ width: 230, background: "rgba(15, 20, 30, 0.4)", backdropFilter: "blur(20px)", borderColor: "rgba(255,255,255,0.05)" }}>
 
         {/* Brand */}
         <div className="px-4 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
