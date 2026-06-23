@@ -53,7 +53,7 @@ export default function TJBoxesClient({
         title: "Delete TJ Box",
         message: "Are you sure you want to delete this TJ Box? This action cannot be undone.",
         confirmText: "Delete",
-        confirmStyle: "danger"
+        danger: true
     });
     if (!confirmed) return;
 
