@@ -400,31 +400,20 @@ const lastSessionTraffic = loadSessionCache();
 
 function parseUptimeToSeconds(uptime: string): number {
   if (!uptime) return 0;
-  let totalSeconds = 0;
-  
+  let total = 0;
   const wMatch = uptime.match(/(\d+)w/);
   const dMatch = uptime.match(/(\d+)d/);
   const hMatch = uptime.match(/(\d+)h/);
   const mMatch = uptime.match(/(\d+)m/);
   const sMatch = uptime.match(/(\d+)s/);
 
-  if (wMatch) totalSeconds += parseInt(wMatch[1]) * 7 * 86400;
-  if (dMatch) totalSeconds += parseInt(dMatch[1]) * 86400;
-  if (hMatch) totalSeconds += parseInt(hMatch[1]) * 3600;
-  if (mMatch) totalSeconds += parseInt(mMatch[1]) * 60;
-  if (sMatch) totalSeconds += parseInt(sMatch[1]);
+  if (wMatch) total += parseInt(wMatch[1]) * 604800;
+  if (dMatch) total += parseInt(dMatch[1]) * 86400;
+  if (hMatch) total += parseInt(hMatch[1]) * 3600;
+  if (mMatch) total += parseInt(mMatch[1]) * 60;
+  if (sMatch) total += parseInt(sMatch[1]);
 
-  // Fallback for HH:MM:SS format just in case
-  if (totalSeconds === 0 && uptime.includes(":")) {
-    const parts = uptime.split(":");
-    if (parts.length === 3) {
-      totalSeconds += (parseInt(parts[0]) || 0) * 3600;
-      totalSeconds += (parseInt(parts[1]) || 0) * 60;
-      totalSeconds += parseInt(parts[2]) || 0;
-    }
-  }
-
-  return totalSeconds;
+  return total;
 }
 
 export async function trackCustomerDataUsage() {
@@ -462,7 +451,7 @@ async function trackRouterUsage(routerId?: number) {
 
     // Fetch customers assigned to this router
     const dbCustomers = await db
-      .select({ id: users.id, pppoeUsername: users.pppoeUsername })
+      .select({ id: users.id, pppoeUsername: users.pppoeUsername, status: users.status })
       .from(users)
       .where(
         and(
@@ -473,10 +462,10 @@ async function trackRouterUsage(routerId?: number) {
         )
       );
 
-    const usernameToUserId = new Map<string, number>();
+    const usernameToUser = new Map<string, { id: number; status: string | null }>();
     for (const c of dbCustomers) {
       if (c.pppoeUsername) {
-        usernameToUserId.set(c.pppoeUsername.toLowerCase(), c.id);
+        usernameToUser.set(c.pppoeUsername.toLowerCase(), { id: c.id, status: c.status });
       }
     }
 
@@ -488,8 +477,26 @@ async function trackRouterUsage(routerId?: number) {
     for (const session of activeSessions) {
       const username = session.name;
       if (!username) continue;
-      const userId = usernameToUserId.get(username.toLowerCase());
-      if (!userId) continue;
+      
+      const user = usernameToUser.get(username.toLowerCase());
+      if (!user) continue;
+
+      // --- SELF HEALING ENFORCER ---
+      // If the user's DB status is NOT active/online, they shouldn't be connected!
+      if (user.status && user.status !== "active" && user.status !== "online") {
+        console.log(`[Self-Healing] Disconnecting ${username} because DB status is '${user.status}'`);
+        try {
+          await disconnectPppoeActive(session[".id"], routerId);
+          // ensure secret is disabled
+          await syncCustomerToMikrotik(username, undefined, undefined, user.status, routerId);
+        } catch (e) {
+          console.warn(`[Self-Healing] Failed to kick ${username}:`, e);
+        }
+        continue;
+      }
+      // ----------------------------
+
+      const userId = user.id;
 
       const ifaceName = `<pppoe-${username}>`.toLowerCase();
       const iface = ifaceMap.get(ifaceName) || ifaceMap.get(`pppoe-${username.toLowerCase()}`);
@@ -575,7 +582,16 @@ async function trackRouterUsage(routerId?: number) {
   }
 }
 
+// Use a global variable to prevent multiple intervals during HMR in dev mode
+declare global {
+  var _expirationCheckerInterval: NodeJS.Timeout | undefined;
+}
+
 export function startExpirationChecker() {
+  if (global._expirationCheckerInterval) {
+    clearInterval(global._expirationCheckerInterval);
+  }
+
   console.log("[Expiration Checker] Initializing background tasks (runs every 30s)...");
   // Run immediately on boot
   checkAndSuspendExpiredUsers().catch(err => {
@@ -586,7 +602,7 @@ export function startExpirationChecker() {
   });
 
   // Setup interval
-  setInterval(() => {
+  global._expirationCheckerInterval = setInterval(() => {
     checkAndSuspendExpiredUsers().catch(err => {
       console.warn("[Expiration Checker] Interval run failed:", err);
     });

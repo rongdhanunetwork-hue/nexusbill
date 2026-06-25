@@ -65,6 +65,11 @@ export async function POST(req: Request) {
         status: "paid",
         dueDate: newExpireDate
       });
+
+      // 4. Mark any old unpaid invoices as paid since the account is now recharged and active
+      await tx.update(invoices)
+        .set({ status: "paid" })
+        .where(eq(invoices.userId, userId));
     });
 
     // Sync status to MikroTik router

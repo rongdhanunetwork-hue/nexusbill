@@ -65,12 +65,10 @@ export async function GET(req: Request) {
       screenshotUrl: "Auto-generated via Gateway",
     });
 
-    // Update Invoice if provided
-    if (invoiceId) {
-      await db.update(invoices)
-        .set({ status: "paid" })
-        .where(eq(invoices.id, Number(invoiceId)));
-    }
+    // Mark all unpaid/due invoices as paid since the account is now recharged and active
+    await db.update(invoices)
+      .set({ status: "paid" })
+      .where(eq(invoices.userId, customer.id));
 
     // Sync to Mikrotik
     if (customer.pppoeUsername) {

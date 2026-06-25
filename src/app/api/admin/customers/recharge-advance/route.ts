@@ -170,6 +170,11 @@ export async function POST(req: Request) {
       dueDate: newExpireDate
     });
 
+    // Mark any old unpaid invoices as paid since the account is now recharged and active
+    await db.update(invoices)
+      .set({ status: "paid" })
+      .where(eq(invoices.userId, customer.id));
+
     // Sync status and expiry to MikroTik router
     if (customer.pppoeUsername) {
       await syncCustomerToMikrotik(

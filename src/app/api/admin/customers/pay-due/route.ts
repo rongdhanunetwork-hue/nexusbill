@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { users, payments, transactions } from "@/db/schema";
+import { users, payments, transactions, invoices } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import { insertAuditLog } from "@/lib/audit";
@@ -54,6 +54,11 @@ export async function POST(req: Request) {
       trxId: `DUE-${Date.now().toString().slice(-6)}`,
       screenshotUrl: note ? `Note: ${note}` : "Due Collection"
     });
+
+    // Mark all unpaid/due invoices as paid since the due is cleared
+    await db.update(invoices)
+      .set({ status: "paid" })
+      .where(eq(invoices.userId, customer.id));
 
     // Record transaction
     await db.insert(transactions).values({
