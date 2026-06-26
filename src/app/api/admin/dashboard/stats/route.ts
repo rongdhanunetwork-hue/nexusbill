@@ -200,8 +200,8 @@ export async function GET() {
       const dbMatch = dailyUsageResult.find(r => r.dayDate === yyyymmdd);
       last7Days.push({
         name,
-        download: dbMatch?.downloadSum || 0,
-        upload: dbMatch?.uploadSum || 0
+        download: (dbMatch?.downloadSum || 0) / 100,
+        upload: (dbMatch?.uploadSum || 0) / 100
       });
     }
 
