@@ -323,14 +323,26 @@ export async function checkAndSuspendExpiredUsers() {
   try {
     const now = new Date();
     // Fetch all active customers whose expireDate <= now
-    const expiredUsers = await db.query.users.findMany({
-      where: and(
-        eq(users.role, "customer"),
-        eq(users.status, "active"),
-        lte(users.expireDate, now)
-      ),
-      with: { package: true }
-    });
+    const { packages } = await import("@/db/schema");
+    const expiredUsersRaw = await db
+      .select({
+        user: users,
+        package: packages,
+      })
+      .from(users)
+      .leftJoin(packages, eq(users.packageId, packages.id))
+      .where(
+        and(
+          eq(users.role, "customer"),
+          eq(users.status, "active"),
+          lte(users.expireDate, now)
+        )
+      );
+
+    const expiredUsers = expiredUsersRaw.map(r => ({
+      ...r.user,
+      package: r.package
+    }));
 
     if (expiredUsers.length === 0) return;
 

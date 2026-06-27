@@ -16,16 +16,27 @@ export async function GET(req: NextRequest) {
   try {
     const now = new Date();
 
-    // Find all active customers whose expiry has passed
-    const expiredCustomers = await db.query.users.findMany({
-      where: and(
-        eq(users.role, "customer"),
-        eq(users.status, "active"),
-        isNotNull(users.expireDate),
-        lt(users.expireDate, now)
-      ),
-      with: { package: true },
-    });
+    const { packages } = await import("@/db/schema");
+    const expiredCustomersRaw = await db
+      .select({
+        user: users,
+        package: packages,
+      })
+      .from(users)
+      .leftJoin(packages, eq(users.packageId, packages.id))
+      .where(
+        and(
+          eq(users.role, "customer"),
+          eq(users.status, "active"),
+          isNotNull(users.expireDate),
+          lt(users.expireDate, now)
+        )
+      );
+
+    const expiredCustomers = expiredCustomersRaw.map(r => ({
+      ...r.user,
+      package: r.package
+    }));
 
     let expiredCount = 0;
     let smsCount = 0;
