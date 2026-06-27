@@ -21,6 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" style={{ backgroundColor: "#0f172a" }}>
       <body
+        suppressHydrationWarning
         className={`${poppins.variable} font-sans bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100 antialiased min-h-screen`}
         style={{ backgroundColor: "#0f172a", color: "#f8fafc", minHeight: "100vh" }}
       >

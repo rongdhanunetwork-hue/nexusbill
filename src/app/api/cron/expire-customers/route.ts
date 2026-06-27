@@ -119,6 +119,22 @@ export async function GET(req: NextRequest) {
           .set({ status: "expired" })
           .where(eq(users.id, customer.id));
 
+        // Generate unpaid invoice when expired
+        if (customer.package) {
+          try {
+            const { invoices } = await import("@/db/schema");
+            await db.insert(invoices).values({
+              userId: customer.id,
+              amount: String(customer.package.price || 0),
+              status: "unpaid",
+              createdAt: now,
+              dueDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+            });
+          } catch (e) {
+            console.warn(`[Cron] Failed to create unpaid invoice for ${customer.name}:`, e);
+          }
+        }
+
         expiredCount++;
 
         // Send SMS notification

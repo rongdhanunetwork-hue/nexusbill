@@ -323,16 +323,14 @@ export async function checkAndSuspendExpiredUsers() {
   try {
     const now = new Date();
     // Fetch all active customers whose expireDate <= now
-    const expiredUsers = await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.role, "customer"),
-          eq(users.status, "active"),
-          lte(users.expireDate, now)
-        )
-      );
+    const expiredUsers = await db.query.users.findMany({
+      where: and(
+        eq(users.role, "customer"),
+        eq(users.status, "active"),
+        lte(users.expireDate, now)
+      ),
+      with: { package: true }
+    });
 
     if (expiredUsers.length === 0) return;
 
@@ -359,12 +357,29 @@ export async function checkAndSuspendExpiredUsers() {
       }
     }
 
-    // Update database status to "expired" for these users
+    const { invoices } = await import("@/db/schema");
+
+    // Update database status to "expired" for these users and generate unpaid invoices
     for (const user of expiredUsers) {
       await db
         .update(users)
         .set({ status: "expired" })
         .where(eq(users.id, user.id));
+
+      if (user.package) {
+        try {
+          await db.insert(invoices).values({
+            userId: user.id,
+            amount: String(user.package.price || 0),
+            status: "unpaid",
+            createdAt: now,
+            dueDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+          });
+        } catch (e) {
+          console.warn(`[Expiration Checker] Failed to create unpaid invoice for ${user.id}:`, e);
+        }
+      }
+
       console.log(`[Expiration Checker] Suspended user: ${user.name} (PPPoE: ${user.pppoeUsername || "N/A"})`);
     }
   } catch (err) {
