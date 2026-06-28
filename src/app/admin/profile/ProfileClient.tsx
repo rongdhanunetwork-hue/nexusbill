@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import QRCode from "qrcode";
 import {
   User,
   Settings as SettingsIcon,
@@ -104,6 +105,28 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [pwdSuccess, setPwdSuccess] = useState<string | null>(null);
   const [savingPwd, setSavingPwd] = useState(false);
+
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+
+  useEffect(() => {
+    const vcard = `BEGIN:VCARD
+VERSION:3.0
+FN:${companyName}
+ORG:${companyName}
+TEL;TYPE=WORK,VOICE:${phone}
+EMAIL;TYPE=PREF,INTERNET:${email}
+ADR;TYPE=WORK:;;${address || ""};;;;
+NOTE:Admin: ${profileName}
+END:VCARD`;
+
+    QRCode.toDataURL(vcard, {
+      width: 256,
+      margin: 1,
+      color: { dark: "#0f172a", light: "#ffffff" },
+    })
+      .then((url) => setQrCodeUrl(url))
+      .catch(console.error);
+  }, [companyName, phone, email, address, profileName]);
 
   async function handleFileUpload(file: File): Promise<string | null> {
     const formData = new FormData();
@@ -589,10 +612,13 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
                 <QrCode className="text-neon-blue" size={18} /> Company QR Code
               </h2>
               <div className="bg-white p-4 rounded-2xl w-fit mx-auto border-4 border-neon-blue/40 shadow-2xl">
-                {/* Mock QR code svg grid */}
-                <svg className="w-48 h-48 text-slate-950" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M2,2 H8 V8 H2 Z M4,4 H6 V6 H4 Z M16,2 H22 V8 H16 Z M18,4 H20 V6 H18 Z M2,16 H8 V22 H2 Z M4,18 H6 V20 H4 Z M11,11 H13 V13 H11 Z M10,2 H14 V6 H10 Z M2,10 H6 V14 H2 Z M18,10 H22 V14 H18 Z M10,18 H14 V22 H10 Z M16,16 H22 V18 H16 Z M16,20 H20 V22 H16 Z" />
-                </svg>
+                {qrCodeUrl ? (
+                  <img src={qrCodeUrl} alt="Company QR Code" className="w-48 h-48 object-contain" />
+                ) : (
+                  <div className="w-48 h-48 flex items-center justify-center">
+                    <Loader2 className="animate-spin text-neon-blue" size={32} />
+                  </div>
+                )}
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-white">{companyName}</p>
