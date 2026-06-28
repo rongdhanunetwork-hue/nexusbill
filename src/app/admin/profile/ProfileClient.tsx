@@ -116,7 +116,8 @@ ORG:${companyName}
 TEL;TYPE=WORK,VOICE:${phone}
 EMAIL;TYPE=PREF,INTERNET:${email}
 ADR;TYPE=WORK:;;${address || ""};;;;
-NOTE:Admin: ${profileName}
+URL:https://rdnisp.com
+${companyLogo ? `PHOTO;VALUE=uri:${companyLogo}\n` : ""}NOTE:Admin: ${profileName}
 END:VCARD`;
 
     QRCode.toDataURL(vcard, {
