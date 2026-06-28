@@ -345,7 +345,9 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
                       )}
                       <input
                         type="file"
+                        id="company-logo-upload"
                         accept="image/*"
+                        className="hidden"
                         onChange={async (e) => {
                           if (e.target.files && e.target.files[0]) {
                             setUploadingImage(true);
@@ -354,8 +356,13 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
                             setUploadingImage(false);
                           }
                         }}
-                        className="w-full glass-input px-4 py-2 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-neon-blue/20 file:text-neon-blue hover:file:bg-neon-blue/30"
                       />
+                      <label 
+                        htmlFor="company-logo-upload"
+                        className="cursor-pointer px-4 py-2 rounded-xl text-sm font-semibold bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 transition-all text-center flex-1"
+                      >
+                        {uploadingImage ? "Uploading..." : "Choose File"}
+                      </label>
                     </div>
                   </div>
                   <div>
@@ -380,7 +387,9 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
                       )}
                       <input
                         type="file"
+                        id="profile-image-upload"
                         accept="image/*"
+                        className="hidden"
                         onChange={async (e) => {
                           if (e.target.files && e.target.files[0]) {
                             setUploadingImage(true);
@@ -389,8 +398,13 @@ export default function ProfileClient({ adminUser, totalCustomers, initialSettin
                             setUploadingImage(false);
                           }
                         }}
-                        className="w-full glass-input px-4 py-2 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-purple-500/20 file:text-purple-300 hover:file:bg-purple-500/30"
                       />
+                      <label 
+                        htmlFor="profile-image-upload"
+                        className="cursor-pointer px-4 py-2 rounded-xl text-sm font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 transition-all text-center flex-1"
+                      >
+                        {uploadingImage ? "Uploading..." : "Choose File"}
+                      </label>
                     </div>
                   </div>
                   <div>
