@@ -289,7 +289,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
                   <input
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    defaultValue={customer.plainPassword || ""}
+                    defaultValue={""}
                     placeholder="Enter new password to change"
                     className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
                   />
