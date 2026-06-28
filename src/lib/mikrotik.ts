@@ -74,6 +74,8 @@ export interface SystemResource {
   "free-memory": string;
   "total-memory": string;
   "free-hdd-space": string;
+  txBps?: number;
+  rxBps?: number;
 }
 
 export async function getSystemResource(routerId?: number): Promise<SystemResource | null> {
@@ -81,7 +83,41 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
   try {
     await client.connect();
     const data = await client.write('/system/resource/print');
-    if (data && data.length > 0) return data[0] as unknown as SystemResource;
+    
+    let maxTx = 0;
+    let maxRx = 0;
+    try {
+      const stats1 = await client.write(["/interface/print", "=stats="]);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const stats2 = await client.write(["/interface/print", "=stats="]);
+      
+      let maxTotal = 0;
+      for (const s1 of stats1 as any[]) {
+        if (s1.type === "pppoe-in" || s1.type === "bridge" || s1.type?.includes("-in")) continue;
+        const s2 = (stats2 as any[]).find((s:any) => s['.id'] === s1['.id']);
+        if (s1 && s2) {
+          const rx = (parseInt(s2['rx-byte'] || "0") - parseInt(s1['rx-byte'] || "0")) * 8;
+          const tx = (parseInt(s2['tx-byte'] || "0") - parseInt(s1['tx-byte'] || "0")) * 8;
+          if (rx >= 0 && tx >= 0) {
+             const total = rx + tx;
+             if (total > maxTotal) {
+                maxTotal = total;
+                maxRx = rx;
+                maxTx = tx;
+             }
+          }
+        }
+      }
+    } catch (trafficErr) {
+       console.error("Traffic calc error:", trafficErr);
+    }
+
+    if (data && data.length > 0) {
+      const res = data[0] as unknown as SystemResource;
+      res.rxBps = maxRx;
+      res.txBps = maxTx;
+      return res;
+    }
     return null;
   } catch (err) {
     console.warn('getSystemResource error:', err);

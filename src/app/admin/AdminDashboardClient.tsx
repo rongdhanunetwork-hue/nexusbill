@@ -149,6 +149,18 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                   <span className="text-[11px] text-gray-500 uppercase font-semibold">Memory Usage</span>
                   <span className="text-lg font-bold text-white font-mono">{formatBytes(usedMem.toString())} <span className="text-xs text-gray-500 font-sans">/ {formatBytes(res["total-memory"])}</span></span>
                 </div>
+                {res.rxBps !== undefined && (
+                  <>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] text-green-400/80 uppercase font-semibold flex items-center gap-1"><Download size={12}/> Download</span>
+                      <span className="text-lg font-bold text-green-400 font-mono">{(res.rxBps / 1000000).toFixed(1)} <span className="text-xs font-sans text-green-500/70">Mbps</span></span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] text-blue-400/80 uppercase font-semibold flex items-center gap-1"><Upload size={12}/> Upload</span>
+                      <span className="text-lg font-bold text-neon-blue font-mono">{(res.txBps / 1000000).toFixed(1)} <span className="text-xs font-sans text-neon-blue/70">Mbps</span></span>
+                    </div>
+                  </>
+                )}
                 <div className="flex flex-col">
                   <span className="text-[11px] text-gray-500 uppercase font-semibold">Uptime</span>
                   <span className="text-lg font-bold text-neon-blue font-sans tracking-wide">{formatUptime(res.uptime)}</span>
