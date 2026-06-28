@@ -25,7 +25,7 @@ export async function GET() {
     const smsSettings = await db.query.settings.findMany({
       where: and(
         eq(settings.adminId, 1),
-        sql`${settings.key} in ('sms_provider', 'sms_api_key', 'sms_sender_id', 'sms_test_phone')`
+        sql`${settings.key} in ('sms_provider', 'sms_api_key', 'sms_sender_id', 'sms_test_phone', 'sms_acode')`
       )
     });
     for (const row of smsSettings) {
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   const body = await req.json(); // { key: value, ... }
 
   for (const [key, value] of Object.entries(body)) {
-    const targetAdminId = ['sms_provider', 'sms_api_key', 'sms_sender_id', 'sms_test_phone'].includes(key) ? 1 : session.userId;
+    const targetAdminId = ['sms_provider', 'sms_api_key', 'sms_sender_id', 'sms_test_phone', 'sms_acode'].includes(key) ? 1 : session.userId;
     const existing = await db.query.settings.findFirst({
       where: and(eq(settings.key, key), eq(settings.adminId, targetAdminId))
     });

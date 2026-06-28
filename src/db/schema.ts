@@ -62,6 +62,7 @@ export const users = pgTable("users", {
   connectionType: varchar("connection_type", { length: 50 }).default("fiber"),
   gpsCoordinates: varchar("gps_coordinates", { length: 100 }),
   joiningDate: timestamp("joining_date").defaultNow(),
+  plainPassword: varchar("plain_password", { length: 255 }),
 });
 
 export const packages = pgTable("packages", {

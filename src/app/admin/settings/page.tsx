@@ -198,15 +198,24 @@ export default function SettingsPage() {
                 <option value="" className="bg-slate-800">— Select Provider —</option>
                 <option value="ssl_wireless" className="bg-slate-800">SSL Wireless</option>
                 <option value="bdbulksms" className="bg-slate-800">BDBulkSMS</option>
+                <option value="rtcom" className="bg-slate-800">RT Communications</option>
               </select>
             </div>
             <Field
               label="Sender ID / Masking"
               name="sms_sender_id"
               defaultValue={settings.sms_sender_id || ""}
-              placeholder="e.g. MYISP"
+              placeholder="e.g. 8809648906892"
             />
-            <div className="md:col-span-2">
+            {settings.sms_provider === "rtcom" && (
+              <Field
+                label="Account Code (acode)"
+                name="sms_acode"
+                defaultValue={settings.sms_acode || ""}
+                placeholder="e.g. 30000601"
+              />
+            )}
+            <div className={settings.sms_provider === "rtcom" ? "md:col-span-1" : "md:col-span-2"}>
               <label className="block text-sm font-medium text-gray-300 mb-2">API Key / Token</label>
               <input
                 type="password"

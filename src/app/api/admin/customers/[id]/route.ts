@@ -102,6 +102,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // Password change
     if (body.password && body.password.length >= 6) {
       updateData.password = await bcrypt.hash(body.password, 12);
+      updateData.plainPassword = body.password;
     }
 
     const [updated] = await db.update(users).set(updateData).where(eq(users.id, customerId)).returning();

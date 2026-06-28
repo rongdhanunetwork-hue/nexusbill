@@ -119,7 +119,61 @@ async function sendViaBdBulkSms(
     if (text.toLowerCase().includes("success")) {
       return { success: true, message: "SMS sent via BDBulkSMS" };
     }
-    return { success: false, error: `BDBulkSMS raw response: ${text}` };
+}
+
+/**
+ * Send an SMS via RT Communications API
+ */
+async function sendViaRtcom(
+  phone: string,
+  message: string,
+  apiKey: string,
+  senderId: string,
+  acode: string | null
+): Promise<SMSResult> {
+  // Normalize phone — add +880
+  let normalizedPhone = phone.replace(/\s+/g, "").replace(/^0/, "880");
+  if (!normalizedPhone.startsWith("880")) {
+    normalizedPhone = "880" + normalizedPhone.replace(/^88/, "");
+  }
+
+  const url = "https://api.rtcom.xyz/onetomany";
+  
+  if (!acode) {
+    return { success: false, error: "Account Code (acode) is required for RT Communications" };
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      acode: acode,
+      api_key: apiKey,
+      senderid: senderId,
+      type: "text",
+      msg: message,
+      contacts: normalizedPhone,
+      transactionType: "T",
+      contentID: ""
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`RT Communications API error: ${response.status}`);
+  }
+
+  const text = await response.text();
+  try {
+    const data = JSON.parse(text);
+    if (data.response && data.response.code === 200) {
+      return { success: true, message: "SMS sent via RT Communications" };
+    }
+    return { 
+      success: false, 
+      error: data.response?.message || `RT Communications response code: ${data.response?.code}` 
+    };
+  } catch {
+    return { success: false, error: `RT Communications raw response: ${text}` };
   }
 }
 
@@ -144,6 +198,7 @@ export async function sendSMS(
     const provider = await getSetting("sms_provider", targetAdminId);
     const apiKey = await getSetting("sms_api_key", targetAdminId);
     const senderId = await getSetting("sms_sender_id", targetAdminId);
+    const acode = await getSetting("sms_acode", targetAdminId);
 
     // If not configured, log and return (non-blocking)
     if (!apiKey || !senderId || !provider) {
@@ -166,6 +221,8 @@ export async function sendSMS(
       result = await sendViaSslWireless(phone, message, apiKey, senderId);
     } else if (provider === "bdbulksms") {
       result = await sendViaBdBulkSms(phone, message, apiKey, senderId);
+    } else if (provider === "rtcom") {
+      result = await sendViaRtcom(phone, message, apiKey, senderId, acode);
     } else {
       result = { success: false, error: `Unknown provider: ${provider}` };
     }

@@ -136,6 +136,7 @@ export async function POST(req: Request) {
       connectionType: connectionType || "fiber",
       gpsCoordinates: gpsCoordinates?.trim() || null,
       joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
+      plainPassword: password,
     }).returning();
 
     // Automatically sync customer PPPoE secret to MikroTik router (disabled by default)

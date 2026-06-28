@@ -93,6 +93,7 @@ export async function POST() {
             name: username,
             phone: phone, // They will need to edit this later
             password: defaultPassword,
+            plainPassword: "123456",
             role: "customer",
             adminId,
             pppoeUsername: username,

@@ -248,6 +248,7 @@ export async function POST(req: Request) {
             name,
             phone,
             password: hashedPassword,
+            plainPassword: password,
             pppoeUsername: username,
             address,
             packageId,

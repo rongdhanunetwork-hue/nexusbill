@@ -236,7 +236,8 @@ export default function ResellerEditCustomerPage({ params }: { params: Promise<{
               <input
                 name="password"
                 type={showPwd ? "text" : "password"}
-                placeholder="Leave blank to keep current password"
+                defaultValue={customer.plainPassword || ""}
+                placeholder="Enter new password to change"
                 className="w-full glass-input px-4 py-3 pr-12 bg-slate-800 text-white border border-white/10 animate-none"
               />
               <button
