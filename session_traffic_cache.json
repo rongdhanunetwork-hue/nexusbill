@@ -20,34 +20,34 @@
     "uptime": "6h15m8s"
   },
   "2-rdn-mojib-1005": {
-    "bytesIn": 1035418601,
-    "bytesOut": 8543782991,
-    "uptime": "9h27m21s"
+    "bytesIn": 327788926,
+    "bytesOut": 5473930583,
+    "uptime": "3h17m10s"
   },
   "2-rdn-college-1001": {
-    "bytesIn": 719000184,
-    "bytesOut": 6609313666,
-    "uptime": "7h7m29s"
+    "bytesIn": 110668796,
+    "bytesOut": 2879834595,
+    "uptime": "2h11m55s"
   },
   "2-rdn-college-1003": {
-    "bytesIn": 285927480,
-    "bytesOut": 2672982745,
-    "uptime": "9h28m40s"
+    "bytesIn": 622256,
+    "bytesOut": 416265,
+    "uptime": "3h19m2s"
   },
   "2-rdn-muslim-1002": {
-    "bytesIn": 39116767,
-    "bytesOut": 1106463717,
-    "uptime": "59m35s"
+    "bytesIn": 43569441,
+    "bytesOut": 1233435671,
+    "uptime": "3h18m47s"
   },
   "2-rdn-notun-1004": {
-    "bytesIn": 57624086,
-    "bytesOut": 1260347371,
-    "uptime": "59m32s"
+    "bytesIn": 79248272,
+    "bytesOut": 1390963641,
+    "uptime": "3h18m47s"
   },
   "2-rdn-notun-1008": {
-    "bytesIn": 9012293,
-    "bytesOut": 194040789,
-    "uptime": "59m34s"
+    "bytesIn": 90234691,
+    "bytesOut": 1288707814,
+    "uptime": "3h18m13s"
   },
   "2-rdn-amanat-1019": {
     "bytesIn": 264180450,
@@ -55,64 +55,64 @@
     "uptime": "6h19m32s"
   },
   "2-rdn-amanat-1009": {
-    "bytesIn": 272561123,
-    "bytesOut": 5247366782,
-    "uptime": "9h28m23s"
+    "bytesIn": 52343777,
+    "bytesOut": 2012921121,
+    "uptime": "3h18m14s"
   },
   "2-rdn-amanat-1031": {
-    "bytesIn": 192744,
-    "bytesOut": 190884,
-    "uptime": "9h28m26s"
+    "bytesIn": 67476,
+    "bytesOut": 66672,
+    "uptime": "3h18m12s"
   },
   "2-rdn-akdewan-1003": {
-    "bytesIn": 416383808,
-    "bytesOut": 7920037337,
-    "uptime": "9h27m49s"
+    "bytesIn": 93922725,
+    "bytesOut": 1436511716,
+    "uptime": "3h17m11s"
   },
   "2-rdn-muslim-1010": {
-    "bytesIn": 64439897,
-    "bytesOut": 1470579925,
-    "uptime": "59m25s"
+    "bytesIn": 67742656,
+    "bytesOut": 1877139660,
+    "uptime": "3h18m9s"
   },
   "2-rdn-amanat-1037": {
-    "bytesIn": 2186472670,
-    "bytesOut": 8168800696,
-    "uptime": "9h27m44s"
+    "bytesIn": 578394623,
+    "bytesOut": 3702070135,
+    "uptime": "3h18m5s"
   },
   "2-rdn-awlia-1003": {
-    "bytesIn": 824034650,
-    "bytesOut": 13906456575,
-    "uptime": "9h27m23s"
+    "bytesIn": 219727975,
+    "bytesOut": 5362106703,
+    "uptime": "3h17m28s"
   },
   "2-rdn-muslim-1012": {
-    "bytesIn": 14927561,
-    "bytesOut": 844335132,
-    "uptime": "59m20s"
+    "bytesIn": 18092412,
+    "bytesOut": 242636830,
+    "uptime": "3h4m21s"
   },
   "2-rdn-rajmoni-1003": {
-    "bytesIn": 478581735,
-    "bytesOut": 1666673181,
-    "uptime": "59m18s"
+    "bytesIn": 21753327,
+    "bytesOut": 405597644,
+    "uptime": "3h17m28s"
   },
   "2-rdn-rajmoni-1002": {
-    "bytesIn": 11023595,
-    "bytesOut": 635764246,
-    "uptime": "59m15s"
+    "bytesIn": 787589,
+    "bytesOut": 845512,
+    "uptime": "3h17m26s"
   },
   "2-rdn-cof-1001": {
-    "bytesIn": 644500597,
-    "bytesOut": 12925649428,
-    "uptime": "5h6m48s"
+    "bytesIn": 844667261,
+    "bytesOut": 11575688184,
+    "uptime": "3h17m25s"
   },
   "2-rdn-amanat-1032": {
-    "bytesIn": 561513347,
-    "bytesOut": 5247703741,
-    "uptime": "9h27m35s"
+    "bytesIn": 430420700,
+    "bytesOut": 1487187532,
+    "uptime": "3h17m23s"
   },
   "2-rdn-awlia-1004": {
-    "bytesIn": 36940654,
-    "bytesOut": 718241512,
-    "uptime": "9h27m22s"
+    "bytesIn": 66963534,
+    "bytesOut": 1133086668,
+    "uptime": "3h17m23s"
   },
   "2-rdn-amanat-1008": {
     "bytesIn": 189506218,
@@ -120,9 +120,9 @@
     "uptime": "2h17m56s"
   },
   "2-rdn-mortel-1007": {
-    "bytesIn": 867453981,
-    "bytesOut": 5442270488,
-    "uptime": "9h27m41s"
+    "bytesIn": 197848025,
+    "bytesOut": 1844284300,
+    "uptime": "3h17m24s"
   },
   "2-rdn-college-1002": {
     "bytesIn": 56468470,
@@ -130,104 +130,104 @@
     "uptime": "39m51s"
   },
   "2-rdn-mortel-1011": {
-    "bytesIn": 196029598,
-    "bytesOut": 4132187470,
-    "uptime": "4h6m50s"
+    "bytesIn": 716454518,
+    "bytesOut": 3839956517,
+    "uptime": "3h13m29s"
   },
   "2-rdn-muslim-1001": {
-    "bytesIn": 34911944,
-    "bytesOut": 561833098,
-    "uptime": "59m4s"
+    "bytesIn": 278690815,
+    "bytesOut": 4317841071,
+    "uptime": "3h17m14s"
   },
   "2-rdn-mortel-1009": {
-    "bytesIn": 362318718,
-    "bytesOut": 3546141859,
-    "uptime": "3h47m58s"
+    "bytesIn": 148593235,
+    "bytesOut": 6882617015,
+    "uptime": "3h17m24s"
   },
   "2-rdn-debasis-1001": {
-    "bytesIn": 107979088,
-    "bytesOut": 3254450622,
-    "uptime": "1h4m13s"
+    "bytesIn": 7359742,
+    "bytesOut": 320537888,
+    "uptime": "3h17m25s"
   },
   "2-rdn-amanat-1027": {
-    "bytesIn": 2420108414,
-    "bytesOut": 9118406844,
-    "uptime": "9h27m16s"
+    "bytesIn": 606536408,
+    "bytesOut": 6634085076,
+    "uptime": "3h16m37s"
   },
   "2-rdn-motel-1005": {
-    "bytesIn": 590235871,
-    "bytesOut": 6261817564,
-    "uptime": "9h27m17s"
+    "bytesIn": 327902567,
+    "bytesOut": 2341849126,
+    "uptime": "3h16m37s"
   },
   "2-rdn-amanat-1005": {
-    "bytesIn": 397054092,
-    "bytesOut": 12804233314,
-    "uptime": "9h26m44s"
+    "bytesIn": 245011175,
+    "bytesOut": 6193045526,
+    "uptime": "3h17m5s"
   },
   "2-rdn-mojib-1011": {
-    "bytesIn": 1246791440,
-    "bytesOut": 12849149257,
-    "uptime": "9h27m35s"
+    "bytesIn": 479087392,
+    "bytesOut": 5789828711,
+    "uptime": "3h17m22s"
   },
   "2-rdn-mortel-1012": {
-    "bytesIn": 105517771,
-    "bytesOut": 2826273284,
-    "uptime": "9h27m31s"
+    "bytesIn": 68622577,
+    "bytesOut": 1148469568,
+    "uptime": "3h17m23s"
   },
   "2-rdn-mojib-1004": {
-    "bytesIn": 28059112,
-    "bytesOut": 73210102,
-    "uptime": "37m37s"
+    "bytesIn": 175735918,
+    "bytesOut": 3849525833,
+    "uptime": "3h16m14s"
   },
   "2-rdn-cof-1010": {
-    "bytesIn": 2656136380,
-    "bytesOut": 12500214565,
-    "uptime": "9h25m56s"
+    "bytesIn": 196451005,
+    "bytesOut": 1795986455,
+    "uptime": "3h15m40s"
   },
   "2-rdn-amanat-1013": {
-    "bytesIn": 1257357045,
-    "bytesOut": 12214756948,
-    "uptime": "9h27m34s"
+    "bytesIn": 390888892,
+    "bytesOut": 8715141468,
+    "uptime": "3h17m22s"
   },
   "2-rdn-notun-1001": {
-    "bytesIn": 97267640,
-    "bytesOut": 967402311,
-    "uptime": "2h44m7s"
+    "bytesIn": 45387061,
+    "bytesOut": 1527490552,
+    "uptime": "3h9m40s"
   },
   "2-rdn-amanat-1035": {
-    "bytesIn": 124333597,
-    "bytesOut": 2437656948,
-    "uptime": "2h44m7s"
+    "bytesIn": 148896627,
+    "bytesOut": 3619745636,
+    "uptime": "3h9m40s"
   },
   "2-rdn-notun-1002": {
-    "bytesIn": 200271292,
-    "bytesOut": 5318224621,
-    "uptime": "2h44m3s"
+    "bytesIn": 272481520,
+    "bytesOut": 6100549433,
+    "uptime": "3h9m36s"
   },
   "2-rdn-mojib-1009": {
-    "bytesIn": 528686376,
-    "bytesOut": 8100391738,
-    "uptime": "9h27m23s"
+    "bytesIn": 78491690,
+    "bytesOut": 2621653860,
+    "uptime": "3h17m11s"
   },
   "2-rdn-muslim-1008": {
-    "bytesIn": 678695334,
-    "bytesOut": 15595082721,
-    "uptime": "18h26m34s"
+    "bytesIn": 124848790,
+    "bytesOut": 3286500472,
+    "uptime": "3h18m9s"
   },
   "2-rdn-mojib-1008": {
-    "bytesIn": 196170979,
-    "bytesOut": 5238522137,
-    "uptime": "8h19m29s"
+    "bytesIn": 47745311,
+    "bytesOut": 1266582214,
+    "uptime": "3h17m23s"
   },
   "2-rdn-amanat-1041": {
-    "bytesIn": 1541459581,
-    "bytesOut": 8433895400,
-    "uptime": "8h53m50s"
+    "bytesIn": 2578143968,
+    "bytesOut": 13659549088,
+    "uptime": "17h26m13s"
   },
   "2-rdn-rajmoni-1001": {
-    "bytesIn": 955069148,
-    "bytesOut": 31525288892,
-    "uptime": "1d4h17m37s"
+    "bytesIn": 3547345617,
+    "bytesOut": 42192986586,
+    "uptime": "1d12h49m"
   },
   "2-test": {
     "bytesIn": 0,
@@ -235,14 +235,14 @@
     "uptime": "13h46m59s"
   },
   "2-rdn-mojib-1006": {
-    "bytesIn": 555097241,
-    "bytesOut": 11517547905,
-    "uptime": "9h28m19s"
+    "bytesIn": 172444698,
+    "bytesOut": 3716375029,
+    "uptime": "3h18m10s"
   },
   "2-rdn-1": {
-    "bytesIn": 983853356,
-    "bytesOut": 14045854916,
-    "uptime": "9h27m48s"
+    "bytesIn": 358288246,
+    "bytesOut": 5726902933,
+    "uptime": "3h18m7s"
   },
   "2-rdn-muslim-1017": {
     "bytesIn": 1053353168,
@@ -250,69 +250,69 @@
     "uptime": "17h13m36s"
   },
   "2-rdn-muslim-1014": {
-    "bytesIn": 8088858,
-    "bytesOut": 94879716,
-    "uptime": "59m32s"
+    "bytesIn": 202933613,
+    "bytesOut": 4813019501,
+    "uptime": "3h18m45s"
   },
   "2-rdn-amanat-1011": {
-    "bytesIn": 45417314,
-    "bytesOut": 920298466,
-    "uptime": "59m30s"
+    "bytesIn": 38249275,
+    "bytesOut": 1149655631,
+    "uptime": "3h18m12s"
   },
   "2-rdn-amanat-1012": {
-    "bytesIn": 54624612,
-    "bytesOut": 764015529,
-    "uptime": "9h28m23s"
+    "bytesIn": 171999988,
+    "bytesOut": 3254509051,
+    "uptime": "3h18m12s"
   },
   "2-rdn-amanat-1029": {
-    "bytesIn": 1309258291,
-    "bytesOut": 559453208,
-    "uptime": "3h32m16s"
+    "bytesIn": 513307432,
+    "bytesOut": 1589685114,
+    "uptime": "3h18m11s"
   },
   "2-rdn-rajmoni-1006": {
-    "bytesIn": 38467530,
-    "bytesOut": 915209319,
-    "uptime": "59m29s"
+    "bytesIn": 5983441,
+    "bytesOut": 101921955,
+    "uptime": "3h18m12s"
   },
   "2-rdn-rajmoni-1008": {
-    "bytesIn": 29589367,
-    "bytesOut": 570442947,
-    "uptime": "59m29s"
+    "bytesIn": 16396983,
+    "bytesOut": 543552785,
+    "uptime": "3h18m8s"
   },
   "2-rdn-amanat-1020": {
-    "bytesIn": 307110012,
-    "bytesOut": 6268696742,
-    "uptime": "9h27m46s"
+    "bytesIn": 29026107,
+    "bytesOut": 385376098,
+    "uptime": "3h18m11s"
   },
   "2-rdn-muslim-1016": {
-    "bytesIn": 22393763,
-    "bytesOut": 1007692669,
-    "uptime": "59m27s"
+    "bytesIn": 156556990,
+    "bytesOut": 4481778017,
+    "uptime": "3h18m10s"
   },
   "2-rdn-amanat-1007": {
-    "bytesIn": 26131876,
-    "bytesOut": 656211392,
-    "uptime": "9h28m20s"
+    "bytesIn": 59936638,
+    "bytesOut": 1196525772,
+    "uptime": "3h18m10s"
   },
   "2-rdn-mojib-1010": {
-    "bytesIn": 1900473169,
-    "bytesOut": 11943769872,
-    "uptime": "9h27m20s"
+    "bytesIn": 332591807,
+    "bytesOut": 5289550000,
+    "uptime": "3h17m20s"
   },
   "2-rdn-muslim-1015": {
-    "bytesIn": 26507060,
-    "bytesOut": 3239731467,
-    "uptime": "59m32s"
+    "bytesIn": 181039890,
+    "bytesOut": 1287489509,
+    "uptime": "3h18m45s"
   },
   "2-rdn-amanat-1047": {
-    "bytesIn": 176590230,
-    "bytesOut": 4597165579,
-    "uptime": "9h27m31s"
+    "bytesIn": 41709151,
+    "bytesOut": 769534866,
+    "uptime": "3h18m10s"
   },
   "2-rdn-rajmoni-1010": {
-    "bytesIn": 5713172,
-    "bytesOut": 310228773,
-    "uptime": "59m22s"
+    "bytesIn": 151819800,
+    "bytesOut": 2541470645,
+    "uptime": "3h17m14s"
   },
   "2-rdn-amanat-1004": {
     "bytesIn": 121178863,
@@ -320,14 +320,14 @@
     "uptime": "6h19m21s"
   },
   "2-rdn-amanat-1024": {
-    "bytesIn": 225051676,
-    "bytesOut": 604378237,
-    "uptime": "59m21s"
+    "bytesIn": 239011899,
+    "bytesOut": 2626938037,
+    "uptime": "3h18m4s"
   },
   "2-rdn-amanat-1038": {
-    "bytesIn": 430018212,
-    "bytesOut": 9844164573,
-    "uptime": "9h27m43s"
+    "bytesIn": 74334654,
+    "bytesOut": 490834840,
+    "uptime": "3h17m28s"
   },
   "2-rdn-akdewan-1001": {
     "bytesIn": 61812065,
@@ -335,19 +335,19 @@
     "uptime": "2h17m11s"
   },
   "2-rdn-mojib-1012": {
-    "bytesIn": 784346921,
-    "bytesOut": 11044886900,
-    "uptime": "9h27m40s"
+    "bytesIn": 396286807,
+    "bytesOut": 7484170205,
+    "uptime": "3h17m28s"
   },
   "2-rdn-amanat-1025": {
-    "bytesIn": 982371698,
-    "bytesOut": 5738389374,
-    "uptime": "9h27m38s"
+    "bytesIn": 928745601,
+    "bytesOut": 6800313000,
+    "uptime": "3h17m26s"
   },
   "2-rdn-notun-1012": {
-    "bytesIn": 47139192,
-    "bytesOut": 959225463,
-    "uptime": "59m12s"
+    "bytesIn": 90439846,
+    "bytesOut": 3354434406,
+    "uptime": "3h17m23s"
   },
   "2-rdn-notun-1016": {
     "bytesIn": 324434615,
@@ -355,14 +355,14 @@
     "uptime": "10h52m3s"
   },
   "2-rdn-mojib-1002": {
-    "bytesIn": 454047464,
-    "bytesOut": 6116789801,
-    "uptime": "3h56m54s"
+    "bytesIn": 109986628,
+    "bytesOut": 3579139436,
+    "uptime": "3h17m26s"
   },
   "2-rdn-akdewan-1004": {
-    "bytesIn": 91722040,
-    "bytesOut": 3952215596,
-    "uptime": "9h27m26s"
+    "bytesIn": 24757941,
+    "bytesOut": 528468740,
+    "uptime": "3h17m15s"
   },
   "2-rdn-amanat-1018": {
     "bytesIn": 66504419,
@@ -370,64 +370,64 @@
     "uptime": "2h17m48s"
   },
   "2-rdn-amanat-1028": {
-    "bytesIn": 84878276,
-    "bytesOut": 2767341493,
-    "uptime": "59m23s"
+    "bytesIn": 316418814,
+    "bytesOut": 6154094042,
+    "uptime": "3h18m5s"
   },
   "2-rdn-tnt-1001": {
-    "bytesIn": 6584974912,
-    "bytesOut": 4340100076,
-    "uptime": "9h26m39s"
+    "bytesIn": 2720,
+    "bytesOut": 45590,
+    "uptime": "16m57s"
   },
   "2-rdn-montri-1006": {
-    "bytesIn": 133621019,
-    "bytesOut": 3983289384,
-    "uptime": "9h27m38s"
+    "bytesIn": 65302622,
+    "bytesOut": 757547800,
+    "uptime": "3h17m27s"
   },
   "2-rdn-mojib-1001": {
-    "bytesIn": 96774782,
-    "bytesOut": 1085314844,
-    "uptime": "2h46m1s"
+    "bytesIn": 232400926,
+    "bytesOut": 4488782272,
+    "uptime": "3h16m29s"
   },
   "2-rdn-college-1006": {
-    "bytesIn": 316505211,
-    "bytesOut": 8102040445,
-    "uptime": "9h26m37s"
+    "bytesIn": 210840353,
+    "bytesOut": 5641746398,
+    "uptime": "3h16m28s"
   },
   "2-rdn-3": {
-    "bytesIn": 1395171219,
-    "bytesOut": 25594775107,
-    "uptime": "9h27m24s"
+    "bytesIn": 600097006,
+    "bytesOut": 8543440250,
+    "uptime": "3h17m12s"
   },
   "2-rdn-amanat-1003": {
-    "bytesIn": 105991070,
-    "bytesOut": 1301331384,
-    "uptime": "9h26m33s"
+    "bytesIn": 210462596,
+    "bytesOut": 1019105246,
+    "uptime": "3h16m24s"
   },
   "2-rdn-notun-1014": {
-    "bytesIn": 31056950,
-    "bytesOut": 687928533,
-    "uptime": "58m26s"
+    "bytesIn": 55831035,
+    "bytesOut": 1584614897,
+    "uptime": "3h16m9s"
   },
   "2-rdn-amanat-1033": {
-    "bytesIn": 359992357,
-    "bytesOut": 5786988896,
-    "uptime": "9h26m30s"
+    "bytesIn": 93381605,
+    "bytesOut": 3137160363,
+    "uptime": "2h12m1s"
   },
   "2-rdn-amanat-1015": {
-    "bytesIn": 85995818,
-    "bytesOut": 1399835963,
-    "uptime": "1h34m42s"
+    "bytesIn": 152081568,
+    "bytesOut": 5414001953,
+    "uptime": "3h18m45s"
   },
   "2-rdn-awlia-1005": {
-    "bytesIn": 1083299371,
-    "bytesOut": 9352716470,
-    "uptime": "8h37m22s"
+    "bytesIn": 665126323,
+    "bytesOut": 5348958697,
+    "uptime": "2h51m49s"
   },
   "2-rdn-awlia-1001": {
-    "bytesIn": 1162402595,
-    "bytesOut": 22726826620,
-    "uptime": "9h26m39s"
+    "bytesIn": 299679206,
+    "bytesOut": 4863197310,
+    "uptime": "3h16m30s"
   },
   "2-rdn-amanat-1039": {
     "bytesIn": 1219603621,
@@ -435,24 +435,24 @@
     "uptime": "6h26m39s"
   },
   "2-rdn-sonaton-1004": {
-    "bytesIn": 58672809,
-    "bytesOut": 2513710212,
-    "uptime": "2h44m12s"
+    "bytesIn": 11213782,
+    "bytesOut": 177884666,
+    "uptime": "3h9m43s"
   },
   "2-rdn-notun-1009": {
-    "bytesIn": 461789422,
-    "bytesOut": 2385241586,
-    "uptime": "2h44m1s"
+    "bytesIn": 406527888,
+    "bytesOut": 5967067096,
+    "uptime": "3h9m31s"
   },
   "2-rdn-notun-1005": {
-    "bytesIn": 51076681,
-    "bytesOut": 3604372346,
-    "uptime": "2h44m2s"
+    "bytesIn": 66118041,
+    "bytesOut": 3569176370,
+    "uptime": "3h9m35s"
   },
   "2-rdn-notun-1010": {
-    "bytesIn": 108506287,
-    "bytesOut": 2936090609,
-    "uptime": "2h43m59s"
+    "bytesIn": 172298291,
+    "bytesOut": 4514266666,
+    "uptime": "3h9m32s"
   },
   "2-rdn-sonaton-1005": {
     "bytesIn": 90203555,
@@ -460,19 +460,19 @@
     "uptime": "5h34m35s"
   },
   "2-rdn-sonaton-1001": {
-    "bytesIn": 170185424,
-    "bytesOut": 3039443044,
-    "uptime": "2h43m12s"
+    "bytesIn": 196380241,
+    "bytesOut": 4462298051,
+    "uptime": "3h9m14s"
   },
   "2-rdn-notun-1013": {
-    "bytesIn": 135324166,
-    "bytesOut": 256758676,
-    "uptime": "2h42m59s"
+    "bytesIn": 373680475,
+    "bytesOut": 514866505,
+    "uptime": "3h9m1s"
   },
   "2-rdn-muslim-1021": {
-    "bytesIn": 110331161,
-    "bytesOut": 2402903747,
-    "uptime": "5d2h24m49s"
+    "bytesIn": 122460291,
+    "bytesOut": 2500207660,
+    "uptime": "5d10h56m12s"
   },
   "2-rdn-office": {
     "bytesIn": 706,
@@ -480,64 +480,64 @@
     "uptime": "15s"
   },
   "2-rdn-amanat-1065": {
-    "bytesIn": 5319885443,
-    "bytesOut": 167388540226,
-    "uptime": "3d8h48m36s"
+    "bytesIn": 6220382273,
+    "bytesOut": 185287596442,
+    "uptime": "3d17h19m59s"
   },
   "2-rdn-amanat-1050": {
-    "bytesIn": 4366371421,
-    "bytesOut": 67684215924,
-    "uptime": "3d9h20m21s"
+    "bytesIn": 4655939091,
+    "bytesOut": 75847970070,
+    "uptime": "3d17h51m44s"
   },
   "2-rdn-montri-1007": {
-    "bytesIn": 41004620,
-    "bytesOut": 2406264946,
-    "uptime": "8h40m47s"
+    "bytesIn": 170024514,
+    "bytesOut": 7520036976,
+    "uptime": "17h13m10s"
   },
   "2-rdn-montri-1003": {
-    "bytesIn": 216414905,
-    "bytesOut": 4896533607,
-    "uptime": "9h39m46s"
+    "bytesIn": 65377653,
+    "bytesOut": 1049755160,
+    "uptime": "3h18m7s"
   },
   "2-rdn-notun-1020": {
-    "bytesIn": 152015895,
-    "bytesOut": 1536263427,
-    "uptime": "59m40s"
+    "bytesIn": 444101926,
+    "bytesOut": 5800816165,
+    "uptime": "3h18m45s"
   },
   "2-rdn-muslim-1007": {
-    "bytesIn": 34503181,
-    "bytesOut": 1081646219,
-    "uptime": "59m26s"
+    "bytesIn": 361387310,
+    "bytesOut": 2776331507,
+    "uptime": "3h18m13s"
   },
   "2-rdn-muslim-1023": {
-    "bytesIn": 61867623,
-    "bytesOut": 1338300827,
-    "uptime": "59m33s"
+    "bytesIn": 140051507,
+    "bytesOut": 3477514652,
+    "uptime": "3h18m13s"
   },
   "2-rdn-muslim-1020": {
-    "bytesIn": 10081906,
-    "bytesOut": 306453611,
-    "uptime": "21m38s"
+    "bytesIn": 11031269,
+    "bytesOut": 343215500,
+    "uptime": "3h18m45s"
   },
   "2-rdn-muslim-1019": {
-    "bytesIn": 309239093,
-    "bytesOut": 1592711293,
-    "uptime": "59m31s"
+    "bytesIn": 1137109370,
+    "bytesOut": 5618955537,
+    "uptime": "3h18m14s"
   },
   "2-rdn-amanat-1061": {
-    "bytesIn": 241627499,
-    "bytesOut": 4160632727,
-    "uptime": "9h28m22s"
+    "bytesIn": 112510025,
+    "bytesOut": 3270143194,
+    "uptime": "2h27m8s"
   },
   "2-rdn-muslim-1022": {
-    "bytesIn": 5910771,
-    "bytesOut": 329486862,
-    "uptime": "59m34s"
+    "bytesIn": 46565868,
+    "bytesOut": 1095754100,
+    "uptime": "3h18m13s"
   },
   "2-rdn-amanat-1060": {
-    "bytesIn": 1112615978,
-    "bytesOut": 12373041596,
-    "uptime": "9h28m21s"
+    "bytesIn": 425277240,
+    "bytesOut": 4708688021,
+    "uptime": "3h18m8s"
   },
   "2-rdn-amanat-1067": {
     "bytesIn": 2737057676,
@@ -545,49 +545,49 @@
     "uptime": "3h57m51s"
   },
   "2-rdn-muslim-1027": {
-    "bytesIn": 6927897,
-    "bytesOut": 360925714,
-    "uptime": "59m31s"
+    "bytesIn": 35024569,
+    "bytesOut": 799448856,
+    "uptime": "3h18m11s"
   },
   "2-rdn-motel-1025": {
-    "bytesIn": 802851779,
-    "bytesOut": 17038574902,
-    "uptime": "9h28m19s"
+    "bytesIn": 610005746,
+    "bytesOut": 9389778729,
+    "uptime": "3h18m10s"
   },
   "2-rdn-amanat-1052": {
-    "bytesIn": 428613880,
-    "bytesOut": 6493139376,
-    "uptime": "9h27m49s"
+    "bytesIn": 235826965,
+    "bytesOut": 3959439925,
+    "uptime": "3h18m11s"
   },
   "2-rdn-notun-1019": {
-    "bytesIn": 296372105,
-    "bytesOut": 14062249150,
-    "uptime": "18h26m36s"
+    "bytesIn": 34054707,
+    "bytesOut": 999452463,
+    "uptime": "3h18m10s"
   },
   "2-rdn-amanat-1059": {
-    "bytesIn": 75699804,
-    "bytesOut": 1518622201,
-    "uptime": "9h27m48s"
+    "bytesIn": 20795060,
+    "bytesOut": 723515182,
+    "uptime": "3h18m9s"
   },
   "2-rdn-amanat-1051": {
-    "bytesIn": 645513644,
-    "bytesOut": 2380837161,
-    "uptime": "9h27m48s"
+    "bytesIn": 189074123,
+    "bytesOut": 4739533322,
+    "uptime": "3h18m9s"
   },
   "2-rdn-mojib-1017": {
-    "bytesIn": 745098455,
-    "bytesOut": 12516028487,
-    "uptime": "9h27m42s"
+    "bytesIn": 274450355,
+    "bytesOut": 5857858888,
+    "uptime": "3h17m30s"
   },
   "2-rdn-muslim-1004": {
-    "bytesIn": 41435228,
-    "bytesOut": 1688980447,
-    "uptime": "59m18s"
+    "bytesIn": 71744043,
+    "bytesOut": 460958139,
+    "uptime": "3h18m3s"
   },
   "2-rdn-amanat-1058": {
-    "bytesIn": 17422576,
-    "bytesOut": 728600107,
-    "uptime": "59m15s"
+    "bytesIn": 99735328,
+    "bytesOut": 1688069451,
+    "uptime": "3h17m25s"
   },
   "2-rdn-rajmoni-1013": {
     "bytesIn": 2001704219,
@@ -595,164 +595,164 @@
     "uptime": "18h55m6s"
   },
   "2-rdn-amanat-1068": {
-    "bytesIn": 110136710,
-    "bytesOut": 3278999910,
-    "uptime": "5h6m29s"
+    "bytesIn": 138665082,
+    "bytesOut": 3277957457,
+    "uptime": "3h17m18s"
   },
   "2-rdn-motel-1019": {
-    "bytesIn": 554103629,
-    "bytesOut": 12176784192,
-    "uptime": "9h27m28s"
+    "bytesIn": 546144120,
+    "bytesOut": 15321243798,
+    "uptime": "3h17m27s"
   },
   "2-rdn-awlia-1006": {
-    "bytesIn": 592552166,
-    "bytesOut": 15555269894,
-    "uptime": "9h27m20s"
+    "bytesIn": 144183024,
+    "bytesOut": 3345715511,
+    "uptime": "3h17m11s"
   },
   "2-rdn-montri-1008": {
-    "bytesIn": 1524192667,
-    "bytesOut": 10694727363,
-    "uptime": "9h27m36s"
+    "bytesIn": 840992771,
+    "bytesOut": 1454393151,
+    "uptime": "3h16m6s"
   },
   "2-rdn-motel-1018": {
-    "bytesIn": 532665609,
-    "bytesOut": 7221513735,
-    "uptime": "9h27m16s"
+    "bytesIn": 204274075,
+    "bytesOut": 2254633371,
+    "uptime": "3h16m37s"
   },
   "2-rdn-amanat-1054": {
-    "bytesIn": 504612952,
-    "bytesOut": 14463287905,
-    "uptime": "9h26m42s"
+    "bytesIn": 198375125,
+    "bytesOut": 7401025731,
+    "uptime": "3h16m32s"
   },
   "2-rdn-awlia-1009": {
-    "bytesIn": 77823156,
-    "bytesOut": 1911409765,
-    "uptime": "3h43m40s"
+    "bytesIn": 129061824,
+    "bytesOut": 2138967605,
+    "uptime": "3h17m17s"
   },
   "2-rdn-mojib-1016": {
-    "bytesIn": 1172661177,
-    "bytesOut": 14979125549,
-    "uptime": "9h26m41s"
+    "bytesIn": 351156006,
+    "bytesOut": 7482845072,
+    "uptime": "3h16m31s"
   },
   "2-rdn-mojib-1014": {
-    "bytesIn": 2713556398,
-    "bytesOut": 6012613697,
-    "uptime": "9h26m43s"
+    "bytesIn": 400920440,
+    "bytesOut": 3153627028,
+    "uptime": "3h16m33s"
   },
   "2-rdn-motel-1016": {
-    "bytesIn": 214555118,
-    "bytesOut": 1996606354,
-    "uptime": "3h8m30s"
+    "bytesIn": 2690654,
+    "bytesOut": 9941691,
+    "uptime": "3h17m31s"
   },
   "2-rdn-awlia-1002": {
-    "bytesIn": 5599443,
-    "bytesOut": 110184243,
-    "uptime": "11m4s"
+    "bytesIn": 25567431,
+    "bytesOut": 1078452319,
+    "uptime": "3h17m9s"
   },
   "2-rdn-amanat-1014": {
-    "bytesIn": 1396905272,
-    "bytesOut": 18230659729,
-    "uptime": "9h26m15s"
+    "bytesIn": 327084163,
+    "bytesOut": 4589916651,
+    "uptime": "3h16m4s"
   },
   "2-rdn-amanat-1062": {
-    "bytesIn": 1548966157,
-    "bytesOut": 9848264369,
-    "uptime": "9h28m22s"
+    "bytesIn": 19959372,
+    "bytesOut": 325068400,
+    "uptime": "3h18m13s"
   },
   "2-rdn-motel-1015": {
-    "bytesIn": 535844646,
-    "bytesOut": 7996308124,
-    "uptime": "9h27m41s"
+    "bytesIn": 34382821,
+    "bytesOut": 1057085736,
+    "uptime": "3h17m25s"
   },
   "2-rdn-amanat-1063": {
-    "bytesIn": 715439113,
-    "bytesOut": 7553340690,
-    "uptime": "9h27m48s"
+    "bytesIn": 152398319,
+    "bytesOut": 4278905198,
+    "uptime": "3h17m6s"
   },
   "2-rdn-muslim-1025": {
-    "bytesIn": 42008842,
-    "bytesOut": 687580840,
-    "uptime": "59m23s"
+    "bytesIn": 48262686,
+    "bytesOut": 1082419500,
+    "uptime": "3h18m3s"
   },
   "2-rdn-amanat-1056": {
-    "bytesIn": 162665666,
-    "bytesOut": 4154462131,
-    "uptime": "9h28m26s"
+    "bytesIn": 257815851,
+    "bytesOut": 3731358536,
+    "uptime": "3h10m29s"
   },
   "2-rdn-notun-1017": {
-    "bytesIn": 242742585,
-    "bytesOut": 5411317114,
-    "uptime": "2h44m3s"
+    "bytesIn": 198837058,
+    "bytesOut": 3617284484,
+    "uptime": "3h8m37s"
   },
   "2-rdn-sonaton-1008": {
-    "bytesIn": 30785602,
-    "bytesOut": 983001468,
-    "uptime": "2h44m5s"
+    "bytesIn": 25054740,
+    "bytesOut": 473401968,
+    "uptime": "3h9m37s"
   },
   "2-rdn-notun-1018": {
-    "bytesIn": 63433010,
-    "bytesOut": 3747234435,
-    "uptime": "2h44m1s"
+    "bytesIn": 20854234,
+    "bytesOut": 240744731,
+    "uptime": "3h9m34s"
   },
   "2-rdn-sonaton-1007": {
-    "bytesIn": 346504583,
-    "bytesOut": 3363298972,
-    "uptime": "2h44m"
+    "bytesIn": 324413902,
+    "bytesOut": 6491795777,
+    "uptime": "3h9m33s"
   },
   "2-rdn-sonaton-1006": {
-    "bytesIn": 94495032,
-    "bytesOut": 1905495738,
-    "uptime": "2h43m"
+    "bytesIn": 443026759,
+    "bytesOut": 2915830674,
+    "uptime": "3h9m2s"
   },
   "2-rdn-college-1008": {
-    "bytesIn": 5944361853,
-    "bytesOut": 143300311397,
-    "uptime": "1w2d2h49m53s"
+    "bytesIn": 6323415769,
+    "bytesOut": 151044889566,
+    "uptime": "1w2d11h21m16s"
   },
   "2-rdn-college-1012": {
-    "bytesIn": 35916305,
-    "bytesOut": 409949903,
-    "uptime": "7h46m52s"
+    "bytesIn": 99812601,
+    "bytesOut": 808572540,
+    "uptime": "6h26m41s"
   },
   "2-rdn-college-1014": {
-    "bytesIn": 229615109,
-    "bytesOut": 3086137513,
-    "uptime": "9h28m32s"
+    "bytesIn": 1064612,
+    "bytesOut": 1242112,
+    "uptime": "3h18m50s"
   },
   "2-rdn-mojib-1007": {
-    "bytesIn": 523509973,
-    "bytesOut": 20932850897,
-    "uptime": "9h10m19s"
+    "bytesIn": 24089507,
+    "bytesOut": 831900760,
+    "uptime": "3h18m13s"
   },
   "2-rdn-motel-1023": {
-    "bytesIn": 203448789,
-    "bytesOut": 4605476407,
-    "uptime": "9h28m25s"
+    "bytesIn": 269530452,
+    "bytesOut": 4957531531,
+    "uptime": "3h18m13s"
   },
   "2-rdn-mojib-1018": {
-    "bytesIn": 547505352,
-    "bytesOut": 10642693098,
-    "uptime": "9h10m5s"
+    "bytesIn": 132193508,
+    "bytesOut": 3426200314,
+    "uptime": "3h18m12s"
   },
   "2-rdn-amanat-1021": {
-    "bytesIn": 574750931,
-    "bytesOut": 7724628066,
-    "uptime": "9h28m20s"
+    "bytesIn": 128867117,
+    "bytesOut": 2153836544,
+    "uptime": "3h18m11s"
   },
   "2-rdn-cof-1006": {
-    "bytesIn": 287637235,
-    "bytesOut": 3939984611,
-    "uptime": "9h27m23s"
+    "bytesIn": 202441387,
+    "bytesOut": 3615709085,
+    "uptime": "3h16m21s"
   },
   "2-rdn-amanat-1023": {
-    "bytesIn": 395083760,
-    "bytesOut": 7362466293,
-    "uptime": "9h27m43s"
+    "bytesIn": 195956426,
+    "bytesOut": 4379050834,
+    "uptime": "3h18m4s"
   },
   "2-rdn-amanat-1069": {
-    "bytesIn": 627075559,
-    "bytesOut": 13265971979,
-    "uptime": "9h27m45s"
+    "bytesIn": 100204965,
+    "bytesOut": 2791395144,
+    "uptime": "2h45m13s"
   },
   "2-rdn-mojib-1024": {
     "bytesIn": 4030252,
@@ -760,99 +760,99 @@
     "uptime": "6h19m21s"
   },
   "2-rdn-akdewan-1006": {
-    "bytesIn": 151411122,
-    "bytesOut": 5849561588,
-    "uptime": "9h27m26s"
+    "bytesIn": 192452370,
+    "bytesOut": 6174170937,
+    "uptime": "3h17m15s"
   },
   "2-rdn-muslim-1031": {
-    "bytesIn": 31201147,
-    "bytesOut": 1065919903,
-    "uptime": "59m24s"
+    "bytesIn": 595835083,
+    "bytesOut": 7454457597,
+    "uptime": "3h17m30s"
   },
   "2-rdn-awlia-1011": {
-    "bytesIn": 618755835,
-    "bytesOut": 7148520631,
-    "uptime": "9h26m20s"
+    "bytesIn": 83481079,
+    "bytesOut": 4125137758,
+    "uptime": "3h17m11s"
   },
   "2-rdn-college-1013": {
-    "bytesIn": 253491111,
-    "bytesOut": 3890486379,
-    "uptime": "9h27m37s"
+    "bytesIn": 622578855,
+    "bytesOut": 3362275115,
+    "uptime": "3h18m5s"
   },
   "2-rdn-mojib-1023": {
-    "bytesIn": 113341220,
-    "bytesOut": 2973110221,
-    "uptime": "3h50m28s"
+    "bytesIn": 23564805,
+    "bytesOut": 850925107,
+    "uptime": "3h17m21s"
   },
   "2-rdn-mojib-1026": {
-    "bytesIn": 309096565,
-    "bytesOut": 11550818558,
-    "uptime": "9h27m32s"
+    "bytesIn": 4582089,
+    "bytesOut": 181815771,
+    "uptime": "3h17m21s"
   },
   "2-rdn-muslim-1011": {
-    "bytesIn": 66995887,
-    "bytesOut": 1127987043,
-    "uptime": "59m21s"
+    "bytesIn": 424497586,
+    "bytesOut": 6832025263,
+    "uptime": "3h18m4s"
   },
   "2-rdn-mojib-1021": {
-    "bytesIn": 218143704,
-    "bytesOut": 6104706477,
-    "uptime": "9h27m40s"
+    "bytesIn": 75645379,
+    "bytesOut": 1383217231,
+    "uptime": "3h17m29s"
   },
   "2-rdn-mojib-1025": {
-    "bytesIn": 1090497765,
-    "bytesOut": 31289793232,
-    "uptime": "9h27m21s"
+    "bytesIn": 489108620,
+    "bytesOut": 5933840501,
+    "uptime": "3h17m10s"
   },
   "2-rdn-motel-1006": {
-    "bytesIn": 632947658,
-    "bytesOut": 9293202495,
-    "uptime": "9h26m46s"
+    "bytesIn": 417259273,
+    "bytesOut": 4099554968,
+    "uptime": "3h16m36s"
   },
   "2-rdn-college-1011": {
-    "bytesIn": 250713197,
-    "bytesOut": 6724423696,
-    "uptime": "9h26m44s"
+    "bytesIn": 8430878,
+    "bytesOut": 4270841,
+    "uptime": "3h16m34s"
   },
   "2-rdn-debasis-1002": {
-    "bytesIn": 4064805431,
-    "bytesOut": 24854189775,
-    "uptime": "9h27m39s"
+    "bytesIn": 103467534,
+    "bytesOut": 3327698044,
+    "uptime": "3h16m33s"
   },
   "2-rdn-amanat-1030": {
-    "bytesIn": 1131780383,
-    "bytesOut": 8892898483,
-    "uptime": "9h26m39s"
+    "bytesIn": 53774458,
+    "bytesOut": 679514741,
+    "uptime": "3h16m28s"
   },
   "2-rdn-amanat-1074": {
-    "bytesIn": 337274867,
-    "bytesOut": 4860303973,
-    "uptime": "9h26m35s"
+    "bytesIn": 593418524,
+    "bytesOut": 4380978526,
+    "uptime": "3h16m25s"
   },
   "2-rdn-mojib-1022": {
-    "bytesIn": 801580425,
-    "bytesOut": 15272891041,
-    "uptime": "9h27m33s"
+    "bytesIn": 180366086,
+    "bytesOut": 4432870030,
+    "uptime": "3h17m26s"
   },
   "2-rdn-montri-1011": {
-    "bytesIn": 103803833,
-    "bytesOut": 3514711406,
-    "uptime": "9h26m30s"
+    "bytesIn": 25901575,
+    "bytesOut": 550806625,
+    "uptime": "3h16m19s"
   },
   "2-rdn-amanat-1071": {
-    "bytesIn": 271795005,
-    "bytesOut": 5897147773,
-    "uptime": "9h27m33s"
+    "bytesIn": 33294806,
+    "bytesOut": 607412109,
+    "uptime": "3h17m21s"
   },
   "2-rdn-montri-1009": {
-    "bytesIn": 263751771,
-    "bytesOut": 9857205392,
-    "uptime": "9h26m23s"
+    "bytesIn": 77061726,
+    "bytesOut": 1768570095,
+    "uptime": "3h16m10s"
   },
   "2-rdn-amanat-1049": {
-    "bytesIn": 554431544,
-    "bytesOut": 9857557145,
-    "uptime": "9h27m32s"
+    "bytesIn": 173732464,
+    "bytesOut": 3165442417,
+    "uptime": "3h17m24s"
   },
   "2-rdn-mojib-1020": {
     "bytesIn": 40503181,
@@ -860,34 +860,34 @@
     "uptime": "2h17m11s"
   },
   "2-rdn-cof-1005": {
-    "bytesIn": 55861529,
-    "bytesOut": 701427416,
-    "uptime": "2h27m42s"
+    "bytesIn": 14922960,
+    "bytesOut": 248760509,
+    "uptime": "3h17m6s"
   },
   "2-rdn-amanat-1034": {
-    "bytesIn": 70925034,
-    "bytesOut": 1851687052,
-    "uptime": "59m20s"
+    "bytesIn": 502665805,
+    "bytesOut": 4502072825,
+    "uptime": "3h18m4s"
   },
   "2-rdn-awlia-1012": {
-    "bytesIn": 2656847676,
-    "bytesOut": 36357395056,
-    "uptime": "9h27m41s"
+    "bytesIn": 823870025,
+    "bytesOut": 11443957222,
+    "uptime": "3h17m29s"
   },
   "2-rdn-amanat-1070": {
-    "bytesIn": 259851764,
-    "bytesOut": 8014653681,
-    "uptime": "9h28m26s"
+    "bytesIn": 22376557,
+    "bytesOut": 541431256,
+    "uptime": "3h16m27s"
   },
   "2-rdn-college-1010": {
-    "bytesIn": 2956586123,
-    "bytesOut": 19657870833,
-    "uptime": "4d4h58s"
+    "bytesIn": 3159466511,
+    "bytesOut": 20247175445,
+    "uptime": "4d12h32m21s"
   },
   "2-rdn-notun-1021": {
-    "bytesIn": 70049064,
-    "bytesOut": 2045458791,
-    "uptime": "2h44m5s"
+    "bytesIn": 57169363,
+    "bytesOut": 1300050564,
+    "uptime": "3h9m37s"
   },
   "2-rdn-amanat-1090": {
     "bytesIn": 2764212700,
@@ -895,69 +895,69 @@
     "uptime": "2d20h10m4s"
   },
   "2-rdn-hospital-1002": {
-    "bytesIn": 6222504677,
-    "bytesOut": 40601490089,
-    "uptime": "2d14h6m22s"
+    "bytesIn": 9642381535,
+    "bytesOut": 46943474988,
+    "uptime": "2d22h37m45s"
   },
   "2-rdn-amanat-1083": {
-    "bytesIn": 803079568,
-    "bytesOut": 9130831992,
-    "uptime": "9h39m50s"
+    "bytesIn": 241016634,
+    "bytesOut": 4609971297,
+    "uptime": "3h19m10s"
   },
   "2-rdn-awlia-1013": {
-    "bytesIn": 562311416,
-    "bytesOut": 13737958735,
-    "uptime": "9h28m36s"
+    "bytesIn": 138288007,
+    "bytesOut": 3261623401,
+    "uptime": "3h18m53s"
   },
   "2-rdn-vedvedi-1003": {
-    "bytesIn": 12920037,
-    "bytesOut": 8496341,
-    "uptime": "59m35s"
+    "bytesIn": 39210798,
+    "bytesOut": 130028353,
+    "uptime": "3h18m14s"
   },
   "2-rdn-muslim-1032": {
-    "bytesIn": 45313048,
-    "bytesOut": 1336423933,
-    "uptime": "59m33s"
+    "bytesIn": 258411869,
+    "bytesOut": 4276979120,
+    "uptime": "3h18m45s"
   },
   "2-rdn-vedvedi-1002": {
-    "bytesIn": 78026125,
-    "bytesOut": 2036816550,
-    "uptime": "9h28m25s"
+    "bytesIn": 1602528,
+    "bytesOut": 987693,
+    "uptime": "3h18m13s"
   },
   "2-rdn-notun-1011": {
-    "bytesIn": 10175708,
-    "bytesOut": 206276673,
-    "uptime": "59m34s"
+    "bytesIn": 99179649,
+    "bytesOut": 1759608074,
+    "uptime": "3h18m12s"
   },
   "2-rdn-amanat-1081": {
-    "bytesIn": 715286015,
-    "bytesOut": 7342964697,
-    "uptime": "9h28m23s"
+    "bytesIn": 228175180,
+    "bytesOut": 3443974036,
+    "uptime": "3h18m10s"
   },
   "2-rdn-mojib-1028": {
-    "bytesIn": 870906211,
-    "bytesOut": 14111655825,
-    "uptime": "9h28m22s"
+    "bytesIn": 367872753,
+    "bytesOut": 7486548940,
+    "uptime": "3h18m13s"
   },
   "2-rdn-amanat-1084": {
-    "bytesIn": 109674134,
-    "bytesOut": 2930455538,
-    "uptime": "9h28m19s"
+    "bytesIn": 11278576,
+    "bytesOut": 846510036,
+    "uptime": "3h17m23s"
   },
   "2-rdn-muslim-1024": {
-    "bytesIn": 38803968,
-    "bytesOut": 1202579447,
-    "uptime": "59m28s"
+    "bytesIn": 157305798,
+    "bytesOut": 3887645467,
+    "uptime": "3h18m9s"
   },
   "2-rdn-amanat-1087": {
-    "bytesIn": 378712302,
-    "bytesOut": 4352501071,
-    "uptime": "9h27m47s"
+    "bytesIn": 88112660,
+    "bytesOut": 2486426303,
+    "uptime": "3h18m8s"
   },
   "2-rdn-shimul-1003": {
-    "bytesIn": 19396395,
-    "bytesOut": 742099402,
-    "uptime": "59m25s"
+    "bytesIn": 132844309,
+    "bytesOut": 2763975292,
+    "uptime": "3h18m7s"
   },
   "2-rdn-shimul-1005": {
     "bytesIn": 7643865,
@@ -970,14 +970,14 @@
     "uptime": "18h25m38s"
   },
   "2-rdn-notun-1027": {
-    "bytesIn": 15074494,
-    "bytesOut": 630900841,
-    "uptime": "59m27s"
+    "bytesIn": 60249208,
+    "bytesOut": 3025109745,
+    "uptime": "3h14m54s"
   },
   "2-rdn-shimul-1001": {
-    "bytesIn": 23855195,
-    "bytesOut": 865118592,
-    "uptime": "59m21s"
+    "bytesIn": 85124596,
+    "bytesOut": 2032899540,
+    "uptime": "3h17m30s"
   },
   "2-rdn-vedvedi-1004": {
     "bytesIn": 65944003,
@@ -985,69 +985,69 @@
     "uptime": "17h13m25s"
   },
   "2-rdn-notun-1006": {
-    "bytesIn": 43323264,
-    "bytesOut": 1061733328,
-    "uptime": "1h10m45s"
+    "bytesIn": 544934339,
+    "bytesOut": 3716895632,
+    "uptime": "2h51m29s"
   },
   "2-rdn-motel-1027": {
-    "bytesIn": 83758049,
-    "bytesOut": 812966892,
-    "uptime": "9h27m41s"
+    "bytesIn": 80051271,
+    "bytesOut": 2055204663,
+    "uptime": "3h17m26s"
   },
   "2-rdn-amanat-1086": {
-    "bytesIn": 1493210453,
-    "bytesOut": 27919412594,
-    "uptime": "9h27m41s"
+    "bytesIn": 1524560943,
+    "bytesOut": 26295815710,
+    "uptime": "3h17m29s"
   },
   "2-rdn-motel-1026": {
-    "bytesIn": 121730042,
-    "bytesOut": 1560906717,
-    "uptime": "9h27m39s"
+    "bytesIn": 67541416,
+    "bytesOut": 59517597,
+    "uptime": "3h17m11s"
   },
   "2-rdn-mojib-1029": {
-    "bytesIn": 752299517,
-    "bytesOut": 11712264641,
-    "uptime": "9h26m19s"
+    "bytesIn": 123770062,
+    "bytesOut": 2587230980,
+    "uptime": "3h17m11s"
   },
   "2-rdn-amanat-1076": {
-    "bytesIn": 2207074922,
-    "bytesOut": 35129763708,
-    "uptime": "1d15h9m52s"
+    "bytesIn": 2589963338,
+    "bytesOut": 44624368357,
+    "uptime": "1d23h41m15s"
   },
   "2-rdn-amanat-1079": {
-    "bytesIn": 492318692,
-    "bytesOut": 6554621158,
-    "uptime": "9h27m38s"
+    "bytesIn": 109266997,
+    "bytesOut": 3094436654,
+    "uptime": "3h17m27s"
   },
   "2-rdn-vedvedi-1005": {
-    "bytesIn": 91069618,
-    "bytesOut": 1534553587,
-    "uptime": "59m30s"
+    "bytesIn": 194504093,
+    "bytesOut": 5354523690,
+    "uptime": "3h18m13s"
   },
   "2-rdn-motel-1009": {
-    "bytesIn": 124418378,
-    "bytesOut": 2913792035,
-    "uptime": "9h27m40s"
+    "bytesIn": 28430207,
+    "bytesOut": 733598429,
+    "uptime": "3h17m29s"
   },
   "2-rdn-debasis-1003": {
-    "bytesIn": 395799499,
-    "bytesOut": 12896822067,
-    "uptime": "9h27m22s"
+    "bytesIn": 177316600,
+    "bytesOut": 5032418353,
+    "uptime": "3h17m10s"
   },
   "2-rdn-akdewan-1005": {
-    "bytesIn": 351979167,
-    "bytesOut": 5491575973,
-    "uptime": "9h27m39s"
+    "bytesIn": 199931344,
+    "bytesOut": 3476966634,
+    "uptime": "3h17m27s"
   },
   "2-rdn-cof-1009": {
-    "bytesIn": 251468137,
-    "bytesOut": 12659266245,
-    "uptime": "6h50m30s"
+    "bytesIn": 225404518,
+    "bytesOut": 1471610212,
+    "uptime": "3h17m6s"
   },
   "2-rdn-amanat-1088": {
-    "bytesIn": 488990589,
-    "bytesOut": 11879708045,
-    "uptime": "9h26m44s"
+    "bytesIn": 377538686,
+    "bytesOut": 5342361039,
+    "uptime": "3h16m34s"
   },
   "2-rdn-motel-1003": {
     "bytesIn": 1541680,
@@ -1055,24 +1055,24 @@
     "uptime": "6h18m48s"
   },
   "2-rdn-awlia-1014": {
-    "bytesIn": 21934500,
-    "bytesOut": 500910896,
-    "uptime": "9h26m41s"
+    "bytesIn": 92691572,
+    "bytesOut": 2508862687,
+    "uptime": "3h16m32s"
   },
   "2-rdn-amanat-1077": {
-    "bytesIn": 563666312,
-    "bytesOut": 10568151833,
-    "uptime": "9h26m33s"
+    "bytesIn": 383698725,
+    "bytesOut": 4755713750,
+    "uptime": "3h18m9s"
   },
   "2-rdn-cof-1008": {
-    "bytesIn": 461984042,
-    "bytesOut": 2681024932,
-    "uptime": "9h26m29s"
+    "bytesIn": 108877517,
+    "bytesOut": 1349740151,
+    "uptime": "3h16m19s"
   },
   "2-rdn-muslim-1033": {
-    "bytesIn": 1483501,
-    "bytesOut": 78010684,
-    "uptime": "58m24s"
+    "bytesIn": 34674722,
+    "bytesOut": 3080921954,
+    "uptime": "3h16m4s"
   },
   "2-rdn-amanat-1091": {
     "bytesIn": 56450497,
@@ -1080,29 +1080,29 @@
     "uptime": "2h16m14s"
   },
   "2-rdn-amanat-1089": {
-    "bytesIn": 521090875,
-    "bytesOut": 8087982577,
-    "uptime": "9h28m26s"
+    "bytesIn": 123396863,
+    "bytesOut": 3622735662,
+    "uptime": "3h18m14s"
   },
   "2-rdn-amanat-1078": {
-    "bytesIn": 129901195,
-    "bytesOut": 2370047163,
-    "uptime": "9h28m24s"
+    "bytesIn": 86988833,
+    "bytesOut": 1293731163,
+    "uptime": "3h18m13s"
   },
   "2-rdn-mojib-1027": {
-    "bytesIn": 735129272,
-    "bytesOut": 10643251387,
-    "uptime": "9h27m30s"
+    "bytesIn": 231980069,
+    "bytesOut": 3150243836,
+    "uptime": "3h17m18s"
   },
   "2-rdn-motel-1007": {
-    "bytesIn": 669766163,
-    "bytesOut": 429636809,
-    "uptime": "2h8m28s"
+    "bytesIn": 14325863,
+    "bytesOut": 326009433,
+    "uptime": "3h17m9s"
   },
   "2-rdn-amanat-1055": {
-    "bytesIn": 384513749,
-    "bytesOut": 2033185966,
-    "uptime": "4h18m20s"
+    "bytesIn": 110266217,
+    "bytesOut": 1472049899,
+    "uptime": "3h18m45s"
   },
   "2-rdn-sonaton-1009": {
     "bytesIn": 16056,
@@ -1110,9 +1110,9 @@
     "uptime": "44m39s"
   },
   "2-rdn-notun-1028": {
-    "bytesIn": 798188906,
-    "bytesOut": 28647073799,
-    "uptime": "2h43m16s"
+    "bytesIn": 315328100,
+    "bytesOut": 9110113914,
+    "uptime": "3h9m21s"
   },
   "2-rdn-sonaton-1011": {
     "bytesIn": 302210116,
@@ -1125,39 +1125,39 @@
     "uptime": "19h3m29s"
   },
   "2-rdn-kalin-1002": {
-    "bytesIn": 353012101,
-    "bytesOut": 3860090438,
-    "uptime": "3h40m28s"
+    "bytesIn": 36240,
+    "bytesOut": 44616,
+    "uptime": "4h34m55s"
   },
   "2-rdn-amanat-1100": {
-    "bytesIn": 2050464592,
-    "bytesOut": 16942495763,
-    "uptime": "1d37m40s"
+    "bytesIn": 2580622823,
+    "bytesOut": 28477239144,
+    "uptime": "1d9h9m3s"
   },
   "2-rdn-amanat-1097": {
-    "bytesIn": 340135947,
-    "bytesOut": 8166698782,
-    "uptime": "9h28m24s"
+    "bytesIn": 111309589,
+    "bytesOut": 2431716074,
+    "uptime": "3h18m12s"
   },
   "2-rdn-amanat-1096": {
-    "bytesIn": 668172987,
-    "bytesOut": 14156260108,
-    "uptime": "9h28m20s"
+    "bytesIn": 248337186,
+    "bytesOut": 5237287065,
+    "uptime": "3h18m11s"
   },
   "2-rdn-amanat-1095": {
-    "bytesIn": 334309815,
-    "bytesOut": 4564705939,
-    "uptime": "9h27m49s"
+    "bytesIn": 120644014,
+    "bytesOut": 2680557345,
+    "uptime": "3h18m45s"
   },
   "2-rdn-amanat-1098": {
-    "bytesIn": 237249046,
-    "bytesOut": 2450216056,
-    "uptime": "9h27m44s"
+    "bytesIn": 52417651,
+    "bytesOut": 1595284217,
+    "uptime": "3h18m4s"
   },
   "2-rdn-sonaton-1013": {
-    "bytesIn": 1887672,
-    "bytesOut": 252006346,
-    "uptime": "59m20s"
+    "bytesIn": 35815464,
+    "bytesOut": 765616905,
+    "uptime": "3h18m4s"
   },
   "2-rdn-amanat-1080": {
     "bytesIn": 117751939,
@@ -1165,9 +1165,9 @@
     "uptime": "2h18m9s"
   },
   "2-rdn-muslim-1034": {
-    "bytesIn": 69997020,
-    "bytesOut": 1617471123,
-    "uptime": "59m16s"
+    "bytesIn": 137491438,
+    "bytesOut": 1418960473,
+    "uptime": "3h17m28s"
   },
   "2-rdn-awlia-1015": {
     "bytesIn": 176409849,
@@ -1175,19 +1175,19 @@
     "uptime": "6h18m41s"
   },
   "2-rdn-amanat-1082": {
-    "bytesIn": 536491815,
-    "bytesOut": 4103389701,
-    "uptime": "9h27m42s"
+    "bytesIn": 62866555,
+    "bytesOut": 1844098587,
+    "uptime": "3h18m3s"
   },
   "2-rdn-amanat-1094": {
-    "bytesIn": 349781712,
-    "bytesOut": 5880385174,
-    "uptime": "9h27m25s"
+    "bytesIn": 32318422,
+    "bytesOut": 886627071,
+    "uptime": "1h27m7s"
   },
   "2-rdn-muslim-1026": {
-    "bytesIn": 37747709,
-    "bytesOut": 1221471086,
-    "uptime": "58m54s"
+    "bytesIn": 225354465,
+    "bytesOut": 3765333526,
+    "uptime": "3h12m59s"
   },
   "2-rdn-notun-1029": {
     "bytesIn": 298793098,
@@ -1195,19 +1195,19 @@
     "uptime": "58m51s"
   },
   "2-rdn-amanat-1092": {
-    "bytesIn": 42783246,
-    "bytesOut": 2094509685,
-    "uptime": "58m13s"
+    "bytesIn": 6099305,
+    "bytesOut": 248085307,
+    "uptime": "2h41m54s"
   },
   "2-rdn-amanat-1099": {
-    "bytesIn": 54436581,
-    "bytesOut": 2011495675,
-    "uptime": "9h27m46s"
+    "bytesIn": 50595860,
+    "bytesOut": 3236500495,
+    "uptime": "3h17m31s"
   },
   "2-rdn-sonaton-1012": {
-    "bytesIn": 117466785,
-    "bytesOut": 3394168333,
-    "uptime": "2h43m26s"
+    "bytesIn": 3256084,
+    "bytesOut": 36152659,
+    "uptime": "32m27s"
   },
   "2-rdn-amanat-1017": {
     "bytesIn": 289513224,
@@ -1220,9 +1220,9 @@
     "uptime": "9h27m20s"
   },
   "2-rdn-kalin-1001": {
-    "bytesIn": 147344489,
-    "bytesOut": 3446205880,
-    "uptime": "3h40m9s"
+    "bytesIn": 662846561,
+    "bytesOut": 4442642947,
+    "uptime": "4h34m37s"
   },
   "2-rdn-muslim-1018": {
     "bytesIn": 7086795,
@@ -1235,14 +1235,14 @@
     "uptime": "6h31m35s"
   },
   "2-rdn-mojib-1015": {
-    "bytesIn": 98084235,
-    "bytesOut": 1991539744,
-    "uptime": "9h26m41s"
+    "bytesIn": 19500089,
+    "bytesOut": 1110898249,
+    "uptime": "3h16m32s"
   },
   "2-rdn-muslim-1028": {
-    "bytesIn": 20784,
-    "bytesOut": 20052,
-    "uptime": "59m28s"
+    "bytesIn": 80292055,
+    "bytesOut": 2359528786,
+    "uptime": "3h2m55s"
   },
   "2-rdn-amanat-1002": {
     "bytesIn": 182289944,
@@ -1250,14 +1250,14 @@
     "uptime": "2h18m37s"
   },
   "2-rdn-amanat-1046": {
-    "bytesIn": 442730872,
-    "bytesOut": 13421404421,
-    "uptime": "5h8m49s"
+    "bytesIn": 251831677,
+    "bytesOut": 5084396930,
+    "uptime": "3h16m35s"
   },
   "2-rdn-awlia-1007": {
-    "bytesIn": 561941961,
-    "bytesOut": 12719250177,
-    "uptime": "9h26m43s"
+    "bytesIn": 131143092,
+    "bytesOut": 3232128146,
+    "uptime": "3h16m34s"
   },
   "2-rdn-notun-1024": {
     "bytesIn": 905358918,
@@ -1265,9 +1265,9 @@
     "uptime": "1d12h40m13s"
   },
   "2-rdn-shimul-1006": {
-    "bytesIn": 22821479,
-    "bytesOut": 470494716,
-    "uptime": "58m54s"
+    "bytesIn": 30560820,
+    "bytesOut": 815510597,
+    "uptime": "3h16m29s"
   },
   "2-rdn-amanat-1073": {
     "bytesIn": 10138811,
@@ -1280,9 +1280,9 @@
     "uptime": "22m33s"
   },
   "2-rdn-rajmoni-1012": {
-    "bytesIn": 22545393,
-    "bytesOut": 497349127,
-    "uptime": "58m54s"
+    "bytesIn": 218791063,
+    "bytesOut": 5658985434,
+    "uptime": "3h16m35s"
   },
   "2-rdn-amanat-1042": {
     "bytesIn": 454995048,
@@ -1290,9 +1290,9 @@
     "uptime": "4h57m53s"
   },
   "2-rdn-muslim-1013": {
-    "bytesIn": 218761330,
-    "bytesOut": 638508569,
-    "uptime": "59m30s"
+    "bytesIn": 373806589,
+    "bytesOut": 1961850450,
+    "uptime": "3h17m29s"
   },
   "0-rdn-1": {
     "bytesIn": 75761133,
@@ -1325,63 +1325,63 @@
     "uptime": "18h57m23s"
   },
   "2-rdn-college-1015": {
-    "bytesIn": 51391989,
-    "bytesOut": 1047562773,
-    "uptime": "9h28m26s"
+    "bytesIn": 186359,
+    "bytesOut": 397487,
+    "uptime": "3h18m14s"
   },
   "2-rdn-amanat-1006": {
-    "bytesIn": 269646938,
-    "bytesOut": 12214035385,
-    "uptime": "9h28m21s"
+    "bytesIn": 203517321,
+    "bytesOut": 1413759493,
+    "uptime": "3h18m12s"
   },
   "2-rdn-amanat-1022": {
-    "bytesIn": 226732800,
-    "bytesOut": 5653285295,
-    "uptime": "9h28m20s"
+    "bytesIn": 121527915,
+    "bytesOut": 3760498411,
+    "uptime": "3h18m11s"
   },
   "2-rdn-amanat-1101": {
-    "bytesIn": 137014010,
-    "bytesOut": 3794022837,
-    "uptime": "9h27m48s"
+    "bytesIn": 155075637,
+    "bytesOut": 5474090923,
+    "uptime": "3h18m8s"
   },
   "2-rdn-rajmoni-1011": {
-    "bytesIn": 37877090,
-    "bytesOut": 927975125,
-    "uptime": "58m51s"
+    "bytesIn": 3985208,
+    "bytesOut": 10823342,
+    "uptime": "3h17m30s"
   },
   "2-rdn-mojib-1033": {
-    "bytesIn": 124782408,
-    "bytesOut": 3048045417,
-    "uptime": "8h34m43s"
+    "bytesIn": 34593708,
+    "bytesOut": 934798981,
+    "uptime": "3h17m15s"
   },
   "2-rdn-kalin-1003": {
-    "bytesIn": 120216533,
-    "bytesOut": 1047814599,
-    "uptime": "3h39m41s"
+    "bytesIn": 247968566,
+    "bytesOut": 5173740777,
+    "uptime": "4h34m8s"
   },
   "2-rdn-notun-1022": {
-    "bytesIn": 2728,
+    "bytesIn": 3172,
     "bytesOut": 0,
-    "uptime": "1m14s"
+    "uptime": "1m17s"
   },
   "2-rdn-amanat-1066": {
-    "bytesIn": 397572673,
-    "bytesOut": 5998775574,
-    "uptime": "9h28m20s"
+    "bytesIn": 73960457,
+    "bytesOut": 2115063747,
+    "uptime": "3h18m10s"
   },
   "2-rdn-mojib-1034": {
-    "bytesIn": 170308452,
-    "bytesOut": 3045808390,
-    "uptime": "8h46m19s"
+    "bytesIn": 41420663,
+    "bytesOut": 1443252452,
+    "uptime": "3h18m3s"
   },
   "2-rdn-kalin-1004": {
-    "bytesIn": 161633349,
-    "bytesOut": 4413698314,
-    "uptime": "3h38m56s"
+    "bytesIn": 222702321,
+    "bytesOut": 4349664921,
+    "uptime": "4h32m40s"
   },
   "2-rdn-awlia-1010": {
-    "bytesIn": 277569116,
-    "bytesOut": 3596777060,
-    "uptime": "5h20s"
+    "bytesIn": 130944789,
+    "bytesOut": 4548039793,
+    "uptime": "3h16m26s"
   }
 }

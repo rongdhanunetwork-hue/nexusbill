@@ -119,6 +119,8 @@ async function sendViaBdBulkSms(
     if (text.toLowerCase().includes("success")) {
       return { success: true, message: "SMS sent via BDBulkSMS" };
     }
+    return { success: false, error: `BDBulkSMS raw response: ${text}` };
+  }
 }
 
 /**
