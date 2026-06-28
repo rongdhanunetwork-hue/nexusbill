@@ -3,4 +3,7 @@ node_modules
 .env
 .env.local
 .env.production
-*.env
+*.env
+session_traffic_cache.json
+scratch/
+*.log

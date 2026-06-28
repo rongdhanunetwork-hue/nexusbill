@@ -14,6 +14,7 @@ interface SettingsMap {
   sms_provider?: string;
   sms_api_key?: string;
   sms_sender_id?: string;
+  sms_acode?: string;
   sms_test_phone?: string;
 }
 
