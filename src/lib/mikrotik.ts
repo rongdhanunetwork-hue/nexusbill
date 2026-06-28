@@ -102,8 +102,11 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
              const total = rx + tx;
              if (total > maxTotal) {
                 maxTotal = total;
-                maxRx = rx;
-                maxTx = tx;
+                // In an ISP, Download is always significantly higher than Upload.
+                // Since we don't know if this max-traffic interface is WAN (RX=DL) or LAN (TX=DL),
+                // we assign the larger value to Download and the smaller to Upload.
+                maxRx = Math.max(rx, tx); // rxBps maps to Download in UI
+                maxTx = Math.min(rx, tx); // txBps maps to Upload in UI
              }
           }
         }
