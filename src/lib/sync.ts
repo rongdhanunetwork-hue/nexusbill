@@ -365,7 +365,11 @@ export async function checkAndSuspendExpiredUsers() {
         .filter((username): username is string => !!username);
 
       if (pppoeUsernames.length > 0) {
-        await suspendUsers(pppoeUsernames, routerId);
+        try {
+          await suspendUsers(pppoeUsernames, routerId);
+        } catch (e) {
+          console.warn(`[Expiration Checker] Failed to suspend users on router ${routerId}:`, e);
+        }
       }
     }
 
@@ -468,7 +472,12 @@ async function trackRouterUsage(routerId?: number) {
     if (!activeSessions || activeSessions.length === 0) return;
 
     // Fetch interfaces to get actual traffic bytes
-    const interfaces = await getPppoeInterfaces(routerId);
+    let interfaces: any[] = [];
+    try {
+      interfaces = await getPppoeInterfaces(routerId);
+    } catch (e) {
+      console.warn("Failed to fetch interfaces, skipping traffic usage but proceeding with enforcer:", e);
+    }
     const ifaceMap = new Map<string, any>();
     for (const iface of interfaces) {
       if (iface.name) {
@@ -478,7 +487,7 @@ async function trackRouterUsage(routerId?: number) {
 
     // Fetch customers assigned to this router
     const dbCustomers = await db
-      .select({ id: users.id, pppoeUsername: users.pppoeUsername, status: users.status })
+      .select({ id: users.id, pppoeUsername: users.pppoeUsername, status: users.status, expireDate: users.expireDate })
       .from(users)
       .where(
         and(
@@ -489,10 +498,10 @@ async function trackRouterUsage(routerId?: number) {
         )
       );
 
-    const usernameToUser = new Map<string, { id: number; status: string | null }>();
+    const usernameToUser = new Map<string, { id: number; status: string | null; expireDate: Date | null }>();
     for (const c of dbCustomers) {
       if (c.pppoeUsername) {
-        usernameToUser.set(c.pppoeUsername.toLowerCase(), { id: c.id, status: c.status });
+        usernameToUser.set(c.pppoeUsername.toLowerCase(), { id: c.id, status: c.status, expireDate: c.expireDate });
       }
     }
 
@@ -509,13 +518,14 @@ async function trackRouterUsage(routerId?: number) {
       if (!user) continue;
 
       // --- SELF HEALING ENFORCER ---
-      // If the user's DB status is NOT active/online, they shouldn't be connected!
-      if (user.status && user.status !== "active" && user.status !== "online") {
-        console.log(`[Self-Healing] Disconnecting ${username} because DB status is '${user.status}'`);
+      // If the user's DB status is NOT active/online, OR their package has expired, they shouldn't be connected!
+      const isExpired = user.expireDate && new Date(user.expireDate) < new Date();
+      if ((user.status && user.status !== "active" && user.status !== "online") || isExpired) {
+        console.log(`[Self-Healing] Disconnecting ${username} because DB status is '${user.status}' or they are expired.`);
         try {
           await disconnectPppoeActive(session[".id"], routerId);
           // ensure secret is disabled
-          await syncCustomerToMikrotik(username, undefined, undefined, user.status, routerId);
+          await syncCustomerToMikrotik(username, undefined, undefined, "expired", routerId);
         } catch (e) {
           console.warn(`[Self-Healing] Failed to kick ${username}:`, e);
         }

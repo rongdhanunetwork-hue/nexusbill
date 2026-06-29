@@ -1,0 +1,1 @@
+﻿import { config } from 'dotenv'; config(); import { getPppoeSecrets } from './src/lib/mikrotik'; async function run() { const s = await getPppoeSecrets(2); const user = s.find(x => x.name === 'RDN-AMANAT-1080'); console.log(user); process.exit(0); } run().catch(console.error);

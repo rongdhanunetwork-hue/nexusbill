@@ -26,10 +26,3 @@ if (process.env.NODE_ENV !== "production") {
 
 export const db = drizzle(pool, { schema });
 
-// Start the background expiration checker on server boot
-if (typeof window === "undefined" && !globalForDb.__expirationCheckerStarted) {
-  globalForDb.__expirationCheckerStarted = true;
-  setTimeout(() => {
-    startExpirationChecker();
-  }, 1000);
-}

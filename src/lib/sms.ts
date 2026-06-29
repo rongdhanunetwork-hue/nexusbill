@@ -138,29 +138,21 @@ async function sendViaRtcom(
   if (!normalizedPhone.startsWith("880")) {
     normalizedPhone = "880" + normalizedPhone.replace(/^88/, "");
   }
+  // RT Communications often requires a leading plus sign
+  normalizedPhone = "+" + normalizedPhone;
 
-  const url = "https://api.rtcom.xyz/onetomany";
+  const url = `https://api.rtcom.xyz/onetomany?acode=${acode}&api_key=${apiKey}&senderid=${senderId}&type=${/[^\x00-\x7F]/.test(message) ? "unicode" : "text"}&msg=${encodeURIComponent(message)}&contacts=${encodeURIComponent(normalizedPhone)}&transactionType=T&contentID=`;
   
   if (!acode) {
     return { success: false, error: "Account Code (acode) is required for RT Communications" };
   }
 
   const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      acode: acode,
-      api_key: apiKey,
-      senderid: senderId,
-      type: "text",
-      msg: message,
-      contacts: normalizedPhone,
-      transactionType: "T",
-      contentID: ""
-    }),
+    method: "POST"
   });
 
   if (!response.ok) {
+
     throw new Error(`RT Communications API error: ${response.status}`);
   }
 

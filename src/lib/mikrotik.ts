@@ -76,6 +76,8 @@ export interface SystemResource {
   "free-hdd-space": string;
   txBps?: number;
   rxBps?: number;
+  txPps?: number;
+  rxPps?: number;
 }
 
 export async function getSystemResource(routerId?: number): Promise<SystemResource | null> {
@@ -86,6 +88,8 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
     
     let maxTx = 0;
     let maxRx = 0;
+    let maxTxPkts = 0;
+    let maxRxPkts = 0;
     try {
       const stats1 = await client.write(["/interface/print", "=stats="]);
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -98,15 +102,21 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
         if (s1 && s2) {
           const rx = (parseInt(s2['rx-byte'] || "0") - parseInt(s1['rx-byte'] || "0")) * 8;
           const tx = (parseInt(s2['tx-byte'] || "0") - parseInt(s1['tx-byte'] || "0")) * 8;
+          const rxPkts = parseInt(s2['rx-packet'] || "0") - parseInt(s1['rx-packet'] || "0");
+          const txPkts = parseInt(s2['tx-packet'] || "0") - parseInt(s1['tx-packet'] || "0");
+          
           if (rx >= 0 && tx >= 0) {
              const total = rx + tx;
              if (total > maxTotal) {
                 maxTotal = total;
                 // In an ISP, Download is always significantly higher than Upload.
-                // Since we don't know if this max-traffic interface is WAN (RX=DL) or LAN (TX=DL),
-                // we assign the larger value to Download and the smaller to Upload.
-                maxRx = Math.max(rx, tx); // rxBps maps to Download in UI
-                maxTx = Math.min(rx, tx); // txBps maps to Upload in UI
+                if (rx > tx) {
+                   maxRx = rx; maxTx = tx;
+                   maxRxPkts = rxPkts; maxTxPkts = txPkts;
+                } else {
+                   maxRx = tx; maxTx = rx;
+                   maxRxPkts = txPkts; maxTxPkts = rxPkts;
+                }
              }
           }
         }
@@ -118,6 +128,9 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
     if (data && data.length > 0) {
       const res = data[0] as unknown as SystemResource;
       res.rxBps = maxRx;
+      res.txBps = maxTx;
+      res.rxPps = maxRxPkts;
+      res.txPps = maxTxPkts;
       res.txBps = maxTx;
       return res;
     }
