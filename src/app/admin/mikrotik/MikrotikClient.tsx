@@ -235,8 +235,6 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
         if (statusChanged) fetchOlts();
       });
     }
-    // We intentionally only want this to run when activeTab changes or when olts are initially loaded (length changes)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, olts.length]);
 
   useEffect(() => {

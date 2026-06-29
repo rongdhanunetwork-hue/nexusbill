@@ -1,1 +1,0 @@
-{ "crons": [ { "path": "/api/cron/sync-enforcer", "schedule": "*/5 * * * *" }, { "path": "/api/cron/expire-customers?secret=isp-cron-secret-2024", "schedule": "0 * * * *" } ] }
