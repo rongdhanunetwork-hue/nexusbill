@@ -175,13 +175,13 @@ export default function TwoFactorUI({ is2FAEnabled }: Props) {
                     placeholder="123456"
                     value={token}
                     onChange={e => setToken(e.target.value)}
-                    className="flex-1 glass-input px-4 py-3 text-center tracking-widest text-lg"
+                    className="flex-1 min-w-0 glass-input px-4 py-3 text-center tracking-widest text-lg"
                     maxLength={6}
                   />
                   <button
                     onClick={verifyAndEnable}
                     disabled={loading}
-                    className="px-8 bg-neon-green/20 hover:bg-neon-green/30 text-neon-green font-bold rounded-xl border border-neon-green/30 transition flex items-center justify-center min-w-[120px] disabled:opacity-50"
+                    className="px-4 sm:px-8 bg-neon-green/20 hover:bg-neon-green/30 text-neon-green font-bold rounded-xl border border-neon-green/30 transition flex items-center justify-center shrink-0 disabled:opacity-50"
                   >
                     {loading ? <Loader2 className="animate-spin" /> : "Verify"}
                   </button>
