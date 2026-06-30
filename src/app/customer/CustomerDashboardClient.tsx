@@ -7,7 +7,7 @@ import {
   Download, Upload, Loader2, Activity, X
 } from "lucide-react";
 import Link from "next/link";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
 import { AnimatePresence } from "framer-motion";
 
 interface UsageDay {
@@ -387,29 +387,20 @@ export default function CustomerDashboardClient({
                 </div>
               </div>
             </div>
-            <div className="h-64 w-full">
+            <div className="h-64 w-full bg-[#1C2534] p-4 rounded-xl border border-white/5">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="historyDownGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="historyUpGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" vertical={true} horizontal={true} />
-                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} />
-                  <YAxis stroke="#9ca3af" fontSize={11} unit=" GB" />
+                <LineChart data={chartData}>
+                  <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
+                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} axisLine={false} tickLine={false} />
+                  <YAxis stroke="#9ca3af" fontSize={11} unit=" GB" axisLine={false} tickLine={false} />
                   <RechartsTooltip 
-                    contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }} 
-                    formatter={(value: any, name: any) => [`${value} GB`, name === "download" ? "Download" : "Upload"]}
+                    contentStyle={{ backgroundColor: "#1C2534", borderColor: "#2f3a4d", borderRadius: 8 }} 
+                    formatter={(value: any, name: any) => [`${value} GB`, name === "download" ? "Tx" : "Rx"]}
                   />
-                  <Area type="stepAfter" dataKey="download" stroke="#ef4444" strokeWidth={2} activeDot={{ r: 4 }} fill="url(#historyDownGrad)" />
-                  <Area type="stepAfter" dataKey="upload" stroke="#22c55e" strokeWidth={2} activeDot={{ r: 4 }} fill="url(#historyUpGrad)" />
-                </AreaChart>
+                  <Legend iconType="square" formatter={(value) => <span className="text-gray-300 text-xs">{value === "download" ? "Tx (Download)" : "Rx (Upload)"}</span>} />
+                  <Line type="monotone" dataKey="download" stroke="#0ea5e9" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="upload" stroke="#ef4444" strokeWidth={2} dot={false} />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </>
@@ -447,29 +438,20 @@ export default function CustomerDashboardClient({
                   </div>
                 </div>
               </div>
-              <div className="h-64 w-full">
+              <div className="h-64 w-full bg-[#1C2534] p-4 rounded-xl border border-white/5">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={liveData}>
-                    <defs>
-                      <linearGradient id="liveDownGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="liveUpGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" vertical={true} horizontal={true} />
-                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} />
-                    <YAxis stroke="#9ca3af" fontSize={11} tickFormatter={formatSpeed} />
-                    <RechartsTooltip 
-                      contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }}
-                      formatter={(value: any, name: any) => [formatSpeed(Number(value)), name === "download" ? "Download" : "Upload"]}
+                  <LineChart data={liveData}>
+                    <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
+                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} axisLine={false} tickLine={false} />
+                    <YAxis stroke="#9ca3af" fontSize={11} tickFormatter={formatSpeed} axisLine={false} tickLine={false} />
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: "#1C2534", borderColor: "#2f3a4d", borderRadius: 8 }}
+                      formatter={(value: any, name: any) => [formatSpeed(Number(value)), name === "download" ? "Tx" : "Rx"]}
                     />
-                    <Area type="stepAfter" dataKey="download" stroke="#ef4444" strokeWidth={2} activeDot={{ r: 4 }} fill="url(#liveDownGrad)" />
-                    <Area type="stepAfter" dataKey="upload" stroke="#22c55e" strokeWidth={2} activeDot={{ r: 4 }} fill="url(#liveUpGrad)" />
-                  </AreaChart>
+                    <Legend iconType="square" formatter={(value) => <span className="text-gray-300 text-xs">{value === "download" ? "Tx (Download)" : "Rx (Upload)"}</span>} />
+                    <Line type="monotone" dataKey="download" stroke="#0ea5e9" strokeWidth={2} dot={false} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="upload" stroke="#ef4444" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
 
