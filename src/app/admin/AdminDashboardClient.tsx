@@ -225,8 +225,8 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                             itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                             isAnimationActive={false}
                           />
-                          <Area type="monotone" dataKey="download" stroke="#ef4444" strokeWidth={1.5} fill="transparent" name="Rx" isAnimationActive={false} />
-                          <Area type="monotone" dataKey="upload" stroke="#3b82f6" strokeWidth={1.5} fill="transparent" name="Tx" isAnimationActive={false} />
+                          <Area type="linear" dataKey="download" stroke="#ef4444" strokeWidth={1.5} fill="transparent" name="Rx" isAnimationActive={false} />
+                          <Area type="linear" dataKey="upload" stroke="#3b82f6" strokeWidth={1.5} fill="transparent" name="Tx" isAnimationActive={false} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
@@ -629,7 +629,7 @@ export default function AdminDashboardClient({
                       contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }}
                       formatter={(value: any) => [`৳${Number(value).toLocaleString()}`, "Income"]}
                     />
-                    <Area type="monotone" dataKey="income" stroke="#00f3ff" strokeWidth={3} fill="url(#income)" />
+                    <Area type="linear" dataKey="income" stroke="#00f3ff" strokeWidth={3} fill="url(#income)" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -665,8 +665,8 @@ export default function AdminDashboardClient({
                         contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }}
                         formatter={(value: any, name: any) => [`${Number(value).toFixed(3)} GB`, name === "download" ? "Download" : "Upload"]}
                       />
-                      <Line type="monotone" dataKey="download" stroke="#ef4444" strokeWidth={3} dot={{ r: 4 }} name="download" />
-                      <Line type="monotone" dataKey="upload" stroke="#22c55e" strokeWidth={3} dot={{ r: 4 }} name="upload" />
+                      <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={3} dot={{ r: 4 }} name="download" />
+                      <Line type="linear" dataKey="upload" stroke="#22c55e" strokeWidth={3} dot={{ r: 4 }} name="upload" />
                     </LineChart>
                   </ResponsiveContainer>
                 )
