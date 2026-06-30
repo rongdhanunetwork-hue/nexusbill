@@ -25,7 +25,7 @@ export async function GET() {
       limit: 5,
     });
 
-    return NextResponse.json(latestNotices);
+    return NextResponse.json({ notices: latestNotices, customerId: customer.id });
   } catch (err) {
     console.error("Customer notices error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

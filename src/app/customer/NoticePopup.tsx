@@ -7,14 +7,18 @@ import { X, Megaphone } from "lucide-react";
 export default function NoticePopup() {
   const [notice, setNotice] = useState<any>(null);
   const [show, setShow] = useState(false);
+  const [customerId, setCustomerId] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/customer/notices")
       .then(res => res.json())
       .then(data => {
-        if (data && data.length > 0) {
-          const latestNotice = data[0];
-          const dismissedId = localStorage.getItem("dismissedNoticeId");
+        if (data && data.notices && data.notices.length > 0) {
+          const latestNotice = data.notices[0];
+          const cId = data.customerId;
+          setCustomerId(cId);
+          
+          const dismissedId = localStorage.getItem(`dismissedNoticeId_${cId}`);
           if (dismissedId !== String(latestNotice.id)) {
             setNotice(latestNotice);
             setShow(true);
@@ -25,8 +29,8 @@ export default function NoticePopup() {
   }, []);
 
   const handleDismiss = () => {
-    if (notice) {
-      localStorage.setItem("dismissedNoticeId", String(notice.id));
+    if (notice && customerId) {
+      localStorage.setItem(`dismissedNoticeId_${customerId}`, String(notice.id));
       setShow(false);
     }
   };
