@@ -159,10 +159,10 @@ export default function TwoFactorUI({ is2FAEnabled }: Props) {
                 <div className="p-4 bg-white rounded-xl shadow-lg shrink-0">
                   <img src={qrUrl} alt="2FA QR Code" className="w-40 h-40 object-contain" />
                 </div>
-                <div className="space-y-3 flex-1">
+                <div className="space-y-3 flex-1 min-w-0">
                   <h3 className="text-white font-bold">1. Scan the QR Code</h3>
                   <p className="text-sm text-gray-400">Open your authenticator app and scan the QR code. Or enter the secret key manually:</p>
-                  <code className="block bg-black/50 p-3 rounded text-neon-blue font-mono text-center tracking-widest">{secretText}</code>
+                  <code className="block bg-black/50 p-3 rounded text-neon-blue font-mono text-center tracking-widest break-all">{secretText}</code>
                 </div>
               </div>
 
