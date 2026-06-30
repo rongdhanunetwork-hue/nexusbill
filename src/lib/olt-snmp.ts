@@ -28,8 +28,9 @@ export async function fetchLiveOnus(ip: string, port: number, community: string,
         session.subtree(oid, (varbinds) => {
           for (let i = 0; i < varbinds.length; i++) {
             if (!snmp.isVarbindError(varbinds[i])) {
+              const vbOid = varbinds[i].oid;
               results.push({
-                oid: varbinds[i].oid.join("."),
+                oid: Array.isArray(vbOid) ? vbOid.join(".") : String(vbOid),
                 value: varbinds[i].value,
                 type: varbinds[i].type
               });
