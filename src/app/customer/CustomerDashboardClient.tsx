@@ -403,8 +403,9 @@ export default function CustomerDashboardClient({
                     verticalAlign="bottom" 
                     align="left" 
                     iconType="square" 
-                    wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
-                    formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value}</span>} 
+                    iconSize={10}
+                    wrapperStyle={{ paddingLeft: '10px', bottom: '-2px' }}
+                    formatter={(value) => <span className="text-gray-300 text-[11px] font-sans ml-1">{value}</span>} 
                   />
                   <Line type="linear" dataKey="download" name="Tx (Download)" stroke="#0ea5e9" strokeWidth={1} dot={false} isAnimationActive={false} />
                   <Line type="linear" dataKey="upload" name="Rx (Upload)" stroke="#ef4444" strokeWidth={1} dot={false} isAnimationActive={false} />
@@ -461,8 +462,9 @@ export default function CustomerDashboardClient({
                       verticalAlign="bottom" 
                       align="left" 
                       iconType="square" 
-                      wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
-                      formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value}</span>} 
+                      iconSize={10}
+                      wrapperStyle={{ paddingLeft: '10px', bottom: '-2px' }}
+                      formatter={(value) => <span className="text-gray-300 text-[11px] font-sans ml-1">{value}</span>} 
                     />
                     <Line type="linear" dataKey="download" name="Tx Packet" stroke="#0ea5e9" strokeWidth={1} dot={false} isAnimationActive={false} />
                     <Line type="linear" dataKey="upload" name="Rx Packet" stroke="#ef4444" strokeWidth={1} dot={false} isAnimationActive={false} />

@@ -275,8 +275,9 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                             verticalAlign="bottom" 
                             align="left" 
                             iconType="square" 
-                            wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
-                            formatter={(value, entry: any) => <span className="text-gray-300 text-[11px] font-sans">{entry.value === "Rx" ? "Rx Packet" : "Tx Packet"}</span>} 
+                            iconSize={10}
+                            wrapperStyle={{ paddingLeft: '10px', bottom: '-2px' }}
+                            formatter={(value, entry: any) => <span className="text-gray-300 text-[11px] font-sans ml-1">{entry.value === "Rx" ? "Rx Packet" : "Tx Packet"}</span>} 
                           />
                           <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={1} dot={false} name="Rx" isAnimationActive={false} />
                           <Line type="linear" dataKey="upload" stroke="#0ea5e9" strokeWidth={1} dot={false} name="Tx" isAnimationActive={false} />
@@ -722,8 +723,9 @@ export default function AdminDashboardClient({
                         verticalAlign="bottom" 
                         align="left" 
                         iconType="square" 
-                        wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
-                        formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value}</span>} 
+                        iconSize={10}
+                        wrapperStyle={{ paddingLeft: '10px', bottom: '-2px' }}
+                        formatter={(value) => <span className="text-gray-300 text-[11px] font-sans ml-1">{value}</span>} 
                       />
                       <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={1} dot={false} name="Download" isAnimationActive={false} />
                       <Line type="linear" dataKey="upload" stroke="#0ea5e9" strokeWidth={1} dot={false} name="Upload" isAnimationActive={false} />
