@@ -103,12 +103,8 @@ export default function CustomerDashboardClient({
   const [isOnline, setIsOnline] = useState<boolean>(status === "active" || status === "online");
   const [sessionUptimeSeconds, setSessionUptimeSeconds] = useState<number>(0);
 
-  const [liveData, setLiveData] = useState<{ name: string; download: number; upload: number }[]>(() => 
-    Array.from({ length: 15 }).map((_, i) => ({
-      name: `-${15 - i}s`,
-      download: 0,
-      upload: 0
-    }))
+  const [liveData, setLiveData] = useState<any[]>(() => 
+    Array.from({ length: 30 }).map((_, i) => ({ name: `pad-${i}`, download: null, upload: null }))
   );
 
   useEffect(() => {
@@ -172,11 +168,21 @@ export default function CustomerDashboardClient({
 
       setLiveData((prev) => {
         const timeStr = new Date().toLocaleTimeString(undefined, { hour12: false, hour: "numeric", minute: "numeric", second: "numeric" }).slice(-5);
-        return [...prev.slice(1), {
-          name: timeStr,
-          download: dl,
-          upload: ul
-        }];
+        const newPt = { name: timeStr, download: dl, upload: ul };
+        
+        const actualData = prev.filter(p => p.download !== null);
+        actualData.push(newPt);
+        
+        if (actualData.length > 30) {
+          actualData.shift();
+        }
+        
+        const padded = [...actualData];
+        let padIndex = 0;
+        while (padded.length < 30) {
+          padded.push({ name: `pad-${padIndex++}`, download: null, upload: null });
+        }
+        return padded;
       });
     }, 1000);
 
@@ -445,12 +451,19 @@ export default function CustomerDashboardClient({
                     <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} axisLine={false} tickLine={false} />
                     <YAxis stroke="#9ca3af" fontSize={11} tickFormatter={formatSpeed} axisLine={false} tickLine={false} />
                     <RechartsTooltip
-                      contentStyle={{ backgroundColor: "#1C2534", borderColor: "#2f3a4d", borderRadius: 8 }}
-                      formatter={(value: any, name: any) => [formatSpeed(Number(value)), name === "download" ? "Tx" : "Rx"]}
+                      contentStyle={{ backgroundColor: "#2a313a", borderColor: "#3f4a59", borderRadius: 4 }}
+                      formatter={(value: any, name: any) => [formatSpeed(Number(value)), name === "download" ? "Tx Packet" : "Rx Packet"]}
+                      labelStyle={{ display: 'none' }}
                     />
-                    <Legend iconType="square" formatter={(value) => <span className="text-gray-300 text-xs">{value === "download" ? "Tx (Download)" : "Rx (Upload)"}</span>} />
-                    <Line type="monotone" dataKey="download" stroke="#0ea5e9" strokeWidth={2} dot={false} isAnimationActive={false} />
-                    <Line type="monotone" dataKey="upload" stroke="#ef4444" strokeWidth={2} dot={false} isAnimationActive={false} />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      align="left" 
+                      iconType="square" 
+                      wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
+                      formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value === "download" ? "Tx Packet" : "Rx Packet"}</span>} 
+                    />
+                    <Line type="linear" dataKey="download" stroke="#0ea5e9" strokeWidth={2} dot={false} isAnimationActive={false} />
+                    <Line type="linear" dataKey="upload" stroke="#ef4444" strokeWidth={2} dot={false} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

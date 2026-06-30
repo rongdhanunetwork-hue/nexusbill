@@ -79,7 +79,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                    const memFree = parseInt(r.resource["free-memory"]) || 0;
                    const memUsedMb = parseFloat(((memTotal - memFree) / (1024 * 1024)).toFixed(1));
                    
-                   const routerHist = newHist[r.routerId] || Array.from({ length: 30 }).map(() => ({ time: "", download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 }));
+                   const routerHist = newHist[r.routerId] || Array.from({ length: 30 }).map((_, i) => ({ time: `pad-${i}`, download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 }));
                    
                    const actualData = routerHist.filter((p: any) => p.download !== null);
                    actualData.push({ time: timeStr, download: dl, upload: ul, rxPkts, txPkts, cpuLoad, memUsedMb });
@@ -89,8 +89,9 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                    }
                    
                    const padded = [...actualData];
+                   let padIndex = 0;
                    while (padded.length < 30) {
-                     padded.push({ time: "", download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 });
+                     padded.push({ time: `pad-${padIndex++}`, download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 });
                    }
                    newHist[r.routerId] = padded;
                 }
@@ -270,21 +271,25 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                             unit=" Mbps"
                           />
                           <Tooltip 
-                            contentStyle={{ backgroundColor: "#1C2534", borderColor: "#2f3a4d", borderRadius: 8, padding: '4px 6px', fontSize: '11px' }}
+                            contentStyle={{ backgroundColor: "#2a313a", borderColor: "#3f4a59", borderRadius: 4, padding: '4px 6px', fontSize: '11px' }}
                             labelStyle={{ display: 'none' }}
-                            formatter={(val: any, name: any) => [`${val} Mbps`, name]}
+                            formatter={(val: any, name: any) => [`${val} Mbps`, name === "download" ? "Rx Packet" : "Tx Packet"]}
                             itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                             isAnimationActive={false}
+                          />
+                          <Legend 
+                            verticalAlign="bottom" 
+                            align="left" 
+                            iconType="square" 
+                            wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
+                            formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value === "download" ? "Rx Packet" : "Tx Packet"}</span>} 
                           />
                           <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={2} dot={false} name="Rx" isAnimationActive={false} />
                           <Line type="linear" dataKey="upload" stroke="#0ea5e9" strokeWidth={2} dot={false} name="Tx" isAnimationActive={false} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="flex items-center gap-4 mt-2 ml-[30px]">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-300"><div className="w-2.5 h-2.5 bg-[#0ea5e9]"></div> Tx Packet</div>
-                      <div className="flex items-center gap-1.5 text-xs text-gray-300"><div className="w-2.5 h-2.5 bg-[#ef4444]"></div> Rx Packet</div>
-                    </div>
+
                   </div>
                 )}
               </div>
