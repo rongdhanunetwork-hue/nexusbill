@@ -58,7 +58,8 @@ export async function POST(req: Request) {
       const verified = speakeasy.totp.verify({
         secret: customer.twoFactorSecret,
         encoding: 'base32',
-        token: token
+        token: token,
+        window: 1
       });
 
       if (!verified) {
@@ -80,7 +81,8 @@ export async function POST(req: Request) {
       const verified = speakeasy.totp.verify({
         secret: customer.twoFactorSecret,
         encoding: 'base32',
-        token: token
+        token: token,
+        window: 1
       });
 
       if (!verified) {

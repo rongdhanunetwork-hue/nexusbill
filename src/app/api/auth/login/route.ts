@@ -92,7 +92,8 @@ export async function POST(req: Request) {
       const verified = speakeasy.totp.verify({
         secret: user.twoFactorSecret,
         encoding: 'base32',
-        token: otpToken
+        token: otpToken,
+        window: 1
       });
       if (!verified) {
         return NextResponse.json({ error: "Invalid OTP token" }, { status: 401 });
