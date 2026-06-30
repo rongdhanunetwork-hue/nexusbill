@@ -252,14 +252,13 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                     {/* Byte Graph */}
                     <div className="flex-1 w-full relative min-h-[120px] max-h-[160px] bg-[#1C2534] rounded-lg mt-2 overflow-hidden border border-white/5">
                       <ResponsiveContainer width="100%" height="100%" minHeight={120}>
-                        <LineChart data={(trafficHistory[router.routerId] || []).map((d: any, i: number) => ({ ...d, index: i }))} margin={{ top: 15, right: 0, left: -20, bottom: 0 }}>
+                        <LineChart data={(trafficHistory[router.routerId] || []).map((d: any, i: number) => ({ ...d, index: i }))} margin={{ top: 15, right: 10, left: 10, bottom: 0 }}>
                           <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
                           <XAxis dataKey="index" type="number" domain={[0, 29]} hide />
                           <YAxis 
                             tickFormatter={(val) => `${val}`} 
                             stroke="rgba(255,255,255,0.4)" 
                             fontSize={10}
-                            width={50}
                             domain={[0, 'auto']}
                             tickLine={false}
                             axisLine={false}
@@ -277,7 +276,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                             align="left" 
                             iconType="square" 
                             wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
-                            formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value === "download" ? "Rx Packet" : "Tx Packet"}</span>} 
+                            formatter={(value, entry: any) => <span className="text-gray-300 text-[11px] font-sans">{entry.value === "Rx" ? "Rx Packet" : "Tx Packet"}</span>} 
                           />
                           <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={1} dot={false} name="Rx" isAnimationActive={false} />
                           <Line type="linear" dataKey="upload" stroke="#0ea5e9" strokeWidth={1} dot={false} name="Tx" isAnimationActive={false} />
@@ -708,16 +707,26 @@ export default function AdminDashboardClient({
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.dailyUsageData}>
-                      <XAxis dataKey="name" stroke="#9ca3af" />
-                      <YAxis stroke="#9ca3af" tickFormatter={(v) => `${Number(v).toFixed(2)} GB`} />
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                    <LineChart data={data.dailyUsageData} margin={{ top: 15, right: 10, left: 10, bottom: 0 }}>
+                      <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
+                      <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" fontSize={10} axisLine={false} tickLine={false} />
+                      <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} unit=" GB" tickFormatter={(v) => Number(v).toFixed(1)} axisLine={false} tickLine={false} />
                       <Tooltip
-                        contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 12 }}
-                        formatter={(value: any, name: any) => [`${Number(value).toFixed(3)} GB`, name === "download" ? "Download" : "Upload"]}
+                        contentStyle={{ backgroundColor: "#2a313a", borderColor: "#3f4a59", borderRadius: 4, padding: '4px 6px', fontSize: '11px' }}
+                        labelStyle={{ display: 'none' }}
+                        formatter={(value: any, name: any) => [`${Number(value).toFixed(2)} GB`, name]}
+                        itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                        isAnimationActive={false}
                       />
-                      <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={3} dot={{ r: 4 }} name="download" />
-                      <Line type="linear" dataKey="upload" stroke="#22c55e" strokeWidth={3} dot={{ r: 4 }} name="upload" />
+                      <Legend 
+                        verticalAlign="bottom" 
+                        align="left" 
+                        iconType="square" 
+                        wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
+                        formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value}</span>} 
+                      />
+                      <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={1} dot={false} name="Download" isAnimationActive={false} />
+                      <Line type="linear" dataKey="upload" stroke="#0ea5e9" strokeWidth={1} dot={false} name="Upload" isAnimationActive={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 )

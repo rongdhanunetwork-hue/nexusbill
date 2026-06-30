@@ -388,17 +388,26 @@ export default function CustomerDashboardClient({
             </div>
             <div className="h-64 w-full bg-[#1C2534] p-4 rounded-xl border border-white/5">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
+                <LineChart data={chartData} margin={{ top: 15, right: 10, left: 10, bottom: 0 }}>
                   <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
-                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} axisLine={false} tickLine={false} />
-                  <YAxis stroke="#9ca3af" fontSize={11} unit=" GB" axisLine={false} tickLine={false} />
+                  <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" fontSize={10} axisLine={false} tickLine={false} />
+                  <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} unit=" GB" axisLine={false} tickLine={false} />
                   <RechartsTooltip 
-                    contentStyle={{ backgroundColor: "#1C2534", borderColor: "#2f3a4d", borderRadius: 8 }} 
-                    formatter={(value: any, name: any) => [`${value} GB`, name === "download" ? "Tx" : "Rx"]}
+                    contentStyle={{ backgroundColor: "#2a313a", borderColor: "#3f4a59", borderRadius: 4, padding: '4px 6px', fontSize: '11px' }}
+                    labelStyle={{ display: 'none' }}
+                    formatter={(value: any, name: any) => [`${value} GB`, name]}
+                    itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                    isAnimationActive={false}
                   />
-                  <Legend iconType="square" formatter={(value) => <span className="text-gray-300 text-xs">{value === "download" ? "Tx (Download)" : "Rx (Upload)"}</span>} />
-                  <Line type="monotone" dataKey="download" stroke="#0ea5e9" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="upload" stroke="#ef4444" strokeWidth={2} dot={false} />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    align="left" 
+                    iconType="square" 
+                    wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
+                    formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value}</span>} 
+                  />
+                  <Line type="linear" dataKey="download" name="Tx (Download)" stroke="#0ea5e9" strokeWidth={1} dot={false} isAnimationActive={false} />
+                  <Line type="linear" dataKey="upload" name="Rx (Upload)" stroke="#ef4444" strokeWidth={1} dot={false} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -439,13 +448,13 @@ export default function CustomerDashboardClient({
               </div>
               <div className="h-64 w-full bg-[#1C2534] p-4 rounded-xl border border-white/5">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={liveData.map((d, i) => ({ ...d, index: i }))}>
+                  <LineChart data={liveData.map((d, i) => ({ ...d, index: i }))} margin={{ top: 15, right: 10, left: 10, bottom: 0 }}>
                     <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
                     <XAxis dataKey="index" type="number" domain={[0, 29]} hide />
                     <YAxis stroke="#9ca3af" fontSize={11} tickFormatter={formatSpeed} axisLine={false} tickLine={false} />
                     <RechartsTooltip
                       contentStyle={{ backgroundColor: "#2a313a", borderColor: "#3f4a59", borderRadius: 4 }}
-                      formatter={(value: any, name: any) => [formatSpeed(Number(value)), name === "download" ? "Tx Packet" : "Rx Packet"]}
+                      formatter={(value: any, name: any) => [formatSpeed(Number(value)), name]}
                       labelStyle={{ display: 'none' }}
                     />
                     <Legend 
@@ -453,10 +462,10 @@ export default function CustomerDashboardClient({
                       align="left" 
                       iconType="square" 
                       wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
-                      formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value === "download" ? "Tx Packet" : "Rx Packet"}</span>} 
+                      formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value}</span>} 
                     />
-                    <Line type="linear" dataKey="download" stroke="#0ea5e9" strokeWidth={1} dot={false} isAnimationActive={false} />
-                    <Line type="linear" dataKey="upload" stroke="#ef4444" strokeWidth={1} dot={false} isAnimationActive={false} />
+                    <Line type="linear" dataKey="download" name="Tx Packet" stroke="#0ea5e9" strokeWidth={1} dot={false} isAnimationActive={false} />
+                    <Line type="linear" dataKey="upload" name="Rx Packet" stroke="#ef4444" strokeWidth={1} dot={false} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
