@@ -243,10 +243,10 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                     </div>
 
                     {/* Byte Graph */}
-                    <div className="flex-1 w-full relative min-h-[120px] max-h-[160px]">
+                    <div className="flex-1 w-full relative min-h-[120px] max-h-[160px] bg-[#1C2534] rounded-lg mt-2 overflow-hidden border border-white/5">
                       <ResponsiveContainer width="100%" height="100%" minHeight={120}>
-                        <AreaChart data={trafficHistory[router.routerId]} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" vertical={true} horizontal={true} />
+                        <LineChart data={trafficHistory[router.routerId]} margin={{ top: 15, right: 0, left: -20, bottom: 0 }}>
+                          <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
                           <XAxis dataKey="time" hide />
                           <YAxis 
                             tickFormatter={(val) => `${val}`} 
@@ -256,22 +256,23 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                             domain={[0, 'auto']}
                             tickLine={false}
                             axisLine={false}
+                            unit=" Mbps"
                           />
                           <Tooltip 
-                            contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.2)", borderRadius: 6, padding: '4px 6px', fontSize: '11px' }}
+                            contentStyle={{ backgroundColor: "#1C2534", borderColor: "#2f3a4d", borderRadius: 8, padding: '4px 6px', fontSize: '11px' }}
                             labelStyle={{ display: 'none' }}
                             formatter={(val: any, name: any) => [`${val} Mbps`, name]}
                             itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                             isAnimationActive={false}
                           />
-                          <Area type="stepAfter" dataKey="download" stroke="#ef4444" strokeWidth={1.5} fill="transparent" name="Rx" isAnimationActive={false} />
-                          <Area type="stepAfter" dataKey="upload" stroke="#3b82f6" strokeWidth={1.5} fill="transparent" name="Tx" isAnimationActive={false} />
-                        </AreaChart>
+                          <Line type="monotone" dataKey="download" stroke="#ef4444" strokeWidth={2} dot={false} name="Rx" isAnimationActive={false} />
+                          <Line type="monotone" dataKey="upload" stroke="#0ea5e9" strokeWidth={2} dot={false} name="Tx" isAnimationActive={false} />
+                        </LineChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="flex items-center gap-3 mt-1 ml-[40px]">
-                      <div className="flex items-center gap-1 text-[10px] text-gray-400"><div className="w-2 h-2 bg-[#3b82f6]"></div> Tx</div>
-                      <div className="flex items-center gap-1 text-[10px] text-gray-400"><div className="w-2 h-2 bg-[#ef4444]"></div> Rx</div>
+                    <div className="flex items-center gap-4 mt-2 ml-[30px]">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-300"><div className="w-2.5 h-2.5 bg-[#0ea5e9]"></div> Tx Packet</div>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-300"><div className="w-2.5 h-2.5 bg-[#ef4444]"></div> Rx Packet</div>
                     </div>
                   </div>
                 )}

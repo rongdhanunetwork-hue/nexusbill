@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq, lt, and, isNotNull } from "drizzle-orm";
+import { users, smsLogs } from "@/db/schema";
+import { eq, lt, gt, and, isNotNull } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 // Secret key to prevent unauthorized access
@@ -152,8 +152,20 @@ export async function GET(req: NextRequest) {
         try {
           const { sendSMS } = await import("@/lib/sms");
           const msg = `প্রিয় ${customer.name}, আপনার ইন্টারনেট সংযোগের মেয়াদ শেষ হয়েছে। দয়া করে বিল পরিশোধ করুন বা আপনার রিসেলারকে যোগাযোগ করুন।`;
-          await sendSMS(customer.phone, msg);
-          smsCount++;
+          
+          const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          const existingLog = await db.query.smsLogs.findFirst({
+            where: and(
+              eq(smsLogs.phone, customer.phone),
+              eq(smsLogs.message, msg),
+              gt(smsLogs.sentAt, twentyFourHoursAgo)
+            )
+          });
+
+          if (!existingLog) {
+            await sendSMS(customer.phone, msg);
+            smsCount++;
+          }
         } catch {
           // SMS failure is non-blocking
         }
@@ -186,8 +198,20 @@ export async function GET(req: NextRequest) {
           ? new Date(customer.expireDate).toLocaleDateString("en-BD")
           : "N/A";
         const msg = `প্রিয় ${customer.name}, আপনার ইন্টারনেট সংযোগের মেয়াদ ${expDate} তারিখে শেষ হবে। সংযোগ চালু রাখতে দ্রুত বিল পরিশোধ করুন।`;
-        await sendSMS(customer.phone, msg);
-        reminderCount++;
+        
+        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const existingLog = await db.query.smsLogs.findFirst({
+          where: and(
+            eq(smsLogs.phone, customer.phone),
+            eq(smsLogs.message, msg),
+            gt(smsLogs.sentAt, twentyFourHoursAgo)
+          )
+        });
+
+        if (!existingLog) {
+          await sendSMS(customer.phone, msg);
+          reminderCount++;
+        }
       } catch {
         // Non-blocking
       }
