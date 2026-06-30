@@ -156,8 +156,8 @@ export default function TwoFactorUI({ is2FAEnabled }: Props) {
           ) : (
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-slate-900 rounded-2xl border border-white/10 space-y-6">
               <div className="flex flex-col md:flex-row gap-6 items-center">
-                <div className="p-4 bg-white rounded-xl shadow-lg">
-                  <img src={qrUrl} alt="2FA QR Code" className="w-40 h-40" />
+                <div className="p-4 bg-white rounded-xl shadow-lg shrink-0">
+                  <img src={qrUrl} alt="2FA QR Code" className="w-40 h-40 object-contain" />
                 </div>
                 <div className="space-y-3 flex-1">
                   <h3 className="text-white font-bold">1. Scan the QR Code</h3>
