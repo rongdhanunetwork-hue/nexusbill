@@ -148,131 +148,95 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} 
               className="p-4 rounded-xl border border-neon-blue/20 bg-neon-blue/5 shadow-[0_0_15px_rgba(6,182,212,0.1)] flex flex-col md:flex-row md:items-center justify-between gap-4"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-neon-blue/20 flex items-center justify-center text-neon-blue shrink-0">
-                  <Router size={20} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-sm">MikroTik Router: {res?.["board-name"] || router.name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className={`w-2 h-2 rounded-full animate-pulse ${res ? "bg-neon-green" : "bg-red-500"}`}></div>
-                    <span className="text-[11px] text-gray-400 font-medium">{res ? "Online & Syncing Live" : "Offline"}</span>
-                  </div>
-                </div>
-              </div>
-
-              {res && (
-                <div className="flex flex-wrap items-center gap-6 sm:gap-8">
-                  <div className="flex flex-col">
-                    <span className="text-[11px] text-gray-500 uppercase font-semibold">CPU Load</span>
-                    <span className="text-lg font-bold text-white font-mono">{res["cpu-load"]}%</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] text-gray-500 uppercase font-semibold">Memory Usage</span>
-                    <span className="text-lg font-bold text-white font-mono">{formatBytes(usedMem.toString())} <span className="text-xs text-gray-500 font-sans">/ {formatBytes(res["total-memory"])}</span></span>
-                  </div>
-                  {/* Download/Upload moved to Box 2 */}
-                  <div className="flex flex-col">
-                    <span className="text-[11px] text-gray-500 uppercase font-semibold">Uptime</span>
-                    <span className="text-lg font-bold text-neon-blue font-sans tracking-wide">{formatUptime(res.uptime)}</span>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-
-            {/* Box 2: Total Traffic Graph */}
-            {res && trafficHistory[router.routerId] && trafficHistory[router.routerId].length > 1 && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                className="p-4 rounded-xl border border-white/10 bg-[#2b303b] shadow-lg relative flex flex-col gap-8"
-              >
-                <div className="flex flex-wrap items-center justify-between">
-                  <h3 className="text-gray-300 font-medium text-sm">Traffic Monitor</h3>
-                  {res.rxBps !== undefined && (
-                    <div className="flex items-center gap-6">
-                      <div className="flex flex-col items-end">
-                        <span className="text-[12px] text-[#00ff88] uppercase font-bold flex items-center gap-1.5 tracking-wider"><Download size={14}/> Download</span>
-                        <span className="text-xl font-bold text-[#00ff88] font-mono mt-0.5">{(res.rxBps / 1000000).toFixed(1)} <span className="text-xs font-sans text-[#00ff88]/70 font-medium">Mbps</span></span>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
+                {/* Left Column: Router Info, CPU, Memory, Uptime */}
+                <div className="col-span-1 flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-neon-blue/20 flex items-center justify-center text-neon-blue shrink-0">
+                      <Router size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white text-sm">MikroTik Router: {res?.["board-name"] || router.name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className={`w-2 h-2 rounded-full animate-pulse ${res ? "bg-neon-green" : "bg-red-500"}`}></div>
+                        <span className="text-[11px] text-gray-400 font-medium">{res ? "Online & Syncing Live" : "Offline"}</span>
                       </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-[12px] text-[#00e5ff] uppercase font-bold flex items-center gap-1.5 tracking-wider"><Upload size={14}/> Upload</span>
-                        <span className="text-xl font-bold text-[#00e5ff] font-mono mt-0.5">{(res.txBps / 1000000).toFixed(1)} <span className="text-xs font-sans text-[#00e5ff]/70 font-medium">Mbps</span></span>
+                    </div>
+                  </div>
+
+                  {res && (
+                    <div className="flex flex-col gap-4 mt-2">
+                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                        <span className="text-[11px] text-gray-500 uppercase font-semibold">CPU Load</span>
+                        <span className="text-lg font-bold text-white font-mono">{res["cpu-load"]}%</span>
+                      </div>
+                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                        <span className="text-[11px] text-gray-500 uppercase font-semibold">Memory Usage</span>
+                        <span className="text-sm font-bold text-white font-mono">
+                          {formatBytes(usedMem.toString())} <span className="text-[10px] text-gray-500 font-sans">/ {formatBytes(res["total-memory"])}</span>
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] text-gray-500 uppercase font-semibold">Uptime</span>
+                        <span className="text-sm font-bold text-neon-blue font-sans tracking-wide">{formatUptime(res.uptime)}</span>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-                  {/* Byte Graph */}
-                  <div className="flex flex-col w-full h-[220px]">
-                    <h4 className="text-gray-300 font-medium text-sm mb-2">Byte Graph</h4>
-                    <div className="flex-1 w-full relative min-h-[180px]">
-                      <ResponsiveContainer width="100%" height="100%" minHeight={180}>
-                        <AreaChart data={trafficHistory[router.routerId]} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={true} horizontal={true} />
+                {/* Right Column: Traffic Monitor (Byte Graph only) */}
+                {res && trafficHistory[router.routerId] && trafficHistory[router.routerId].length > 1 && (
+                  <div className="col-span-1 lg:col-span-2 flex flex-col h-full bg-black/20 rounded-lg p-3 border border-white/5">
+                    <div className="flex flex-wrap items-center justify-between mb-3">
+                      <h3 className="text-gray-300 font-medium text-sm">Traffic Monitor</h3>
+                      {res.rxBps !== undefined && (
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] text-[#00ff88] uppercase font-bold flex items-center gap-1 tracking-wider"><Download size={12}/> Download</span>
+                            <span className="text-sm font-bold text-[#00ff88] font-mono">{(res.rxBps / 1000000).toFixed(1)} <span className="text-[10px] font-sans text-[#00ff88]/70 font-medium">Mbps</span></span>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] text-[#00e5ff] uppercase font-bold flex items-center gap-1 tracking-wider"><Upload size={12}/> Upload</span>
+                            <span className="text-sm font-bold text-[#00e5ff] font-mono">{(res.txBps / 1000000).toFixed(1)} <span className="text-[10px] font-sans text-[#00e5ff]/70 font-medium">Mbps</span></span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Byte Graph */}
+                    <div className="flex-1 w-full relative min-h-[120px] max-h-[160px]">
+                      <ResponsiveContainer width="100%" height="100%" minHeight={120}>
+                        <AreaChart data={trafficHistory[router.routerId]} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={true} horizontal={true} />
                           <XAxis dataKey="time" hide />
                           <YAxis 
-                            tickFormatter={(val) => `${val} Mbps`} 
-                            stroke="rgba(255,255,255,0.7)" 
-                            fontSize={11}
-                            width={80}
+                            tickFormatter={(val) => `${val}`} 
+                            stroke="rgba(255,255,255,0.4)" 
+                            fontSize={10}
+                            width={50}
                             domain={[0, 'auto']}
                             tickLine={false}
                             axisLine={false}
                           />
                           <Tooltip 
-                            contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 8, padding: '4px 8px', fontSize: '12px' }}
+                            contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 6, padding: '4px 6px', fontSize: '11px' }}
                             labelStyle={{ display: 'none' }}
                             formatter={(val: any, name: any) => [`${val} Mbps`, name]}
-                            itemStyle={{ color: '#fff', fontSize: '13px', fontWeight: 'bold' }}
+                            itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                             isAnimationActive={false}
                           />
-                          <Area type="monotone" dataKey="download" stroke="#ef4444" strokeWidth={2} fill="transparent" name="Rx" isAnimationActive={false} />
-                          <Area type="monotone" dataKey="upload" stroke="#3b82f6" strokeWidth={2} fill="transparent" name="Tx" isAnimationActive={false} />
+                          <Area type="monotone" dataKey="download" stroke="#ef4444" strokeWidth={1.5} fill="transparent" name="Rx" isAnimationActive={false} />
+                          <Area type="monotone" dataKey="upload" stroke="#3b82f6" strokeWidth={1.5} fill="transparent" name="Tx" isAnimationActive={false} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="flex items-center gap-4 mt-2 ml-[65px]">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-300"><div className="w-3 h-3 bg-[#3b82f6]"></div> Tx</div>
-                      <div className="flex items-center gap-1.5 text-xs text-gray-300"><div className="w-3 h-3 bg-[#ef4444]"></div> Rx</div>
+                    <div className="flex items-center gap-3 mt-1 ml-[40px]">
+                      <div className="flex items-center gap-1 text-[10px] text-gray-400"><div className="w-2 h-2 bg-[#3b82f6]"></div> Tx</div>
+                      <div className="flex items-center gap-1 text-[10px] text-gray-400"><div className="w-2 h-2 bg-[#ef4444]"></div> Rx</div>
                     </div>
                   </div>
-
-                  {/* Packet Graph */}
-                  <div className="flex flex-col w-full h-[220px]">
-                    <h4 className="text-gray-300 font-medium text-sm mb-2">Packet Graph</h4>
-                    <div className="flex-1 w-full relative min-h-[180px]">
-                      <ResponsiveContainer width="100%" height="100%" minHeight={180}>
-                        <AreaChart data={trafficHistory[router.routerId]} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={true} horizontal={true} />
-                          <XAxis dataKey="time" hide />
-                          <YAxis 
-                            tickFormatter={(val) => `${val} p/s`} 
-                            stroke="rgba(255,255,255,0.7)" 
-                            fontSize={11}
-                            width={80}
-                            domain={[0, 'auto']}
-                            tickLine={false}
-                            axisLine={false}
-                          />
-                          <Tooltip 
-                            contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 8, padding: '4px 8px', fontSize: '12px' }}
-                            labelStyle={{ display: 'none' }}
-                            formatter={(val: any, name: any) => [`${val} p/s`, name]}
-                            itemStyle={{ color: '#fff', fontSize: '13px', fontWeight: 'bold' }}
-                            isAnimationActive={false}
-                          />
-                          <Area type="monotone" dataKey="rxPkts" stroke="#ef4444" strokeWidth={2} fill="transparent" name="Rx Packet" isAnimationActive={false} />
-                          <Area type="monotone" dataKey="txPkts" stroke="#3b82f6" strokeWidth={2} fill="transparent" name="Tx Packet" isAnimationActive={false} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="flex items-center gap-4 mt-2 ml-[65px]">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-300"><div className="w-3 h-3 bg-[#3b82f6]"></div> Tx Packet</div>
-                      <div className="flex items-center gap-1.5 text-xs text-gray-300"><div className="w-3 h-3 bg-[#ef4444]"></div> Rx Packet</div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+                )}
+              </div>
             )}
           </div>
         );

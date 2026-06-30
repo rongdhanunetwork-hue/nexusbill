@@ -634,8 +634,8 @@ export async function suspendUsers(usernames: string[], routerId?: number): Prom
         }
       }
       
-      const session = active.find(s => s.name.toLowerCase() === username);
-      if (session) {
+      const sessions = active.filter(s => s.name.toLowerCase() === username);
+      for (const session of sessions) {
         try {
           await client.write([
             "/ppp/active/remove",

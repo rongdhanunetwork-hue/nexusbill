@@ -250,10 +250,10 @@ export async function syncCustomerToMikrotik(
     // Force disconnect active session to apply changes (status / speed profile) instantly
     try {
       const activeSessions = await getPppoeActive(finalRouterId);
-      const session = activeSessions.find(
+      const sessions = activeSessions.filter(
         (s) => s.name.toLowerCase() === pppoeUsername.toLowerCase()
       );
-      if (session) {
+      for (const session of sessions) {
         await disconnectPppoeActive(session[".id"], finalRouterId);
         console.log(`Kicked active session for "${pppoeUsername}" to apply changes instantly on router ${finalRouterId}.`);
       }
