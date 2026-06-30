@@ -237,7 +237,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                   </div>
                 )}
               </div>
-            )}
+            </motion.div>
           </div>
         );
       })}
