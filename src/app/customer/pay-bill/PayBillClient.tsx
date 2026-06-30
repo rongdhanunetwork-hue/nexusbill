@@ -58,6 +58,11 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
       setError("Transaction ID (min 5 chars) and amount required.");
       return;
     }
+
+    if (!screenshotUrl) {
+      setError("Payment screenshot is mandatory. Please upload the screenshot.");
+      return;
+    }
     
     if (parseFloat(amount) !== parseFloat(packagePrice)) {
       setError(`You must pay exactly ৳${packagePrice} for your package.`);
@@ -243,7 +248,7 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Screenshot (Optional)</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Screenshot (Mandatory) <span className="text-red-400">*</span></label>
                 <input type="hidden" name="screenshotUrl" value={screenshotUrl} />
                 
                 <div 
@@ -274,7 +279,8 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
                     <div className="flex flex-col items-center justify-center space-y-2 py-4">
                       <Upload className="text-gray-400" size={28} />
                       <p className="text-sm text-gray-300 font-medium">Tap or click to upload screenshot</p>
-                      <p className="text-xs text-gray-500">Supports JPG, PNG, WEBP</p>
+                      <p className="text-xs text-red-400 mt-1">Payment screenshot is required!</p>
+                      <p className="text-xs text-gray-500 mt-1">Supports JPG, PNG, WEBP</p>
                     </div>
                   )}
                 </div>

@@ -41,7 +41,13 @@ export default function PendingPaymentsTable({ payments, approveAction, rejectAc
           <td className="p-4 text-white font-bold">৳{payment.amount}</td>
           <td className="p-4 text-gray-300 capitalize">{payment.method || "N/A"}</td>
           <td className="p-4 text-neon-blue font-mono">{payment.trxId || "N/A"}</td>
-          <td className="p-4 text-gray-400">{payment.screenshotUrl ? "Uploaded" : "Optional/No"}</td>
+          <td className="p-4 text-gray-400">
+            {payment.screenshotUrl ? (
+              <a href={payment.screenshotUrl} target="_blank" rel="noreferrer" className="text-neon-blue hover:underline flex items-center gap-1">
+                View Image
+              </a>
+            ) : "No"}
+          </td>
           <td className="p-4">
             <div className="flex gap-2">
               <form action={approveAction}>
