@@ -79,9 +79,20 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                    const memFree = parseInt(r.resource["free-memory"]) || 0;
                    const memUsedMb = parseFloat(((memTotal - memFree) / (1024 * 1024)).toFixed(1));
                    
-                   const routerHist = newHist[r.routerId] || Array.from({ length: 14 }).map((_, i) => ({ time: `-${14-i}s`, download: dl, upload: ul, rxPkts, txPkts, cpuLoad, memUsedMb }));
-                   const updatedHist = [...routerHist, { time: timeStr, download: dl, upload: ul, rxPkts, txPkts, cpuLoad, memUsedMb }];
-                   newHist[r.routerId] = updatedHist.length > 15 ? updatedHist.slice(updatedHist.length - 15) : updatedHist;
+                   const routerHist = newHist[r.routerId] || Array.from({ length: 30 }).map(() => ({ time: "", download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 }));
+                   
+                   const actualData = routerHist.filter((p: any) => p.download !== null);
+                   actualData.push({ time: timeStr, download: dl, upload: ul, rxPkts, txPkts, cpuLoad, memUsedMb });
+                   
+                   if (actualData.length > 30) {
+                     actualData.shift();
+                   }
+                   
+                   const padded = [...actualData];
+                   while (padded.length < 30) {
+                     padded.push({ time: "", download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 });
+                   }
+                   newHist[r.routerId] = padded;
                 }
               });
               return newHist;
@@ -265,8 +276,8 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                             itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                             isAnimationActive={false}
                           />
-                          <Line type="monotone" dataKey="download" stroke="#ef4444" strokeWidth={2} dot={false} name="Rx" isAnimationActive={false} />
-                          <Line type="monotone" dataKey="upload" stroke="#0ea5e9" strokeWidth={2} dot={false} name="Tx" isAnimationActive={false} />
+                          <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={2} dot={false} name="Rx" isAnimationActive={false} />
+                          <Line type="linear" dataKey="upload" stroke="#0ea5e9" strokeWidth={2} dot={false} name="Tx" isAnimationActive={false} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
