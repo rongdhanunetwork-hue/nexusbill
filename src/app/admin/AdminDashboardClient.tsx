@@ -91,7 +91,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                    const padded = [...actualData];
                    let padIndex = 0;
                    while (padded.length < 30) {
-                     padded.unshift({ time: `pad-${padIndex++}`, download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 });
+                     padded.push({ time: `pad-${padIndex++}`, download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 });
                    }
                    newHist[r.routerId] = padded;
                 }
