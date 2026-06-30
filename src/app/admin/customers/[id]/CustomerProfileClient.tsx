@@ -435,7 +435,7 @@ useEffect(() => {
         const padded = [...actualData];
         let padIndex = 0;
         while (padded.length < 30) {
-          padded.push({ name: `pad-${padIndex++}`, download: null, upload: null });
+          padded.unshift({ name: `pad-${padIndex++}`, download: null, upload: null });
         }
         return padded;
       });

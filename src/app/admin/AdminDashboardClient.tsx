@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Users, Wifi, WifiOff, Clock, DollarSign, Activity, AlertTriangle, Router, RadioTower, Download, Upload, CalendarCheck, RefreshCw, MoreHorizontal, Eye, Edit, FileText, ShieldAlert, Cpu, HardDrive } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, LabelList } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, LabelList, Legend } from "recharts";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
@@ -91,7 +91,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                    const padded = [...actualData];
                    let padIndex = 0;
                    while (padded.length < 30) {
-                     padded.push({ time: `pad-${padIndex++}`, download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 });
+                     padded.unshift({ time: `pad-${padIndex++}`, download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 });
                    }
                    newHist[r.routerId] = padded;
                 }
