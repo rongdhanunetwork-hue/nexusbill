@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Users, Wifi, WifiOff, Clock, DollarSign, Activity, AlertTriangle, Router, RadioTower, Download, Upload, CalendarCheck, RefreshCw, MoreHorizontal, Eye, Edit, FileText, ShieldAlert, Cpu, HardDrive } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, LabelList } from "recharts";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
@@ -74,8 +74,13 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                    const ul = parseFloat((r.resource.txBps / 1000000).toFixed(2));
                    const rxPkts = r.resource.rxPps || 0;
                    const txPkts = r.resource.txPps || 0;
-                   const routerHist = newHist[r.routerId] || Array.from({ length: 14 }).map((_, i) => ({ time: `-${14-i}s`, download: dl, upload: ul, rxPkts, txPkts }));
-                   const updatedHist = [...routerHist, { time: timeStr, download: dl, upload: ul, rxPkts, txPkts }];
+                   const cpuLoad = parseInt(r.resource["cpu-load"]) || 0;
+                   const memTotal = parseInt(r.resource["total-memory"]) || 1;
+                   const memFree = parseInt(r.resource["free-memory"]) || 0;
+                   const memUsedMb = parseFloat(((memTotal - memFree) / (1024 * 1024)).toFixed(1));
+                   
+                   const routerHist = newHist[r.routerId] || Array.from({ length: 14 }).map((_, i) => ({ time: `-${14-i}s`, download: dl, upload: ul, rxPkts, txPkts, cpuLoad, memUsedMb }));
+                   const updatedHist = [...routerHist, { time: timeStr, download: dl, upload: ul, rxPkts, txPkts, cpuLoad, memUsedMb }];
                    newHist[r.routerId] = updatedHist.length > 15 ? updatedHist.slice(updatedHist.length - 15) : updatedHist;
                 }
               });
@@ -165,7 +170,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                   </div>
 
                   {res && (
-                    <div className="flex flex-col gap-4 mt-2">
+                    <div className="flex flex-col gap-3 mt-2 h-full">
                       <div className="flex justify-between items-center border-b border-white/5 pb-2">
                         <span className="text-[11px] text-gray-500 uppercase font-semibold">CPU Load</span>
                         <span className="text-lg font-bold text-white font-mono">{res["cpu-load"]}%</span>
@@ -180,6 +185,42 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                         <span className="text-[11px] text-gray-500 uppercase font-semibold">Uptime</span>
                         <span className="text-sm font-bold text-neon-blue font-sans tracking-wide">{formatUptime(res.uptime)}</span>
                       </div>
+
+                      {/* CPU Bar Graph */}
+                      {trafficHistory[router.routerId] && trafficHistory[router.routerId].length > 1 && (
+                        <div className="flex-1 w-full mt-2 bg-black/20 rounded-lg p-3 border border-white/5 flex flex-col min-h-[110px]">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-gray-300 font-medium text-xs">CPU Trend</h4>
+                            <span className="text-[10px] bg-[#8b5cf6]/20 text-[#a855f7] px-1.5 py-0.5 rounded border border-[#8b5cf6]/30 font-medium flex items-center gap-1">
+                              <Cpu size={10} /> Live
+                            </span>
+                          </div>
+                          <div className="flex-1 w-full relative">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={trafficHistory[router.routerId]} margin={{ top: 15, right: 0, left: -20, bottom: 0 }}>
+                                <defs>
+                                  <linearGradient id="cpuColor" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1}/>
+                                    <stop offset="100%" stopColor="#6366f1" stopOpacity={1}/>
+                                  </linearGradient>
+                                </defs>
+                                <YAxis domain={[0, 100]} hide />
+                                <Tooltip 
+                                  contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 6, padding: '4px 6px', fontSize: '11px' }}
+                                  labelStyle={{ display: 'none' }}
+                                  formatter={(val: any) => [`${val}%`, 'CPU']}
+                                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                  isAnimationActive={false}
+                                />
+                                <Bar dataKey="cpuLoad" fill="url(#cpuColor)" radius={[4, 4, 0, 0]} barSize={14} isAnimationActive={false}>
+                                  <LabelList dataKey="cpuLoad" position="top" fill="#a855f7" fontSize={9} formatter={(val: any) => val > 0 ? `${val}%` : ''} />
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
