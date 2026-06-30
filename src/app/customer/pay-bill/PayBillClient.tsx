@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Upload, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Upload, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
@@ -16,6 +16,36 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [screenshotUrl, setScreenshotUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setScreenshotUrl(data.url);
+      } else {
+        alert("Upload failed: " + data.error);
+      }
+    } catch (err) {
+      alert("Network error during upload");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -23,7 +53,6 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
     const trxId = String(form.get("trxId") || "").trim();
     const amount = String(form.get("amount") || "").trim();
     const method = String(form.get("method") || "bkash");
-    const screenshotUrl = String(form.get("screenshotUrl") || "").trim();
 
     if (trxId.length < 5 || !amount) {
       setError("Transaction ID (min 5 chars) and amount required.");
@@ -214,15 +243,40 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Screenshot URL (Optional)</label>
-                <input
-                  name="screenshotUrl"
-                  placeholder="Paste screenshot link (optional)"
-                  className="w-full px-4 py-3 glass-input mb-3"
-                />
-                <div className="border-2 border-dashed border-white/20 rounded-xl p-6 text-center hover:border-white/30 transition-colors">
-                  <Upload className="mx-auto text-gray-400 mb-2" size={28} />
-                  <p className="text-sm text-gray-400">Screenshot optional — paste link above</p>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Screenshot (Optional)</label>
+                <input type="hidden" name="screenshotUrl" value={screenshotUrl} />
+                
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed ${screenshotUrl ? 'border-neon-green/50 bg-neon-green/5' : 'border-white/20 hover:border-white/30'} rounded-xl p-6 text-center transition-colors cursor-pointer relative overflow-hidden`}
+                >
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    ref={fileInputRef} 
+                    onChange={handleFileUpload} 
+                  />
+                  
+                  {isUploading ? (
+                    <div className="flex flex-col items-center justify-center space-y-2 py-4">
+                      <Loader2 className="animate-spin text-neon-blue" size={28} />
+                      <p className="text-sm text-gray-400">Uploading...</p>
+                    </div>
+                  ) : screenshotUrl ? (
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <CheckCircle2 className="text-neon-green" size={28} />
+                      <p className="text-sm text-neon-green font-medium">Screenshot Uploaded Successfully!</p>
+                      <img src={screenshotUrl} alt="Preview" className="h-16 rounded mt-2 object-cover border border-white/10" />
+                      <p className="text-xs text-gray-400 mt-2">Click again to change</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center space-y-2 py-4">
+                      <Upload className="text-gray-400" size={28} />
+                      <p className="text-sm text-gray-300 font-medium">Tap or click to upload screenshot</p>
+                      <p className="text-xs text-gray-500">Supports JPG, PNG, WEBP</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
