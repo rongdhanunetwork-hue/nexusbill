@@ -197,26 +197,24 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                           </div>
                           <div className="flex-1 w-full relative">
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={trafficHistory[router.routerId]} margin={{ top: 15, right: 0, left: -20, bottom: 0 }}>
+                              <AreaChart data={trafficHistory[router.routerId]} margin={{ top: 15, right: 0, left: -20, bottom: 0 }}>
                                 <defs>
                                   <linearGradient id="cpuColor" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1}/>
-                                    <stop offset="100%" stopColor="#6366f1" stopOpacity={1}/>
+                                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.4}/>
+                                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0.05}/>
                                   </linearGradient>
                                 </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" vertical={true} horizontal={true} />
                                 <YAxis domain={[0, 100]} hide />
                                 <Tooltip 
-                                  contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 6, padding: '4px 6px', fontSize: '11px' }}
+                                  contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.2)", borderRadius: 6, padding: '4px 6px', fontSize: '11px' }}
                                   labelStyle={{ display: 'none' }}
                                   formatter={(val: any) => [`${val}%`, 'CPU']}
                                   itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                   isAnimationActive={false}
                                 />
-                                <Bar dataKey="cpuLoad" fill="url(#cpuColor)" radius={[4, 4, 0, 0]} barSize={14} isAnimationActive={false}>
-                                  <LabelList dataKey="cpuLoad" position="top" fill="#a855f7" fontSize={9} formatter={(val: any) => val > 0 ? `${val}%` : ''} />
-                                </Bar>
-                              </BarChart>
+                                <Area type="stepAfter" dataKey="cpuLoad" stroke="#ef4444" strokeWidth={1.5} fill="url(#cpuColor)" isAnimationActive={false} />
+                              </AreaChart>
                             </ResponsiveContainer>
                           </div>
                         </div>
@@ -248,7 +246,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                     <div className="flex-1 w-full relative min-h-[120px] max-h-[160px]">
                       <ResponsiveContainer width="100%" height="100%" minHeight={120}>
                         <AreaChart data={trafficHistory[router.routerId]} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={true} horizontal={true} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" vertical={true} horizontal={true} />
                           <XAxis dataKey="time" hide />
                           <YAxis 
                             tickFormatter={(val) => `${val}`} 
@@ -260,14 +258,14 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                             axisLine={false}
                           />
                           <Tooltip 
-                            contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.1)", borderRadius: 6, padding: '4px 6px', fontSize: '11px' }}
+                            contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.2)", borderRadius: 6, padding: '4px 6px', fontSize: '11px' }}
                             labelStyle={{ display: 'none' }}
                             formatter={(val: any, name: any) => [`${val} Mbps`, name]}
                             itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                             isAnimationActive={false}
                           />
-                          <Area type="linear" dataKey="download" stroke="#ef4444" strokeWidth={1.5} fill="transparent" name="Rx" isAnimationActive={false} />
-                          <Area type="linear" dataKey="upload" stroke="#3b82f6" strokeWidth={1.5} fill="transparent" name="Tx" isAnimationActive={false} />
+                          <Area type="stepAfter" dataKey="download" stroke="#ef4444" strokeWidth={1.5} fill="transparent" name="Rx" isAnimationActive={false} />
+                          <Area type="stepAfter" dataKey="upload" stroke="#3b82f6" strokeWidth={1.5} fill="transparent" name="Tx" isAnimationActive={false} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
