@@ -79,21 +79,16 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                    const memFree = parseInt(r.resource["free-memory"]) || 0;
                    const memUsedMb = parseFloat(((memTotal - memFree) / (1024 * 1024)).toFixed(1));
                    
-                   const routerHist = newHist[r.routerId] || Array.from({ length: 30 }).map((_, i) => ({ time: `pad-${i}`, download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 }));
+                   const routerHist = newHist[r.routerId] || [];
                    
-                   const actualData = routerHist.filter((p: any) => p.download !== null);
+                   const actualData = [...routerHist];
                    actualData.push({ time: timeStr, download: dl, upload: ul, rxPkts, txPkts, cpuLoad, memUsedMb });
                    
                    if (actualData.length > 30) {
                      actualData.shift();
                    }
                    
-                   const padded = [...actualData];
-                   let padIndex = 0;
-                   while (padded.length < 30) {
-                     padded.push({ time: `pad-${padIndex++}`, download: null, upload: null, rxPkts: 0, txPkts: 0, cpuLoad: 0, memUsedMb: 0 });
-                   }
-                   newHist[r.routerId] = padded;
+                   newHist[r.routerId] = actualData;
                 }
               });
               return newHist;
@@ -257,9 +252,9 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                     {/* Byte Graph */}
                     <div className="flex-1 w-full relative min-h-[120px] max-h-[160px] bg-[#1C2534] rounded-lg mt-2 overflow-hidden border border-white/5">
                       <ResponsiveContainer width="100%" height="100%" minHeight={120}>
-                        <LineChart data={trafficHistory[router.routerId]} margin={{ top: 15, right: 0, left: -20, bottom: 0 }}>
+                        <LineChart data={(trafficHistory[router.routerId] || []).map((d: any, i: number) => ({ ...d, index: i }))} margin={{ top: 15, right: 0, left: -20, bottom: 0 }}>
                           <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
-                          <XAxis dataKey="time" hide />
+                          <XAxis dataKey="index" type="number" domain={[0, 29]} hide />
                           <YAxis 
                             tickFormatter={(val) => `${val}`} 
                             stroke="rgba(255,255,255,0.4)" 
@@ -284,8 +279,8 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                             wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
                             formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value === "download" ? "Rx Packet" : "Tx Packet"}</span>} 
                           />
-                          <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={2} dot={false} name="Rx" isAnimationActive={false} />
-                          <Line type="linear" dataKey="upload" stroke="#0ea5e9" strokeWidth={2} dot={false} name="Tx" isAnimationActive={false} />
+                          <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={1} dot={false} name="Rx" isAnimationActive={false} />
+                          <Line type="linear" dataKey="upload" stroke="#0ea5e9" strokeWidth={1} dot={false} name="Tx" isAnimationActive={false} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>

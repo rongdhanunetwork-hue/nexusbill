@@ -373,9 +373,7 @@ useEffect(() => {
       .catch(() => {});
   }, []);
 
-  const [liveData, setLiveData] = useState<any[]>(() => 
-    Array.from({ length: 30 }).map((_, i) => ({ name: `pad-${i}`, download: null, upload: null }))
-  );
+  const [liveData, setLiveData] = useState<any[]>([]);
   const [sessionUptimeSeconds, setSessionUptimeSeconds] = useState<number>(0);
   const [chartMode, setChartMode] = useState<"live" | "history">("live");
 
@@ -425,19 +423,14 @@ useEffect(() => {
         const timeStr = new Date().toLocaleTimeString(undefined, { hour12: false, hour: "numeric", minute: "numeric", second: "numeric" }).slice(-5);
         const newPt = { name: timeStr, download: dl, upload: ul };
         
-        const actualData = prev.filter(p => p.download !== null);
+        const actualData = [...prev];
         actualData.push(newPt);
         
         if (actualData.length > 30) {
           actualData.shift();
         }
         
-        const padded = [...actualData];
-        let padIndex = 0;
-        while (padded.length < 30) {
-          padded.push({ name: `pad-${padIndex++}`, download: null, upload: null });
-        }
-        return padded;
+        return actualData;
       });
     }, 1000);
     return () => { active = false; clearInterval(interval); };
@@ -925,9 +918,9 @@ useEffect(() => {
               {/* Live chart */}
               <div className="h-64 w-full bg-[#1C2534] p-4 rounded-xl border border-white/5">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={liveData}>
+                  <LineChart data={liveData.map((d, i) => ({ ...d, index: i }))}>
                     <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
-                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={9} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="index" type="number" domain={[0, 29]} hide />
                     <YAxis stroke="#9ca3af" fontSize={11} tickFormatter={formatSpeed} axisLine={false} tickLine={false} />
                     <RechartsTooltip
                       contentStyle={{ backgroundColor: "#2a313a", borderColor: "#3f4a59", borderRadius: 4 }}
@@ -941,8 +934,8 @@ useEffect(() => {
                       wrapperStyle={{ paddingLeft: '10px', bottom: '0px' }}
                       formatter={(value) => <span className="text-gray-300 text-[11px] font-sans">{value === "download" ? "Tx Packet" : "Rx Packet"}</span>} 
                     />
-                    <Line type="linear" dataKey="download" stroke="#0ea5e9" strokeWidth={2} dot={false} isAnimationActive={false} />
-                    <Line type="linear" dataKey="upload" stroke="#ef4444" strokeWidth={2} dot={false} isAnimationActive={false} />
+                    <Line type="linear" dataKey="download" stroke="#0ea5e9" strokeWidth={1} dot={false} isAnimationActive={false} />
+                    <Line type="linear" dataKey="upload" stroke="#ef4444" strokeWidth={1} dot={false} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
