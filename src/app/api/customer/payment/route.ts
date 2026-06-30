@@ -29,6 +29,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Customer not found" }, { status: 404 });
     }
 
+    // Amount validation
+    const packagePrice = parseFloat(customer.package?.price || "0");
+    const paidAmount = parseFloat(amount);
+    
+    if (paidAmount !== packagePrice) {
+      return NextResponse.json({ error: `Amount mismatch. You must pay exactly ৳${packagePrice} for your package.` }, { status: 400 });
+    }
+
+    // Transaction ID uniqueness check
+    const existingPayment = await db.query.payments.findFirst({
+      where: eq(payments.trxId, trxId.trim().toUpperCase())
+    });
+
+    if (existingPayment) {
+      return NextResponse.json({ error: "This Transaction ID has already been used!" }, { status: 400 });
+    }
+
     // Process Auto Recharge Logic
     let baseDate = new Date();
     const isCustomerActive = customer.status === "active" && customer.expireDate && new Date(customer.expireDate) > baseDate;

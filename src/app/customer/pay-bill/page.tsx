@@ -13,12 +13,14 @@ export default async function PayBillPage() {
     redirect("/login");
   }
 
-  // Look up customer's adminId
+  // Look up customer's adminId and package
   const customer = await db.query.users.findFirst({
     where: eq(users.id, session.userId),
-    columns: { adminId: true }
+    with: { package: true }
   });
   const adminId = customer?.adminId || 1;
+  const packagePrice = customer?.package?.price || "0";
+  const packageName = customer?.package?.name || "Unknown";
 
   // Fetch bKash and Nagad numbers from the customer's admin settings
   const bkashRow = await db.query.settings.findFirst({
@@ -35,6 +37,8 @@ export default async function PayBillPage() {
       bkashNumber={bkashRow?.value || "01580838281"}
       bkashNumber2={bkashRow2?.value || "017XXXXXXXX"}
       bankCardNumber={bankCardRow?.value || "Dutch-Bangla Bank: 123.456.7890"}
+      packagePrice={packagePrice}
+      packageName={packageName}
     />
   );
 }

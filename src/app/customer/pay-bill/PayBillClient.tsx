@@ -8,9 +8,11 @@ interface Props {
   bkashNumber: string;
   bkashNumber2: string;
   bankCardNumber: string;
+  packagePrice: string;
+  packageName: string;
 }
 
-export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumber }: Props) {
+export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumber, packagePrice, packageName }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +27,11 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
 
     if (trxId.length < 5 || !amount) {
       setError("Transaction ID (min 5 chars) and amount required.");
+      return;
+    }
+    
+    if (parseFloat(amount) !== parseFloat(packagePrice)) {
+      setError(`You must pay exactly ৳${packagePrice} for your package.`);
       return;
     }
 
@@ -179,15 +186,19 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Amount (৳)</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Amount (৳) <span className="text-neon-green text-xs font-bold bg-neon-green/10 px-2 py-0.5 rounded ml-2">{packageName}</span>
+                  </label>
                   <input
                     name="amount"
                     type="number"
                     required
-                    min="1"
-                    placeholder="e.g. 500"
-                    className="w-full px-4 py-3 glass-input"
+                    readOnly
+                    value={packagePrice}
+                    className="w-full px-4 py-3 glass-input bg-slate-800/80 text-gray-300 cursor-not-allowed"
+                    title={`You must pay exactly ৳${packagePrice} for your package.`}
                   />
+                  <p className="text-[10px] text-amber-400 mt-1">*Amount is fixed according to your active package.</p>
                 </div>
               </div>
 
