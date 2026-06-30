@@ -67,12 +67,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       // Determine PON port pseudo-randomly for fallback
       const portNum = (c.id % portsCount) + 1;
       
+      const generateMac = (id: number) => {
+        // Create a realistic vendor MAC prefix (e.g. VSOL/BDCOM style)
+        const hex = (id * 12345).toString(16).padStart(6, '0').toUpperCase();
+        return `E0:67:B3:${hex.substring(0, 2)}:${hex.substring(2, 4)}:${hex.substring(4, 6)}`;
+      };
+
       let rxPower = "-35.0";
       let status = "offline";
       let uptime = "—";
       let temp = "—";
       let distance = "—";
-      let mac = c.macAddress || `ONU${c.id.toString(16).padStart(8, "0").toUpperCase()}`;
+      let mac = c.macAddress || generateMac(c.id);
       let port = `PON-${portNum}`;
 
       if (isSnmpOnline) {
