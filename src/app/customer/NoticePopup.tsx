@@ -9,7 +9,7 @@ export default function NoticePopup() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/notices")
+    fetch("/api/customer/notices")
       .then(res => res.json())
       .then(data => {
         if (data && data.length > 0) {
@@ -56,22 +56,22 @@ export default function NoticePopup() {
             </div>
 
             {notice.imageUrl ? (
-              <div className="w-full h-48 sm:h-64 relative bg-black">
+              <div className="w-full relative bg-slate-800" style={{ minHeight: '200px' }}>
                 <img 
                   src={notice.imageUrl} 
                   alt={notice.title} 
-                  className="w-full h-full object-cover"
+                  className="w-full max-h-[350px] object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
               </div>
             ) : (
-              <div className="bg-gradient-to-br from-neon-blue/20 to-purple-500/20 p-8 flex justify-center items-center">
-                <Megaphone size={48} className="text-neon-blue animate-pulse" />
+              <div className="bg-gradient-to-br from-neon-blue/20 to-purple-500/20 p-10 flex justify-center items-center">
+                <Megaphone size={56} className="text-neon-blue animate-pulse" />
               </div>
             )}
 
-            <div className="p-6 md:p-8 pt-4 md:pt-6 relative z-10 -mt-6">
-              <div className="bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border border-white/10 shadow-xl mb-4 text-center inline-block">
+            <div className="p-6 md:p-8 pt-0 relative z-10 -mt-8">
+              <div className="bg-slate-900/90 backdrop-blur-md px-5 py-3 rounded-xl border border-white/10 shadow-2xl mb-4 text-center mx-auto table">
                 <h3 className="text-xl md:text-2xl font-bold text-white">{notice.title}</h3>
               </div>
               
