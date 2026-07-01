@@ -155,12 +155,12 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
         const usedMem = totalMem - freeMem;
         
         return (
-          <div key={router.routerId} className="flex flex-col gap-4">
+          <div key={router.routerId} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Box 1: Router Info, CPU, Memory, Uptime */}
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} 
-              className="p-4 rounded-xl border border-neon-blue/20 bg-neon-blue/5 shadow-[0_0_15px_rgba(6,182,212,0.1)]"
+              className="p-4 rounded-xl border border-neon-blue/20 bg-neon-blue/5 shadow-[0_0_15px_rgba(6,182,212,0.1)] col-span-1 h-full"
             >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex flex-col justify-between h-full gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-neon-blue/20 flex items-center justify-center text-neon-blue shrink-0">
                     <Router size={20} />
@@ -175,18 +175,18 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                 </div>
 
                 {res && (
-                  <div className="flex flex-wrap items-center gap-6 mt-4 md:mt-0">
-                    <div className="flex flex-col">
+                  <div className="flex flex-col gap-3 mt-2">
+                    <div className="flex justify-between items-center border-b border-white/5 pb-2">
                       <span className="text-[11px] text-gray-500 uppercase font-semibold">CPU Load</span>
                       <span className="text-lg font-bold text-white font-mono">{res["cpu-load"]}%</span>
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex justify-between items-center border-b border-white/5 pb-2">
                       <span className="text-[11px] text-gray-500 uppercase font-semibold">Memory Usage</span>
                       <span className="text-sm font-bold text-white font-mono">
                         {formatBytes(usedMem.toString())} <span className="text-[10px] text-gray-500 font-sans">/ {formatBytes(res["total-memory"])}</span>
                       </span>
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex justify-between items-center">
                       <span className="text-[11px] text-gray-500 uppercase font-semibold">Uptime</span>
                       <span className="text-sm font-bold text-neon-blue font-sans tracking-wide">{formatUptime(res.uptime)}</span>
                     </div>
@@ -198,7 +198,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
             {/* Box 2: Traffic Monitor (Byte Graph only) */}
             {res && trafficHistory[router.routerId] && trafficHistory[router.routerId].length > 1 && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} 
-                className="p-4 rounded-xl border border-white/5 bg-black/20 shadow-md mt-4"
+                className="p-4 rounded-xl border border-white/5 bg-black/20 shadow-md col-span-1 lg:col-span-2 flex flex-col h-full"
               >
                 <div className="flex flex-col h-full">
                   <div className="flex flex-wrap items-center justify-between mb-3">
