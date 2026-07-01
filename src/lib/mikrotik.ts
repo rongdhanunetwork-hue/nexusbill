@@ -29,18 +29,40 @@ async function getRouterConfig(routerId?: number) {
   };
 }
 
+const globalClients = new Map<string, RouterOSAPI>();
+
 async function getClient(routerId?: number) {
   const config = await getRouterConfig(routerId);
+  const key = `${config.host}:${config.port}`;
+  
+  if (globalClients.has(key)) {
+     const existing = globalClients.get(key)!;
+     if (existing.connected) {
+        return existing;
+     } else {
+        globalClients.delete(key);
+     }
+  }
+  
   const client = new RouterOSAPI({
     host: config.host,
     port: config.port,
     user: config.user,
     password: config.pass,
     timeout: parseInt(process.env.MIKROTIK_API_TIMEOUT || '8'),
+    keepalive: true
   });
+  
   client.on("error", (err) => {
     console.warn("MikroTik socket error caught:", err.message);
+    globalClients.delete(key);
   });
+  
+  client.on("close", () => {
+     globalClients.delete(key);
+  });
+  
+  globalClients.set(key, client);
   return client;
 }
 
@@ -95,8 +117,16 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
       
       let maxIface = "";
       let maxBytes = 0;
+      let foundPreferred = false;
+      
       for (const i of ifaces as any[]) {
-        if (i.type !== "pppoe-in" && i.type !== "bridge" && !i.type?.includes("-in")) {
+        // If the user's main WAN is SFP-RDN or ether1, prioritize it directly!
+        if (i.name === "SFP-RDN" || i.name.toLowerCase().includes("wan")) {
+           maxIface = i.name;
+           foundPreferred = true;
+        }
+        
+        if (!foundPreferred && i.type !== "pppoe-in" && i.type !== "bridge" && !i.type?.includes("-in")) {
            const b = parseInt(i["rx-byte"] || "0");
            if (b > maxBytes) {
               maxBytes = b;
@@ -142,7 +172,7 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
     console.warn('getSystemResource error:', err);
     return null;
   } finally {
-    try { await client.close(); } catch {}
+    try { /* await client.close(); */ } catch {}
   }
 }
 
@@ -156,7 +186,7 @@ export async function getPppoeSecrets(routerId?: number): Promise<PppoeSecret[]>
     return data as unknown as PppoeSecret[];
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -188,7 +218,7 @@ export async function createPppoeSecret(data: {
     return created[0] as unknown as PppoeSecret;
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -213,7 +243,7 @@ export async function updatePppoeSecret(id: string, data: Partial<PppoeSecret>, 
     await client.write(cmd);
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -228,7 +258,7 @@ export async function deletePppoeSecret(id: string, routerId?: number): Promise<
     ]);
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -244,7 +274,7 @@ export async function enablePppoeSecret(id: string, routerId?: number): Promise<
     ]);
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -260,7 +290,7 @@ export async function disablePppoeSecret(id: string, routerId?: number): Promise
     ]);
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -275,7 +305,7 @@ export async function getPppoeActive(routerId?: number): Promise<PppoeActive[]> 
     return data as unknown as PppoeActive[];
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -288,7 +318,7 @@ export async function getPppoeInterfaces(routerId?: number): Promise<any[]> {
     return data as any[];
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -312,7 +342,7 @@ export async function getPppoeProfiles(routerId?: number): Promise<PppoeProfile[
     return data as unknown as PppoeProfile[];
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -338,7 +368,7 @@ export async function createPppoeProfile(data: {
     return created[0] as unknown as PppoeProfile;
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -363,7 +393,7 @@ export async function updatePppoeProfile(id: string, data: {
     await client.write(cmd);
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -378,7 +408,7 @@ export async function deletePppoeProfile(id: string, routerId?: number): Promise
     ]);
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -393,7 +423,7 @@ export async function disconnectPppoeActive(id: string, routerId?: number): Prom
     ]);
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -407,7 +437,7 @@ export async function rebootRouter(routerId?: number): Promise<void> {
     // Connection closing is expected during reboot command
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -469,7 +499,7 @@ export async function getPppoeTraffic(username: string, routerId?: number): Prom
     return null;
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -484,7 +514,7 @@ export async function testConnection(routerId?: number): Promise<{ ok: boolean; 
     await client.connect();
     const data = await client.write("/system/resource/print");
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
     return { ok: true, version: (data[0] as any)?.version };
   } catch (err) {
@@ -524,7 +554,7 @@ export async function getRouterDetails(routerId?: number): Promise<{
     };
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
@@ -585,7 +615,7 @@ export async function findDeviceOnRouter(routerId: number, opts: { ip?: string; 
     console.warn('findDeviceOnRouter error:', err);
     return null;
   } finally {
-    try { await client.close(); } catch {}
+    try { /* await client.close(); */ } catch {}
   }
 }
 
@@ -654,7 +684,7 @@ export async function suspendUsers(usernames: string[], routerId?: number): Prom
     console.warn("suspendUsers error:", err);
   } finally {
     try {
-      await client.close();
+      // await client.close(); // cached
     } catch {}
   }
 }
