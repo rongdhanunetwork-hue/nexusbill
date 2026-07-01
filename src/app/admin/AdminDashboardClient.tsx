@@ -54,6 +54,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
   const [resources, setResources] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [trafficHistory, setTrafficHistory] = useState<Record<number, any[]>>({});
+  const lastTrafficRef = useRef<Record<number, {rx: number, tx: number, ts: number}>>({});
 
   useEffect(() => {
     let active = true;
@@ -70,9 +71,28 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
             setTrafficHistory(prev => {
               const newHist = { ...prev };
               data.forEach((r: any) => {
-                if (r.resource?.rxBps !== undefined) {
-                   const dl = parseFloat((r.resource.rxBps / 1000000).toFixed(2));
-                   const ul = parseFloat((r.resource.txBps / 1000000).toFixed(2));
+                if (r.resource?.rxBytes !== undefined && r.resource?.timestamp) {
+                   const currRx = r.resource.rxBytes;
+                   const currTx = r.resource.txBytes;
+                   const currTs = r.resource.timestamp;
+                   
+                   const last = lastTrafficRef.current[r.routerId];
+                   
+                   let dl = 0;
+                   let ul = 0;
+                   
+                   if (last && currTs > last.ts) {
+                      const elapsedSecs = (currTs - last.ts) / 1000;
+                      // bits per second = (bytes * 8) / elapsed
+                      const rxBps = ((currRx - last.rx) * 8) / elapsedSecs;
+                      const txBps = ((currTx - last.tx) * 8) / elapsedSecs;
+                      
+                      dl = parseFloat(Math.max(0, rxBps / 1000000).toFixed(2));
+                      ul = parseFloat(Math.max(0, txBps / 1000000).toFixed(2));
+                   }
+                   
+                   lastTrafficRef.current[r.routerId] = { rx: currRx, tx: currTx, ts: currTs };
+                   
                    const rxPkts = r.resource.rxPps || 0;
                    const txPkts = r.resource.txPps || 0;
                    const cpuLoad = parseInt(r.resource["cpu-load"]) || 0;
@@ -83,10 +103,13 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                    const routerHist = newHist[r.routerId] || [];
                    
                    const actualData = [...routerHist];
-                   actualData.push({ time: timeStr, download: dl, upload: ul, rxPkts, txPkts, cpuLoad, memUsedMb });
                    
-                   if (actualData.length > 30) {
-                     actualData.shift();
+                   // Only append if we have a valid delta calculated
+                   if (last) {
+                     actualData.push({ time: timeStr, download: dl, upload: ul, rxPkts, txPkts, cpuLoad, memUsedMb });
+                     if (actualData.length > 30) {
+                       actualData.shift();
+                     }
                    }
                    
                    newHist[r.routerId] = actualData;

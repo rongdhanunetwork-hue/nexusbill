@@ -100,6 +100,9 @@ export interface SystemResource {
   rxBps?: number;
   txPps?: number;
   rxPps?: number;
+  rxBytes?: number;
+  txBytes?: number;
+  timestamp?: number;
 }
 
 export async function getSystemResource(routerId?: number): Promise<SystemResource | null> {
@@ -118,11 +121,12 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
       let maxIface = "";
       let maxBytes = 0;
       let foundPreferred = false;
+      let targetIface: any = null;
       
       for (const i of ifaces as any[]) {
-        // If the user's main WAN is SFP-RDN or ether1, prioritize it directly!
         if (i.name === "SFP-RDN" || i.name.toLowerCase().includes("wan")) {
            maxIface = i.name;
+           targetIface = i;
            foundPreferred = true;
         }
         
@@ -131,28 +135,25 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
            if (b > maxBytes) {
               maxBytes = b;
               maxIface = i.name;
+              targetIface = i;
            }
         }
       }
         
-      if (maxIface) {
-        const stats = await client.write(["/interface/monitor-traffic", `=interface=${maxIface}`, "=once=yes"]);
-        if (stats && stats.length > 0) {
-           const s = stats[0] as any;
-           const rx = parseInt(s["rx-bits-per-second"] || "0");
-           const tx = parseInt(s["tx-bits-per-second"] || "0");
-           const rxPkts = parseInt(s["rx-packets-per-second"] || "0");
-           const txPkts = parseInt(s["tx-packets-per-second"] || "0");
-           
-           // In an ISP, Download is always significantly higher than Upload.
-           if (rx > tx) {
-              maxRx = rx; maxTx = tx;
-              maxRxPkts = rxPkts; maxTxPkts = txPkts;
-           } else {
-              maxRx = tx; maxTx = rx;
-              maxRxPkts = txPkts; maxTxPkts = rxPkts;
-           }
-        }
+      if (targetIface) {
+         const rx = parseInt(targetIface["rx-byte"] || "0");
+         const tx = parseInt(targetIface["tx-byte"] || "0");
+         const rxPkts = parseInt(targetIface["rx-packet"] || "0");
+         const txPkts = parseInt(targetIface["tx-packet"] || "0");
+         
+         // In an ISP, Download is always significantly higher than Upload.
+         if (rx > tx) {
+            maxRx = rx; maxTx = tx;
+            maxRxPkts = rxPkts; maxTxPkts = txPkts;
+         } else {
+            maxRx = tx; maxTx = rx;
+            maxRxPkts = txPkts; maxTxPkts = rxPkts;
+         }
       }
     } catch (trafficErr) {
        console.error("Traffic calc error:", trafficErr);
@@ -160,11 +161,11 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
 
     if (data && data.length > 0) {
       const res = data[0] as unknown as SystemResource;
-      res.rxBps = maxRx;
-      res.txBps = maxTx;
+      res.rxBytes = maxRx;
+      res.txBytes = maxTx;
       res.rxPps = maxRxPkts;
       res.txPps = maxTxPkts;
-      res.txBps = maxTx;
+      res.timestamp = Date.now();
       return res;
     }
     return null;
