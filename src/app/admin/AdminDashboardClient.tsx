@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Users, Wifi, WifiOff, Clock, DollarSign, Activity, AlertTriangle, Router, RadioTower, Download, Upload, CalendarCheck, RefreshCw, MoreHorizontal, Eye, Edit, FileText, ShieldAlert, HardDrive } from "lucide-react";
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, LabelList, Legend } from "recharts";
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, LabelList, Legend, AreaChart, Area } from "recharts";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
@@ -156,139 +156,105 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
         
         return (
           <div key={router.routerId} className="flex flex-col gap-4">
-            {/* Box 1: CPU and Memory Stats */}
+            {/* Box 1: Router Info, CPU, Memory, Uptime */}
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} 
-              className="p-4 rounded-xl border border-neon-blue/20 bg-neon-blue/5 shadow-[0_0_15px_rgba(6,182,212,0.1)] flex flex-col md:flex-row md:items-center justify-between gap-4"
+              className="p-4 rounded-xl border border-neon-blue/20 bg-neon-blue/5 shadow-[0_0_15px_rgba(6,182,212,0.1)]"
             >
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-                {/* Left Column: Router Info, CPU, Memory, Uptime */}
-                <div className="col-span-1 flex flex-col gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-neon-blue/20 flex items-center justify-center text-neon-blue shrink-0">
-                      <Router size={20} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-sm">MikroTik Router: {res?.["board-name"] || router.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className={`w-2 h-2 rounded-full animate-pulse ${res ? "bg-neon-green" : "bg-red-500"}`}></div>
-                        <span className="text-[11px] text-gray-400 font-medium">{res ? "Online & Syncing Live" : "Offline"}</span>
-                      </div>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-neon-blue/20 flex items-center justify-center text-neon-blue shrink-0">
+                    <Router size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm">MikroTik Router: {res?.["board-name"] || router.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className={`w-2 h-2 rounded-full animate-pulse ${res ? 'bg-neon-green' : 'bg-red-500'}`}></div>
+                      <span className="text-[11px] text-gray-400 font-medium">{res ? 'Online & Syncing Live' : 'Offline'}</span>
                     </div>
                   </div>
-
-                  {res && (
-                    <div className="flex flex-col gap-3 mt-2 h-full">
-                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                        <span className="text-[11px] text-gray-500 uppercase font-semibold">CPU Load</span>
-                        <span className="text-lg font-bold text-white font-mono">{res["cpu-load"]}%</span>
-                      </div>
-                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                        <span className="text-[11px] text-gray-500 uppercase font-semibold">Memory Usage</span>
-                        <span className="text-sm font-bold text-white font-mono">
-                          {formatBytes(usedMem.toString())} <span className="text-[10px] text-gray-500 font-sans">/ {formatBytes(res["total-memory"])}</span>
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[11px] text-gray-500 uppercase font-semibold">Uptime</span>
-                        <span className="text-sm font-bold text-neon-blue font-sans tracking-wide">{formatUptime(res.uptime)}</span>
-                      </div>
-
-                      {/* CPU Bar Graph */}
-                      {trafficHistory[router.routerId] && trafficHistory[router.routerId].length > 1 && (
-                        <div className="flex-1 w-full mt-2 bg-black/20 rounded-lg p-3 border border-white/5 flex flex-col min-h-[110px]">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-gray-300 font-medium text-xs">CPU Trend</h4>
-                            <span className="text-[10px] bg-[#8b5cf6]/20 text-[#a855f7] px-1.5 py-0.5 rounded border border-[#8b5cf6]/30 font-medium flex items-center gap-1">
-                              <Cpu size={10} /> Live
-                            </span>
-                          </div>
-                          <div className="flex-1 w-full relative">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={trafficHistory[router.routerId]} margin={{ top: 15, right: 0, left: -20, bottom: 0 }}>
-                                <defs>
-                                  <linearGradient id="cpuColor" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.4}/>
-                                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0.05}/>
-                                  </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" vertical={true} horizontal={true} />
-                                <YAxis domain={[0, 100]} hide />
-                                <Tooltip 
-                                  contentStyle={{ backgroundColor: "rgba(15,23,42,.95)", borderColor: "rgba(255,255,255,.2)", borderRadius: 6, padding: '4px 6px', fontSize: '11px' }}
-                                  labelStyle={{ display: 'none' }}
-                                  formatter={(val: any) => [`${val}%`, 'CPU']}
-                                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                                  isAnimationActive={false}
-                                />
-                                <Area type="stepAfter" dataKey="cpuLoad" stroke="#ef4444" strokeWidth={1.5} fill="url(#cpuColor)" isAnimationActive={false} />
-                              </AreaChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
 
-                {/* Right Column: Traffic Monitor (Byte Graph only) */}
-                {res && trafficHistory[router.routerId] && trafficHistory[router.routerId].length > 1 && (
-                  <div className="col-span-1 lg:col-span-2 flex flex-col h-full bg-black/20 rounded-lg p-3 border border-white/5">
-                    <div className="flex flex-wrap items-center justify-between mb-3">
-                      <h3 className="text-gray-300 font-medium text-sm">Traffic Monitor</h3>
-                      {res.rxBps !== undefined && (
-                        <div className="flex items-center gap-4">
-                          <div className="flex flex-col items-end">
-                            <span className="text-[10px] text-[#00ff88] uppercase font-bold flex items-center gap-1 tracking-wider"><Download size={12}/> Download</span>
-                            <span className="text-sm font-bold text-[#00ff88] font-mono">{(res.rxBps / 1000000).toFixed(1)} <span className="text-[10px] font-sans text-[#00ff88]/70 font-medium">Mbps</span></span>
-                          </div>
-                          <div className="flex flex-col items-end">
-                            <span className="text-[10px] text-[#00e5ff] uppercase font-bold flex items-center gap-1 tracking-wider"><Upload size={12}/> Upload</span>
-                            <span className="text-sm font-bold text-[#00e5ff] font-mono">{(res.txBps / 1000000).toFixed(1)} <span className="text-[10px] font-sans text-[#00e5ff]/70 font-medium">Mbps</span></span>
-                          </div>
-                        </div>
-                      )}
+                {res && (
+                  <div className="flex flex-wrap items-center gap-6 mt-4 md:mt-0">
+                    <div className="flex flex-col">
+                      <span className="text-[11px] text-gray-500 uppercase font-semibold">CPU Load</span>
+                      <span className="text-lg font-bold text-white font-mono">{res["cpu-load"]}%</span>
                     </div>
-
-                    {/* Byte Graph */}
-                    <div className="flex-1 w-full relative min-h-[120px] max-h-[160px] bg-[#1C2534] rounded-lg mt-2 overflow-hidden border border-white/5">
-                      <ResponsiveContainer width="100%" height="100%" minHeight={120}>
-                        <LineChart data={(trafficHistory[router.routerId] || []).map((d: any, i: number) => ({ ...d, index: i }))} margin={{ top: 15, right: 10, left: 10, bottom: 0 }}>
-                          <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
-                          <XAxis dataKey="index" type="number" domain={[0, 29]} hide />
-                          <YAxis 
-                            tickFormatter={(val) => `${val}`} 
-                            stroke="rgba(255,255,255,0.4)" 
-                            fontSize={10}
-                            domain={[0, 'auto']}
-                            tickLine={false}
-                            axisLine={false}
-                            unit=" Mbps"
-                          />
-                          <Tooltip 
-                            contentStyle={{ backgroundColor: "#2a313a", borderColor: "#3f4a59", borderRadius: 4, padding: '4px 6px', fontSize: '11px' }}
-                            labelStyle={{ display: 'none' }}
-                            formatter={(val: any, name: any) => [`${val} Mbps`, name === "download" ? "Rx Packet" : "Tx Packet"]}
-                            itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                            isAnimationActive={false}
-                          />
-                          <Legend 
-                            verticalAlign="bottom" 
-                            align="left" 
-                            iconType="square" 
-                            iconSize={10}
-                            wrapperStyle={{ paddingLeft: '10px', bottom: '-2px' }}
-                            formatter={(value, entry: any) => <span className="text-gray-300 text-[11px] font-sans ml-1">{entry.value === "Rx" ? "Rx Packet" : "Tx Packet"}</span>} 
-                          />
-                          <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={1} dot={false} name="Rx" isAnimationActive={false} />
-                          <Line type="linear" dataKey="upload" stroke="#0ea5e9" strokeWidth={1} dot={false} name="Tx" isAnimationActive={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] text-gray-500 uppercase font-semibold">Memory Usage</span>
+                      <span className="text-sm font-bold text-white font-mono">
+                        {formatBytes(usedMem.toString())} <span className="text-[10px] text-gray-500 font-sans">/ {formatBytes(res["total-memory"])}</span>
+                      </span>
                     </div>
-
+                    <div className="flex flex-col">
+                      <span className="text-[11px] text-gray-500 uppercase font-semibold">Uptime</span>
+                      <span className="text-sm font-bold text-neon-blue font-sans tracking-wide">{formatUptime(res.uptime)}</span>
+                    </div>
                   </div>
                 )}
               </div>
             </motion.div>
+
+            {/* Box 2: Traffic Monitor (Byte Graph only) */}
+            {res && trafficHistory[router.routerId] && trafficHistory[router.routerId].length > 1 && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} 
+                className="p-4 rounded-xl border border-white/5 bg-black/20 shadow-md mt-4"
+              >
+                <div className="flex flex-col h-full">
+                  <div className="flex flex-wrap items-center justify-between mb-3">
+                    <h3 className="text-gray-300 font-medium text-sm">Traffic Monitor</h3>
+                    {res.rxBps !== undefined && (
+                      <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] text-[#00ff88] uppercase font-bold flex items-center gap-1 tracking-wider"><Download size={12}/> Download</span>
+                          <span className="text-sm font-bold text-[#00ff88] font-mono">{(res.rxBps / 1000000).toFixed(1)} <span className="text-[10px] font-sans text-[#00ff88]/70 font-medium">Mbps</span></span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] text-[#00e5ff] uppercase font-bold flex items-center gap-1 tracking-wider"><Upload size={12}/> Upload</span>
+                          <span className="text-sm font-bold text-[#00e5ff] font-mono">{(res.txBps / 1000000).toFixed(1)} <span className="text-[10px] font-sans text-[#00e5ff]/70 font-medium">Mbps</span></span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Byte Graph */}
+                  <div className="flex-1 w-full relative min-h-[160px] max-h-[200px] bg-[#1C2534] rounded-lg mt-2 overflow-hidden border border-white/5">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={160}>
+                      <LineChart data={(trafficHistory[router.routerId] || []).map((d, i) => ({ ...d, index: i }))} margin={{ top: 15, right: 10, left: 10, bottom: 0 }}>
+                        <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
+                        <XAxis dataKey="index" type="number" domain={[0, 29]} hide />
+                        <YAxis 
+                          tickFormatter={(val) => `${val}`} 
+                          stroke="rgba(255,255,255,0.4)" 
+                          fontSize={10}
+                          domain={[0, 'auto']}
+                          tickLine={false}
+                          axisLine={false}
+                          unit=" Mbps"
+                        />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: "#2a313a", borderColor: "#3f4a59", borderRadius: 4, padding: '4px 6px', fontSize: '11px' }}
+                          labelStyle={{ display: 'none' }}
+                          formatter={(val, name) => [`${val} Mbps`, name === "download" ? "Rx Packet" : "Tx Packet"]}
+                          itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                          isAnimationActive={false}
+                        />
+                        <Legend 
+                          verticalAlign="bottom" 
+                          align="left" 
+                          iconType="square" 
+                          iconSize={10}
+                          wrapperStyle={{ paddingLeft: '10px', bottom: '-2px' }}
+                          formatter={(value, entry) => <span className="text-gray-300 text-[11px] font-sans ml-1">{entry.value === "Rx" ? "Rx Packet" : "Tx Packet"}</span>} 
+                        />
+                        <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={1.5} dot={false} name="Rx" isAnimationActive={false} />
+                        <Line type="linear" dataKey="upload" stroke="#0ea5e9" strokeWidth={1.5} dot={false} name="Tx" isAnimationActive={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </div>
         );
       })}
