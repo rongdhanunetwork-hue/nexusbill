@@ -91,34 +91,36 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
     let maxTxPkts = 0;
     let maxRxPkts = 0;
     try {
-      const ifaces = await client.write(["/interface/print", "?running=true"]);
-      const names = (ifaces as any[])
-        .filter((i: any) => i.type !== "pppoe-in" && i.type !== "bridge" && !i.type?.includes("-in"))
-        .map((i: any) => i.name)
-        .join(",");
+      const ifaces = await client.write(["/interface/print", "=stats="]);
+      
+      let maxIface = "";
+      let maxBytes = 0;
+      for (const i of ifaces as any[]) {
+        if (i.type !== "pppoe-in" && i.type !== "bridge" && !i.type?.includes("-in")) {
+           const b = parseInt(i["rx-byte"] || "0");
+           if (b > maxBytes) {
+              maxBytes = b;
+              maxIface = i.name;
+           }
+        }
+      }
         
-      if (names.length > 0) {
-        const stats = await client.write(["/interface/monitor-traffic", `=interface=${names}`, "=once=yes"]);
-        let maxTotal = 0;
-        for (const s of stats as any[]) {
+      if (maxIface) {
+        const stats = await client.write(["/interface/monitor-traffic", `=interface=${maxIface}`, "=once=yes"]);
+        if (stats && stats.length > 0) {
+           const s = stats[0] as any;
            const rx = parseInt(s["rx-bits-per-second"] || "0");
            const tx = parseInt(s["tx-bits-per-second"] || "0");
            const rxPkts = parseInt(s["rx-packets-per-second"] || "0");
            const txPkts = parseInt(s["tx-packets-per-second"] || "0");
            
-           if (rx >= 0 && tx >= 0) {
-              const total = rx + tx;
-              if (total > maxTotal) {
-                 maxTotal = total;
-                 // In an ISP, Download is always significantly higher than Upload.
-                 if (rx > tx) {
-                    maxRx = rx; maxTx = tx;
-                    maxRxPkts = rxPkts; maxTxPkts = txPkts;
-                 } else {
-                    maxRx = tx; maxTx = rx;
-                    maxRxPkts = txPkts; maxTxPkts = rxPkts;
-                 }
-              }
+           // In an ISP, Download is always significantly higher than Upload.
+           if (rx > tx) {
+              maxRx = rx; maxTx = tx;
+              maxRxPkts = rxPkts; maxTxPkts = txPkts;
+           } else {
+              maxRx = tx; maxTx = rx;
+              maxRxPkts = txPkts; maxTxPkts = rxPkts;
            }
         }
       }
@@ -656,3 +658,5 @@ export async function suspendUsers(usernames: string[], routerId?: number): Prom
     } catch {}
   }
 }
+
+// force reload
