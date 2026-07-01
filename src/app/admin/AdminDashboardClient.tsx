@@ -102,7 +102,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
       }
     };
     fetchResources();
-    const interval = setInterval(fetchResources, 5000); // Real-time auto-refresh every 5s
+    const interval = setInterval(fetchResources, 2000); // Real-time auto-refresh every 5s
     return () => { active = false; clearInterval(interval); };
   }, [refreshTrigger]);
 
@@ -218,24 +218,25 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                   </div>
 
                   {/* Byte Graph */}
-                  <div className="flex-1 w-full relative min-h-[160px] max-h-[200px] bg-[#1C2534] rounded-lg mt-2 overflow-hidden border border-white/5">
+                  <div className="flex-1 w-full relative min-h-[160px] max-h-[200px] bg-[#111111] rounded-lg mt-2 overflow-hidden border border-white/5">
                     <ResponsiveContainer width="100%" height="100%" minHeight={160}>
                       <LineChart data={(trafficHistory[router.routerId] || []).map((d, i) => ({ ...d, index: i }))} margin={{ top: 15, right: 10, left: 10, bottom: 0 }}>
-                        <CartesianGrid stroke="#2f3a4d" vertical={true} horizontal={true} />
+                        <CartesianGrid stroke="#333333" vertical={true} horizontal={true} />
                         <XAxis dataKey="index" type="number" domain={[0, 29]} hide />
                         <YAxis 
-                          tickFormatter={(val) => `${val}`} 
-                          stroke="rgba(255,255,255,0.4)" 
-                          fontSize={10}
-                          domain={[0, 'auto']}
+                          tickFormatter={(val) => val === 0 ? "0 bps" : `${Math.round(val)} Mbps`} 
+                          stroke="#e5e5e5" 
+                          fontSize={11}
+                          domain={[0, 'dataMax']}
+                          tickCount={8}
                           tickLine={false}
                           axisLine={false}
-                          unit=" Mbps"
+                          width={75}
                         />
                         <Tooltip 
-                          contentStyle={{ backgroundColor: "#2a313a", borderColor: "#3f4a59", borderRadius: 4, padding: '4px 6px', fontSize: '11px' }}
+                          contentStyle={{ backgroundColor: "#222", borderColor: "#444", borderRadius: 4, padding: '4px 6px', fontSize: '11px' }}
                           labelStyle={{ display: 'none' }}
-                          formatter={(val, name) => [`${val} Mbps`, name === "download" ? "Rx Packet" : "Tx Packet"]}
+                          formatter={(val, name) => [`${val} Mbps`, name === "download" ? "Rx" : "Tx"]}
                           itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                           isAnimationActive={false}
                         />
@@ -244,11 +245,11 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
                           align="left" 
                           iconType="square" 
                           iconSize={10}
-                          wrapperStyle={{ paddingLeft: '10px', bottom: '-2px' }}
-                          formatter={(value, entry) => <span className="text-gray-300 text-[11px] font-sans ml-1">{entry.value === "Rx" ? "Rx Packet" : "Tx Packet"}</span>} 
+                          wrapperStyle={{ paddingLeft: '75px', bottom: '5px' }}
+                          formatter={(value, entry) => <span className="text-gray-300 text-[11px] font-sans ml-1 mr-2">{entry.value === "Rx" ? "Rx" : "Tx"}</span>} 
                         />
-                        <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={1.5} dot={false} name="Rx" isAnimationActive={false} />
                         <Line type="linear" dataKey="upload" stroke="#0ea5e9" strokeWidth={1.5} dot={false} name="Tx" isAnimationActive={false} />
+                        <Line type="linear" dataKey="download" stroke="#ef4444" strokeWidth={1.5} dot={false} name="Rx" isAnimationActive={false} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
