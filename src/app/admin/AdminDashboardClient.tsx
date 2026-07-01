@@ -57,9 +57,10 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
 
   useEffect(() => {
     let active = true;
+    let timeoutId: NodeJS.Timeout;
     const fetchResources = async () => {
       try {
-        const res = await fetch("/api/admin/dashboard/mikrotik-resources");
+        const res = await fetch(`/api/admin/dashboard/mikrotik-resources?t=${Date.now()}`);
         if (res.ok) {
           const data = await res.json();
           if (active) {
@@ -98,12 +99,14 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
       } catch (e) {
         console.error("Failed to fetch mikrotik resources", e);
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+           setLoading(false);
+           timeoutId = setTimeout(fetchResources, 2000);
+        }
       }
     };
     fetchResources();
-    const interval = setInterval(fetchResources, 2000); // Real-time auto-refresh every 5s
-    return () => { active = false; clearInterval(interval); };
+    return () => { active = false; clearTimeout(timeoutId); };
   }, [refreshTrigger]);
 
   if (loading) {
