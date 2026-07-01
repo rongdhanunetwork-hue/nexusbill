@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, smsLogs } from "@/db/schema";
-import { eq, lt, gt, and, isNotNull } from "drizzle-orm";
+import { eq, lt, gt, and, isNotNull, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 // Secret key to prevent unauthorized access
@@ -153,12 +153,11 @@ export async function GET(req: NextRequest) {
           const { sendSMS } = await import("@/lib/sms");
           const msg = `প্রিয় ${customer.name}, আপনার ইন্টারনেট সংযোগের মেয়াদ শেষ হয়েছে। দয়া করে বিল পরিশোধ করুন বা আপনার রিসেলারকে যোগাযোগ করুন।`;
           
-          const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
           const existingLog = await db.query.smsLogs.findFirst({
             where: and(
               eq(smsLogs.phone, customer.phone),
               eq(smsLogs.message, msg),
-              gt(smsLogs.sentAt, twentyFourHoursAgo)
+              gt(smsLogs.sentAt, sql`NOW() - INTERVAL '24 HOURS'`)
             )
           });
 
@@ -199,12 +198,11 @@ export async function GET(req: NextRequest) {
           : "N/A";
         const msg = `প্রিয় ${customer.name}, আপনার ইন্টারনেট সংযোগের মেয়াদ ${expDate} তারিখে শেষ হবে। সংযোগ চালু রাখতে দ্রুত বিল পরিশোধ করুন।`;
         
-        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         const existingLog = await db.query.smsLogs.findFirst({
           where: and(
             eq(smsLogs.phone, customer.phone),
             eq(smsLogs.message, msg),
-            gt(smsLogs.sentAt, twentyFourHoursAgo)
+            gt(smsLogs.sentAt, sql`NOW() - INTERVAL '24 HOURS'`)
           )
         });
 
