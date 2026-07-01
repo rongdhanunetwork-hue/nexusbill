@@ -91,19 +91,29 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
     let maxTxPkts = 0;
     let maxRxPkts = 0;
     try {
+      const t1 = Date.now();
       const stats1 = await client.write(["/interface/print", "=stats="]);
+      
+      // We aim for ~1000ms, but execution time varies
       await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const t2 = Date.now();
       const stats2 = await client.write(["/interface/print", "=stats="]);
+      
+      const elapsed = Math.max((t2 - t1) / 1000, 0.5); // time delta in seconds
       
       let maxTotal = 0;
       for (const s1 of stats1 as any[]) {
         if (s1.type === "pppoe-in" || s1.type === "bridge" || s1.type?.includes("-in")) continue;
         const s2 = (stats2 as any[]).find((s:any) => s['.id'] === s1['.id']);
         if (s1 && s2) {
-          const rx = (parseInt(s2['rx-byte'] || "0") - parseInt(s1['rx-byte'] || "0")) * 8;
-          const tx = (parseInt(s2['tx-byte'] || "0") - parseInt(s1['tx-byte'] || "0")) * 8;
-          const rxPkts = parseInt(s2['rx-packet'] || "0") - parseInt(s1['rx-packet'] || "0");
-          const txPkts = parseInt(s2['tx-packet'] || "0") - parseInt(s1['tx-packet'] || "0");
+          const rxBytes = parseInt(s2['rx-byte'] || "0") - parseInt(s1['rx-byte'] || "0");
+          const txBytes = parseInt(s2['tx-byte'] || "0") - parseInt(s1['tx-byte'] || "0");
+          
+          const rx = (rxBytes * 8) / elapsed;
+          const tx = (txBytes * 8) / elapsed;
+          const rxPkts = Math.round((parseInt(s2['rx-packet'] || "0") - parseInt(s1['rx-packet'] || "0")) / elapsed);
+          const txPkts = Math.round((parseInt(s2['tx-packet'] || "0") - parseInt(s1['tx-packet'] || "0")) / elapsed);
           
           if (rx >= 0 && tx >= 0) {
              const total = rx + tx;
