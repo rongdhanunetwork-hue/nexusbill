@@ -29,40 +29,18 @@ async function getRouterConfig(routerId?: number) {
   };
 }
 
-const globalClients = new Map<string, RouterOSAPI>();
-
 async function getClient(routerId?: number) {
   const config = await getRouterConfig(routerId);
-  const key = `${config.host}:${config.port}`;
-  
-  if (globalClients.has(key)) {
-     const existing = globalClients.get(key)!;
-     if (existing.connected) {
-        return existing;
-     } else {
-        globalClients.delete(key);
-     }
-  }
-  
   const client = new RouterOSAPI({
     host: config.host,
     port: config.port,
     user: config.user,
     password: config.pass,
     timeout: parseInt(process.env.MIKROTIK_API_TIMEOUT || '8'),
-    keepalive: true
   });
-  
   client.on("error", (err) => {
     console.warn("MikroTik socket error caught:", err.message);
-    globalClients.delete(key);
   });
-  
-  client.on("close", () => {
-     globalClients.delete(key);
-  });
-  
-  globalClients.set(key, client);
   return client;
 }
 
@@ -100,9 +78,6 @@ export interface SystemResource {
   rxBps?: number;
   txPps?: number;
   rxPps?: number;
-  rxBytes?: number;
-  txBytes?: number;
-  timestamp?: number;
 }
 
 export async function getSystemResource(routerId?: number): Promise<SystemResource | null> {
@@ -116,44 +91,40 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
     let maxTxPkts = 0;
     let maxRxPkts = 0;
     try {
-      const ifaces = await client.write(["/interface/print", "=stats="]);
+      const ifaces = await client.write(["/interface/print", "?running=true"]);
       
-      let maxIface = "";
-      let maxBytes = 0;
-      let foundPreferred = false;
-      let targetIface: any = null;
+      // Filter out logical interfaces that aren't usually WANs
+      const validIfaces = (ifaces as any[]).filter((i: any) => 
+        i.type !== "pppoe-in" && i.type !== "bridge" && !i.type?.includes("-in")
+      );
       
-      for (const i of ifaces as any[]) {
-        if (i.name === "SFP-RDN" || i.name.toLowerCase().includes("wan")) {
-           maxIface = i.name;
-           targetIface = i;
-           foundPreferred = true;
-        }
+      // Sort by historical rx-byte to find the most likely WAN candidates (top 5)
+      validIfaces.sort((a, b) => {
+         const bA = parseInt(a["rx-byte"] || "0");
+         const bB = parseInt(b["rx-byte"] || "0");
+         return bB - bA;
+      });
+      
+      const topCandidates = validIfaces.slice(0, 5).map(i => i.name).join(",");
+      
+      if (topCandidates.length > 0) {
+        const stats = await client.write(["/interface/monitor-traffic", `=interface=${topCandidates}`, "=once=yes"]);
         
-        if (!foundPreferred && i.type !== "pppoe-in" && i.type !== "bridge" && !i.type?.includes("-in")) {
-           const b = parseInt(i["rx-byte"] || "0");
-           if (b > maxBytes) {
-              maxBytes = b;
-              maxIface = i.name;
-              targetIface = i;
+        let highestCurrentRx = -1;
+        for (const s of stats as any[]) {
+           const rx = parseInt(s["rx-bits-per-second"] || "0");
+           const tx = parseInt(s["tx-bits-per-second"] || "0");
+           const rxPkts = parseInt(s["rx-packets-per-second"] || "0");
+           const txPkts = parseInt(s["tx-packets-per-second"] || "0");
+           
+           if (rx > highestCurrentRx) {
+              highestCurrentRx = rx;
+              maxRx = rx; 
+              maxTx = tx; // DO NOT swap Rx and Tx to preserve actual graph data
+              maxRxPkts = rxPkts; 
+              maxTxPkts = txPkts;
            }
         }
-      }
-        
-      if (targetIface) {
-         const rx = parseInt(targetIface["rx-byte"] || "0");
-         const tx = parseInt(targetIface["tx-byte"] || "0");
-         const rxPkts = parseInt(targetIface["rx-packet"] || "0");
-         const txPkts = parseInt(targetIface["tx-packet"] || "0");
-         
-         // In an ISP, Download is always significantly higher than Upload.
-         if (rx > tx) {
-            maxRx = rx; maxTx = tx;
-            maxRxPkts = rxPkts; maxTxPkts = txPkts;
-         } else {
-            maxRx = tx; maxTx = rx;
-            maxRxPkts = txPkts; maxTxPkts = rxPkts;
-         }
       }
     } catch (trafficErr) {
        console.error("Traffic calc error:", trafficErr);
@@ -161,11 +132,11 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
 
     if (data && data.length > 0) {
       const res = data[0] as unknown as SystemResource;
-      res.rxBytes = maxRx;
-      res.txBytes = maxTx;
+      res.rxBps = maxRx;
+      res.txBps = maxTx;
       res.rxPps = maxRxPkts;
       res.txPps = maxTxPkts;
-      res.timestamp = Date.now();
+      res.txBps = maxTx;
       return res;
     }
     return null;
@@ -173,7 +144,7 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
     console.warn('getSystemResource error:', err);
     return null;
   } finally {
-    try { /* await client.close(); */ } catch {}
+    try { await client.close(); } catch {}
   }
 }
 
@@ -187,7 +158,7 @@ export async function getPppoeSecrets(routerId?: number): Promise<PppoeSecret[]>
     return data as unknown as PppoeSecret[];
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -219,7 +190,7 @@ export async function createPppoeSecret(data: {
     return created[0] as unknown as PppoeSecret;
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -244,7 +215,7 @@ export async function updatePppoeSecret(id: string, data: Partial<PppoeSecret>, 
     await client.write(cmd);
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -259,7 +230,7 @@ export async function deletePppoeSecret(id: string, routerId?: number): Promise<
     ]);
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -275,7 +246,7 @@ export async function enablePppoeSecret(id: string, routerId?: number): Promise<
     ]);
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -291,7 +262,7 @@ export async function disablePppoeSecret(id: string, routerId?: number): Promise
     ]);
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -306,7 +277,7 @@ export async function getPppoeActive(routerId?: number): Promise<PppoeActive[]> 
     return data as unknown as PppoeActive[];
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -319,7 +290,7 @@ export async function getPppoeInterfaces(routerId?: number): Promise<any[]> {
     return data as any[];
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -343,7 +314,7 @@ export async function getPppoeProfiles(routerId?: number): Promise<PppoeProfile[
     return data as unknown as PppoeProfile[];
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -369,7 +340,7 @@ export async function createPppoeProfile(data: {
     return created[0] as unknown as PppoeProfile;
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -394,7 +365,7 @@ export async function updatePppoeProfile(id: string, data: {
     await client.write(cmd);
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -409,7 +380,7 @@ export async function deletePppoeProfile(id: string, routerId?: number): Promise
     ]);
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -424,7 +395,7 @@ export async function disconnectPppoeActive(id: string, routerId?: number): Prom
     ]);
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -438,7 +409,7 @@ export async function rebootRouter(routerId?: number): Promise<void> {
     // Connection closing is expected during reboot command
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -500,7 +471,7 @@ export async function getPppoeTraffic(username: string, routerId?: number): Prom
     return null;
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -515,7 +486,7 @@ export async function testConnection(routerId?: number): Promise<{ ok: boolean; 
     await client.connect();
     const data = await client.write("/system/resource/print");
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
     return { ok: true, version: (data[0] as any)?.version };
   } catch (err) {
@@ -555,7 +526,7 @@ export async function getRouterDetails(routerId?: number): Promise<{
     };
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
@@ -616,7 +587,7 @@ export async function findDeviceOnRouter(routerId: number, opts: { ip?: string; 
     console.warn('findDeviceOnRouter error:', err);
     return null;
   } finally {
-    try { /* await client.close(); */ } catch {}
+    try { await client.close(); } catch {}
   }
 }
 
@@ -685,9 +656,11 @@ export async function suspendUsers(usernames: string[], routerId?: number): Prom
     console.warn("suspendUsers error:", err);
   } finally {
     try {
-      // await client.close(); // cached
+      await client.close();
     } catch {}
   }
 }
 
 // force reload
+
+// force reload 3
