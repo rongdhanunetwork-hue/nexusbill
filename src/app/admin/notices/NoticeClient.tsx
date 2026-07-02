@@ -93,9 +93,9 @@ export default function NoticeClient({ notices }: { notices: any[] }) {
 
   return (
     <div className="grid xl:grid-cols-2 gap-8">
-      <div className="space-y-6">
+      <div className="space-y-6 overflow-hidden">
         <h1 className="text-2xl font-bold text-white tracking-wide">Notice System</h1>
-        <form onSubmit={handlePublish} className="glass-card p-6 md:p-8 space-y-5">
+        <form onSubmit={handlePublish} className="glass-card p-6 md:p-8 space-y-5 overflow-hidden">
           <div>
             <label className="block text-sm text-gray-300 mb-2">Notice Type</label>
             <select name="type" className="w-full glass-input px-4 py-3 bg-slate-800">
@@ -114,13 +114,13 @@ export default function NoticeClient({ notices }: { notices: any[] }) {
           </div>
           <div>
             <label className="block text-sm text-gray-300 mb-2">Attach Image (Optional)</label>
-            <div className="w-full glass-input px-4 py-3 bg-slate-800 flex items-center gap-3">
-              <ImageIcon size={18} className="text-gray-400" />
+            <div className="w-full glass-input px-4 py-3 bg-slate-800 flex items-center gap-3 overflow-hidden">
+              <ImageIcon size={18} className="text-gray-400 shrink-0" />
               <input 
                 type="file" 
                 accept="image/*"
                 onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                className="text-sm text-gray-300 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:bg-white/10 file:text-white hover:file:bg-white/20"
+                className="text-sm text-gray-300 w-full max-w-full overflow-hidden text-ellipsis file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:bg-white/10 file:text-white hover:file:bg-white/20"
               />
             </div>
             {imageFile && (
@@ -161,7 +161,7 @@ export default function NoticeClient({ notices }: { notices: any[] }) {
                 type="button"
                 onClick={() => handleDelete(notice.id)}
                 disabled={deletingId === notice.id}
-                className="absolute top-4 right-4 p-2 bg-red-500/10 hover:bg-red-500/30 text-red-400 rounded-lg transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50 z-20"
+                className="absolute top-4 right-4 p-2 bg-red-500/10 hover:bg-red-500/30 text-red-400 rounded-lg transition-all opacity-100 disabled:opacity-50 z-20"
                 title="Delete Notice"
               >
                 {deletingId === notice.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}

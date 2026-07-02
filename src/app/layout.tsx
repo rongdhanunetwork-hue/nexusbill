@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Poppins } from "next/font/google";
 import "./globals.css";
@@ -15,6 +15,14 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Rongdhunu DOT Net | Billing Software",
   description: "Advanced ISP Billing and Management System",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#0f172a",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
