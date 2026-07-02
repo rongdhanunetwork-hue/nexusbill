@@ -30,7 +30,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const [notifications, setNotifications] = useState<{ id: string; text: string; link: string }[]>([]);
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
-  const [customerInfo, setCustomerInfo] = useState<{ name: string; photoUrl: string | null } | null>(null);
+  const [customerInfo, setCustomerInfo] = useState<{ name: string; photoUrl: string | null; systemSettings?: Record<string, string> } | null>(null);
 
   useEffect(() => {
     fetch("/api/customer/me").then(r => r.json()).then(data => {
@@ -52,6 +52,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   }
 
   const pageTitle = navigation.find(n => n.href === pathname)?.name || "Dashboard";
+  const sysSettings = customerInfo?.systemSettings || {};
 
   return (
     <div className="min-h-screen flex text-slate-100 w-full" style={{ background: "linear-gradient(135deg, #0d1117 0%, #161b27 100%)" }}>
@@ -68,14 +69,25 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       <div className={clsx(
         "fixed inset-y-0 left-0 z-30 flex flex-col border-r transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )} style={{ width: 210, background: "#0d1117", borderColor: "rgba(255,255,255,0.06)" }}>
+      )} style={{ width: 230, background: "#0d1117", borderColor: "rgba(255,255,255,0.06)" }}>
 
         <div className="px-4 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          <div>
-            <div className="text-base font-extrabold tracking-tight" style={{ color: "#39ff14", letterSpacing: "-0.02em" }}>ISP Portal</div>
-            <div className="text-[10px] font-semibold mt-0.5" style={{ color: "#16a34a" }}>◉ Customer Panel</div>
+          <div className="flex items-center gap-3">
+            {sysSettings.website_logo && (
+              <img src={sysSettings.website_logo} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white/5 p-1 border border-white/10 shrink-0" />
+            )}
+            <div className="flex flex-col overflow-hidden">
+              <div className="text-sm font-extrabold tracking-tight truncate" style={{ color: "#39ff14", letterSpacing: "-0.02em" }}>
+                {sysSettings.system_name || "ISP Portal"}
+              </div>
+              <div className="text-[10px] font-semibold mt-0.5 text-gray-500">
+                ◉ Customer Panel
+              </div>
+            </div>
           </div>
-          <button className="lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}><X size={20} /></button>
+          <button className="lg:hidden text-gray-500 hover:text-white shrink-0 ml-2" onClick={() => setSidebarOpen(false)}>
+            <X size={20} />
+          </button>
         </div>
 
         {/* Customer info chip */}

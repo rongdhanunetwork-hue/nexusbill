@@ -72,6 +72,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [hasUnread, setHasUnread] = useState(false);
   const [adminProfile, setAdminProfile] = useState<{ name: string; photoUrl: string | null; role?: string | null; impersonatorId?: number | null } | null>(null);
   const [switchingBack, setSwitchingBack] = useState(false);
+  const [systemSettings, setSystemSettings] = useState<{ system_name?: string; website_logo?: string }>({});
 
   async function handleSwitchBack() {
     setSwitchingBack(true);
@@ -121,6 +122,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     fetch("/api/admin/profile").then(r => r.json()).then(data => {
       if (data?.name) setAdminProfile(data);
+    }).catch(() => {});
+    
+    fetch("/api/admin/settings").then(r => r.json()).then(data => {
+      if (data && !data.error) setSystemSettings(data);
     }).catch(() => {});
   }, []);
 
@@ -177,15 +182,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Brand */}
         <div className="px-4 py-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          <div>
-            <div className="text-base font-extrabold tracking-tight" style={{ color: "#00f3ff", letterSpacing: "-0.02em" }}>
-              Rongdhunu DOT Net
-            </div>
-            <div className="text-[10px] font-semibold mt-0.5" style={{ color: "#8b5cf6" }}>
-              ◉ Admin Panel
+          <div className="flex items-center gap-3">
+            {systemSettings.website_logo && (
+              <img src={systemSettings.website_logo} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white/5 p-1 border border-white/10 shrink-0" />
+            )}
+            <div className="flex flex-col overflow-hidden">
+              <div className="text-sm font-extrabold tracking-tight truncate" style={{ color: "#00f3ff", letterSpacing: "-0.02em" }}>
+                {systemSettings.system_name || "Rongdhunu DOT Net"}
+              </div>
+              <div className="text-[10px] font-semibold mt-0.5" style={{ color: "#8b5cf6" }}>
+                ◉ Admin Panel
+              </div>
             </div>
           </div>
-          <button className="lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="lg:hidden text-gray-500 hover:text-white shrink-0 ml-2" onClick={() => setSidebarOpen(false)}>
             <X size={20} />
           </button>
         </div>
