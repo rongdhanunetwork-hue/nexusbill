@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft, Save, Loader2, Compass, AlertCircle, RefreshCw, Eye, EyeOff } from "lucide-react";
 import ImageUploadField from "@/components/ui/ImageUploadField";
+import { BD_LOCATIONS } from "@/lib/bd-locations";
 
 interface Package {
   id: number;
