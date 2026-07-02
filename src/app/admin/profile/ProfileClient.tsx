@@ -1,5 +1,7 @@
 "use client";
 
+import ImageUploadField from "@/components/ui/ImageUploadField";
+
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import QRCode from "qrcode";
@@ -362,32 +364,12 @@ END:VCARD`;
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-300 mb-2">Company Logo</label>
-                    <div className="flex gap-4 items-center">
-                      {companyLogo && (
-                        <img src={companyLogo} alt="Logo" className="w-12 h-12 object-cover rounded bg-white/10" />
-                      )}
-                      <input
-                        type="file"
-                        id="company-logo-upload"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            setUploadingImage(true);
-                            const url = await handleFileUpload(e.target.files[0]);
-                            if (url) setCompanyLogo(url);
-                            setUploadingImage(false);
-                          }
-                        }}
-                      />
-                      <label 
-                        htmlFor="company-logo-upload"
-                        className="cursor-pointer px-4 py-2 rounded-xl text-sm font-semibold bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 transition-all text-center flex-1"
-                      >
-                        {uploadingImage ? "Uploading..." : "Choose File"}
-                      </label>
-                    </div>
+                    <ImageUploadField
+                      label="Company Logo"
+                      name="company_logo"
+                      defaultValue={companyLogo || ""}
+                      onChange={(val) => setCompanyLogo(val)}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm text-gray-300 mb-2">Mobile Number</label>
@@ -400,36 +382,12 @@ END:VCARD`;
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-300 mb-2">Profile Image</label>
-                    <div className="flex gap-4 items-center">
-                      {photoUrl ? (
-                        <img src={photoUrl} alt="Avatar" className="w-12 h-12 rounded-full object-cover bg-white/10" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-neon-blue to-purple-500 flex items-center justify-center text-white font-bold shrink-0 text-xl">
-                          {profileName.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <input
-                        type="file"
-                        id="profile-image-upload"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            setUploadingImage(true);
-                            const url = await handleFileUpload(e.target.files[0]);
-                            if (url) setPhotoUrl(url);
-                            setUploadingImage(false);
-                          }
-                        }}
-                      />
-                      <label 
-                        htmlFor="profile-image-upload"
-                        className="cursor-pointer px-4 py-2 rounded-xl text-sm font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 transition-all text-center flex-1"
-                      >
-                        {uploadingImage ? "Uploading..." : "Choose File"}
-                      </label>
-                    </div>
+                    <ImageUploadField
+                      label="Profile Image"
+                      name="profile_image"
+                      defaultValue={photoUrl || ""}
+                      onChange={(val) => setPhotoUrl(val)}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm text-gray-300 mb-2">E-mail Address</label>
