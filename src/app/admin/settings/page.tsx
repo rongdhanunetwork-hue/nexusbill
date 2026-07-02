@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Save, Shield, Globe, Phone, Loader2, CheckCircle2, Eye, EyeOff, MessageSquare, Clock, Send, AlertTriangle, Download } from "lucide-react";
+import ImageUploadField from "@/components/ui/ImageUploadField";
 
 interface SettingsMap {
   bkash_number?: string;
@@ -174,11 +175,11 @@ export default function SettingsPage() {
             defaultValue={settings.system_name || "Rongdhunu DOT Net"}
             placeholder="e.g. My ISP Name"
           />
-          <Field
-            label="Website Logo URL"
+          <ImageUploadField
+            label="Website Logo"
             name="website_logo"
             defaultValue={settings.website_logo || ""}
-            placeholder="https://example.com/logo.png"
+            onChange={(val) => setSettings({ ...settings, website_logo: val })}
           />
         </motion.div>
 

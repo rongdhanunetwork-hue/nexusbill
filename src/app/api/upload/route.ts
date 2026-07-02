@@ -43,12 +43,17 @@ export async function POST(req: Request) {
     const filepath = join(uploadDir, filename);
 
     if (["jpg", "jpeg", "png", "webp"].includes(ext)) {
-      const sharp = require("sharp");
-      const resizedBuffer = await sharp(buffer)
-        .resize({ width: 800, height: 800, fit: "inside", withoutEnlargement: true })
-        .jpeg({ quality: 80 })
-        .toBuffer();
-      await writeFile(filepath, resizedBuffer);
+      try {
+        const sharp = require("sharp");
+        const resizedBuffer = await sharp(buffer)
+          .resize({ width: 800, height: 800, fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+        await writeFile(filepath, resizedBuffer);
+      } catch (sharpError) {
+        console.warn("Sharp resize failed, saving original image:", sharpError);
+        await writeFile(filepath, buffer);
+      }
     } else {
       await writeFile(filepath, buffer);
     }
