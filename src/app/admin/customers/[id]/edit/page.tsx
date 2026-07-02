@@ -58,17 +58,6 @@ interface Customer {
   note: string | null;
 }
 
-const DISTRICT_THANAS: Record<string, string[]> = {
-  Dhaka: ["Mirpur", "Uttara", "Gulshan", "Dhanmondi", "Badda", "Mohammadpur", "Khilgaon", "Tejgaon", "Ramna", "Savar", "Keraniganj", "Dhamrai"],
-  Chittagong: ["Panchlaish", "Double Mooring", "Kotwali", "Halishahar", "Patenga", "Hathazari", "Sitakunda", "Rangunia", "Patiya"],
-  Sylhet: ["Kotwali", "Shahparan", "South Surma", "Jaintiapur", "Beanibazar", "Golapganj", "Sreemangal"],
-  Rajshahi: ["Boalia", "Rajpara", "Motihar", "Shah Makhdum", "Paba", "Bagha", "Godagari"],
-  Khulna: ["Kotwali", "Sonadanga", "Khalishpur", "Daulatpur", "Khan Jahan Ali", "Rupsha"],
-  Barisal: ["Kotwali", "Airport", "South Surma", "Bakerganj", "Wazirpur"],
-  Rangpur: ["Kotwali", "Mithapukur", "Pirganj", "Kaunia", "Badarganj"],
-  Mymensingh: ["Kotwali", "Muktagachha", "Bhaluka", "Trishal", "Gafargaon"]
-};
-
 export default function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
@@ -89,6 +78,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   const [discount, setDiscount] = useState<number>(0);
   const [gpsCoordinates, setGpsCoordinates] = useState("");
   const [fetchingGps, setFetchingGps] = useState(false);
+  const [division, setDivision] = useState("");
   const [district, setDistrict] = useState("");
   const [thana, setThana] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -117,6 +107,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       }
       setDiscount(customerData.discount ? parseFloat(customerData.discount) : 0);
       setGpsCoordinates(customerData.gpsCoordinates || "");
+      setDivision(customerData.division || "");
       setDistrict(customerData.district || "");
       setThana(customerData.thana || "");
       setLoading(false);
@@ -169,6 +160,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       pppoeUsername: String(form.get("pppoeUsername") || "").trim(),
       photoUrl: String(form.get("photoUrl") || "").trim(),
       address: String(form.get("address") || "").trim(),
+      division,
       district,
       thana,
       packageId: selectedPackage ? selectedPackage.id : null,
@@ -307,17 +299,33 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
               <Field label="Address" name="address" defaultValue={customer.address || ""} placeholder="House, Street, Area info" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Division *</label>
+                <select
+                  required
+                  value={division}
+                  onChange={(e) => { setDivision(e.target.value); setDistrict(""); setThana(""); }}
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                >
+                  <option value="" className="bg-slate-955">-- Select Division --</option>
+                  {Object.keys(BD_LOCATIONS).map(d => (
+                    <option key={d} value={d} className="bg-slate-955">{d}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">District *</label>
                 <select
                   required
                   value={district}
                   onChange={(e) => { setDistrict(e.target.value); setThana(""); }}
-                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                  disabled={!division}
+                  className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none disabled:opacity-50"
                 >
                   <option value="" className="bg-slate-955">-- Select District --</option>
-                  {Object.keys(DISTRICT_THANAS).map(d => (
+                  {division && Object.keys(BD_LOCATIONS[division] || {}).map(d => (
                     <option key={d} value={d} className="bg-slate-955">{d}</option>
                   ))}
                 </select>
@@ -333,7 +341,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
                   className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none disabled:opacity-50"
                 >
                   <option value="" className="bg-slate-955">-- Select Thana --</option>
-                  {district && DISTRICT_THANAS[district].map(t => (
+                  {division && district && (BD_LOCATIONS[division][district] || []).map(t => (
                     <option key={t} value={t} className="bg-slate-955">{t}</option>
                   ))}
                 </select>
