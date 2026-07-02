@@ -188,6 +188,16 @@ export async function POST(req: Request) {
 
     await insertAuditLog(session.userId, "RECHARGE_CUSTOMER", `Recharged customer ${customer.name} with amount ${amount}. New expiry: ${newExpireDate.toLocaleString()}`);
 
+    // Send SMS notification
+    try {
+      const { sendSMS } = await import("@/lib/sms");
+      const expDateStr = newExpireDate.toLocaleDateString("en-BD");
+      const msg = `প্রিয় ${customer.name}, আপনার ইন্টারনেট সংযোগ সফলভাবে রিচার্জ হয়েছে। নতুন মেয়াদ: ${expDateStr}। ধন্যবাদ।`;
+      await sendSMS(customer.phone, msg);
+    } catch (smsError) {
+      console.error("Recharge SMS Error:", smsError);
+    }
+
     return NextResponse.json({
       success: true,
       message: `Recharged successfully! Expire Date set to ${newExpireDate.toLocaleString()}`

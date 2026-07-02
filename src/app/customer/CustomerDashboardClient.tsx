@@ -177,7 +177,7 @@ export default function CustomerDashboardClient({
         
         return actualData;
       });
-    }, 1000);
+    }, 5000);
 
     return () => {
       active = false;

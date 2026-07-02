@@ -15,6 +15,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    // Track sent messages in this execution to prevent duplicates for accounts sharing a phone
+    const sentSmsTracker = new Set<string>();
 
     const { packages } = await import("@/db/schema");
     const expiredCustomersRaw = await db
@@ -153,15 +156,23 @@ export async function GET(req: NextRequest) {
           const { sendSMS } = await import("@/lib/sms");
           const msg = `প্রিয় ${customer.name}, আপনার ইন্টারনেট সংযোগের মেয়াদ শেষ হয়েছে। দয়া করে বিল পরিশোধ করুন বা আপনার রিসেলারকে যোগাযোগ করুন।`;
           
+          const trackingKey = `${customer.phone}-${msg}`;
+          if (sentSmsTracker.has(trackingKey)) {
+             continue;
+          }
+
           const existingLog = await db.query.smsLogs.findFirst({
             where: and(
               eq(smsLogs.phone, customer.phone),
-              eq(smsLogs.message, msg),
-              gt(smsLogs.sentAt, sql`NOW() - INTERVAL '24 HOURS'`)
+              // We use like() instead of strict eq() for the message because date strings 
+              // can vary based on timezone, which was causing false negatives and duplicate SMS sends.
+              sql`${smsLogs.message} LIKE 'প্রিয় %আপনার ইন্টারনেট সংযোগের মেয়াদ শেষ হয়েছে%'`,
+              gt(smsLogs.sentAt, twentyFourHoursAgo)
             )
           });
 
           if (!existingLog) {
+            sentSmsTracker.add(trackingKey);
             await sendSMS(customer.phone, msg);
             smsCount++;
           }
@@ -198,15 +209,23 @@ export async function GET(req: NextRequest) {
           : "N/A";
         const msg = `প্রিয় ${customer.name}, আপনার ইন্টারনেট সংযোগের মেয়াদ ${expDate} তারিখে শেষ হবে। সংযোগ চালু রাখতে দ্রুত বিল পরিশোধ করুন।`;
         
+        const trackingKey = `${customer.phone}-${msg}`;
+        if (sentSmsTracker.has(trackingKey)) {
+           continue;
+        }
+
         const existingLog = await db.query.smsLogs.findFirst({
           where: and(
             eq(smsLogs.phone, customer.phone),
-            eq(smsLogs.message, msg),
-            gt(smsLogs.sentAt, sql`NOW() - INTERVAL '24 HOURS'`)
+            // We use like() instead of strict eq() for the message because date strings 
+            // can vary based on timezone, which was causing false negatives and duplicate SMS sends.
+            sql`${smsLogs.message} LIKE 'প্রিয় %আপনার ইন্টারনেট সংযোগের মেয়াদ % তারিখে শেষ হবে%'`,
+            gt(smsLogs.sentAt, twentyFourHoursAgo)
           )
         });
 
         if (!existingLog) {
+          sentSmsTracker.add(trackingKey);
           await sendSMS(customer.phone, msg);
           reminderCount++;
         }

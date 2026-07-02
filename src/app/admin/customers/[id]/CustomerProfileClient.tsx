@@ -432,7 +432,7 @@ useEffect(() => {
         
         return actualData;
       });
-    }, 1000);
+    }, 5000);
     return () => { active = false; clearInterval(interval); };
   }, [customer.id, customer.status]);
 
