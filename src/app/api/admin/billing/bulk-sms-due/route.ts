@@ -27,17 +27,23 @@ export async function POST(req: NextRequest) {
 
     let sent = 0;
     let failed = 0;
+    let skipped = 0;
 
     for (const [, customer] of uniqueCustomers) {
       const msg = `প্রিয় ${customer.name}, আপনার ইন্টারনেট বিল ৳${customer.amount} পরিশোধ করা হয়নি। দয়া করে দ্রুত বিল পরিশোধ করুন। সংযোগ বিচ্ছিন্ন হওয়ার আগেই পেমেন্ট করুন।`;
       const result = await sendSMS(customer.phone, msg);
-      if (result.success) sent++;
-      else failed++;
+      if (result.success) {
+        sent++;
+      } else if (result.error?.includes("Duplicate prevented")) {
+        skipped++;
+      } else {
+        failed++;
+      }
       // Avoid API rate limit
       await new Promise((r) => setTimeout(r, 100));
     }
 
-    return NextResponse.json({ success: true, sent, failed, total: uniqueCustomers.size });
+    return NextResponse.json({ success: true, sent, failed, skipped, total: uniqueCustomers.size });
   } catch (error) {
     return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
   }

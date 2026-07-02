@@ -101,12 +101,16 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
   const netProfit = totalIncome - totalExpenses;
 
   async function handleBulkSMS() {
+    if (bulkSmsLoading) return;
     setBulkSmsLoading(true);
     setBulkSmsResult(null);
     try {
       const res = await fetch("/api/admin/billing/bulk-sms-due", { method: "POST" });
       const data = await res.json();
-      setBulkSmsResult(`✅ SMS পাঠানো হয়েছে: ${data.sent} জন | ব্যর্থ: ${data.failed} জন`);
+      let msg = `✅ SMS পাঠানো হয়েছে: ${data.sent} জন`;
+      if (data.skipped > 0) msg += ` | স্কিপড (গত ২৪ ঘণ্টায় পাঠানো হয়েছে): ${data.skipped} জন`;
+      if (data.failed > 0) msg += ` | ব্যর্থ: ${data.failed} জন`;
+      setBulkSmsResult(msg);
     } catch {
       setBulkSmsResult("❌ SMS পাঠাতে সমস্যা হয়েছে");
     }

@@ -6,7 +6,7 @@
 
 import { db } from "@/db";
 import { settings, smsLogs, smsTemplates as dbSmsTemplates, users } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte } from "drizzle-orm";
 
 interface SMSResult {
   success: boolean;
@@ -186,6 +186,21 @@ export async function sendSMS(
   }
 
   try {
+    // Prevent duplicate SMS sent to the same phone within 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentDuplicate = await db.query.smsLogs.findFirst({
+      where: and(
+        eq(smsLogs.phone, phone),
+        eq(smsLogs.message, message),
+        gte(smsLogs.sentAt, twentyFourHoursAgo)
+      )
+    });
+
+    if (recentDuplicate) {
+      console.log(`[SMS] Prevented duplicate SMS to ${phone} within 24 hours.`);
+      return { success: false, error: "Duplicate prevented (24h limit)" };
+    }
+
     // Always use adminId = 1 for global SMS settings (shared system)
     const targetAdminId = 1;
 
