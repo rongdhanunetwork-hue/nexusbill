@@ -122,10 +122,11 @@ export async function GET(req: NextRequest) {
         }
 
         // If Mikrotik update failed (e.g. router offline due to power cut), 
-        // we STILL mark them as expired in the DB. The Self-Healing Sync background task
-        // will automatically disconnect them from Mikrotik when the router comes back online!
+        // we DO NOT mark them as expired in the DB. The Self-Healing Sync background task
+        // will keep retrying to disconnect them from Mikrotik since their status is still 'active'.
         if (!mikrotikSuccess) {
-           console.warn(`[Cron] Mikrotik sync failed for ${customer.name}, but continuing with DB expiration.`);
+           console.warn(`[Cron] Mikrotik sync failed for ${customer.name}, skipping DB expiration so Self-Healing Sync will retry!`);
+           continue; // Skip the rest of the loop for this user so they stay "active"
         }
 
         // Expiration Logic in DB (Only happens if Mikrotik was successful or not needed)

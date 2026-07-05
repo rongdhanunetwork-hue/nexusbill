@@ -358,6 +358,8 @@ export async function checkAndSuspendExpiredUsers() {
       usersByRouter[rId].push(user);
     }
 
+    const successfullySuspendedIds = new Set<number>();
+
     for (const [routerIdStr, rUsers] of Object.entries(usersByRouter)) {
       const routerId = Number(routerIdStr) || undefined;
       const pppoeUsernames = rUsers
@@ -367,16 +369,26 @@ export async function checkAndSuspendExpiredUsers() {
       if (pppoeUsernames.length > 0) {
         try {
           await suspendUsers(pppoeUsernames, routerId);
+          // If no error thrown, assume success for all users on this router
+          for (const u of rUsers) successfullySuspendedIds.add(u.id);
         } catch (e) {
           console.warn(`[Expiration Checker] Failed to suspend users on router ${routerId}:`, e);
         }
+      } else {
+        // Users without PPPoE username can be marked expired immediately
+        for (const u of rUsers) successfullySuspendedIds.add(u.id);
       }
     }
 
     const { invoices } = await import("@/db/schema");
 
-    // Update database status to "expired" for these users and generate unpaid invoices
+    // Update database status to "expired" ONLY for successfully suspended users
     for (const user of expiredUsers) {
+      if (!successfullySuspendedIds.has(user.id)) {
+        console.warn(`[Expiration Checker] Skipping DB expiration for ${user.name} because Mikrotik suspension failed.`);
+        continue;
+      }
+
       await db
         .update(users)
         .set({ status: "expired" })
