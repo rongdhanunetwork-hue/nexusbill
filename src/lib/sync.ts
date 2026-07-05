@@ -95,19 +95,40 @@ export async function syncMikrotikSecrets(passedSecrets?: PppoeSecret[], routerI
           }
 
           // ENFORCE DB STATUS ON MIKROTIK (Self-Healing)
-          const routerExpired = secret.disabled === "true";
-          const dbExpired = exists.status === "expired";
+          const isRouterProfileExpired = secret.profile?.toLowerCase() === "expired";
+          const isRouterDisabled = secret.disabled === "true";
+          const isDbExpired = exists.status === "expired";
           
-          if (routerExpired !== dbExpired) {
-            console.log(`[Sync Enforcer] Fixing status for ${secret.name}. DB is ${exists.status}, Router is disabled=${routerExpired}`);
+          let needsFix = false;
+          let newProfile = secret.profile;
+          let newDisabled = "no";
+
+          if (isDbExpired && (!isRouterProfileExpired || isRouterDisabled)) {
+            needsFix = true;
+            newProfile = "Expired";
+            newDisabled = "no"; // Must not be disabled
+          } else if (!isDbExpired && (isRouterProfileExpired || isRouterDisabled)) {
+            needsFix = true;
+            // Since they are active, let syncCustomerToMikrotik calculate their correct package profile
+            // For now just fix disabled status, the proper profile sync will happen elsewhere if needed,
+            // or we just remove the expired profile if it was set
+            newDisabled = "no";
+          }
+
+          if (needsFix) {
+            console.log(`[Sync Enforcer] Fixing status for ${secret.name}. DB is ${exists.status}, Router profile=${secret.profile}, disabled=${isRouterDisabled}`);
             try {
-              await updatePppoeSecret(secret[".id"], { disabled: dbExpired ? "yes" : "no" }, finalRouterId || undefined);
-              
-              if (dbExpired) {
+              if (isDbExpired) {
+                await updatePppoeSecret(secret[".id"], { profile: "Expired", disabled: "no" }, finalRouterId || undefined);
+                
                 // Kick them out immediately if they should be expired
                 const activeSessions = await getPppoeActive(finalRouterId || undefined);
                 const session = activeSessions.find(s => s.name.toLowerCase() === secret.name.toLowerCase());
                 if (session) await disconnectPppoeActive(session[".id"], finalRouterId || undefined);
+              } else {
+                // If they shouldn't be expired, just ensure they are enabled
+                // It's safer to re-sync them fully to get correct profile
+                await syncCustomerToMikrotik(secret.name, undefined, exists.packageId, exists.status, finalRouterId);
               }
             } catch (err) {
               console.warn(`[Sync Enforcer] Failed to fix status for ${secret.name}:`, err);
@@ -222,7 +243,11 @@ export async function syncCustomerToMikrotik(
       }
     }
 
-    const isDisabled = (status && status !== "active" && status !== "online") ? "true" : "false";
+    if (status && status !== "active" && status !== "online") {
+      profile = "Expired";
+    }
+
+    const isDisabled = "false"; // Never actually disable them from logging in, just give them Expired profile
 
     if (existingSecret) {
       // Update existing secret on MikroTik
@@ -363,13 +388,15 @@ export async function checkAndSuspendExpiredUsers() {
 
     for (const [routerIdStr, rUsers] of Object.entries(usersByRouter)) {
       const routerId = Number(routerIdStr) || undefined;
-      const pppoeUsernames = rUsers
-        .map(u => u.pppoeUsername)
-        .filter((username): username is string => !!username);
+      const usersToSuspend = rUsers.map(u => ({
+        pppoeUsername: u.pppoeUsername,
+        ipAddress: u.ipAddress,
+        type: u.customerType
+      })).filter(u => !!u.pppoeUsername || (u.type === 'static' && !!u.ipAddress));
 
-      if (pppoeUsernames.length > 0) {
+      if (usersToSuspend.length > 0) {
         try {
-          await suspendUsers(pppoeUsernames, routerId);
+          await suspendUsers(usersToSuspend, routerId);
           // If no error thrown, assume success for all users on this router
           for (const u of rUsers) successfullySuspendedIds.add(u.id);
         } catch (e) {
@@ -536,8 +563,7 @@ async function trackRouterUsage(routerId?: number) {
       if ((user.status && user.status !== "active" && user.status !== "online") || isExpired) {
         console.log(`[Self-Healing] Disconnecting ${username} because DB status is '${user.status}' or they are expired.`);
         try {
-          await disconnectPppoeActive(session[".id"], routerId);
-          // ensure secret is disabled
+          // ensure secret is disabled (this function also kicks active sessions safely)
           await syncCustomerToMikrotik(username, undefined, undefined, "expired", routerId);
         } catch (e) {
           console.warn(`[Self-Healing] Failed to kick ${username}:`, e);

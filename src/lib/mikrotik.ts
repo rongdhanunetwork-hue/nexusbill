@@ -615,49 +615,100 @@ export async function findDeviceAcrossRouters(opts: { ip?: string; mac?: string 
   return null;
 }
 
-export async function suspendUsers(usernames: string[], routerId?: number): Promise<void> {
-  if (usernames.length === 0) return;
-  const client = await getClient(routerId);
-  try {
-    await client.connect();
-    const secrets = await client.write("/ppp/secret/print") as any[];
-    const active = await client.write("/ppp/active/print") as any[];
+export async function suspendUsers(
+  usersToSuspend: { pppoeUsername?: string | null; ipAddress?: string | null; type?: string | null }[], 
+  routerId?: number
+): Promise<void> {
+  if (usersToSuspend.length === 0) return;
+  
+  const maxRetries = 3;
+  let attempt = 0;
+  let success = false;
 
-    const lowerUsernames = usernames.map(u => u.toLowerCase());
+  while (attempt < maxRetries && !success) {
+    attempt++;
+    const client = await getClient(routerId);
+    try {
+      await client.connect();
+      const secrets = await client.write("/ppp/secret/print") as any[];
+      const active = await client.write("/ppp/active/print") as any[];
 
-    for (const username of lowerUsernames) {
-      const secret = secrets.find(s => s.name.toLowerCase() === username);
-      if (secret && secret.disabled !== "true") {
-        try {
-          await client.write([
-            "/ppp/secret/set",
-            `=.id=${secret[".id"]}`,
-            "=disabled=yes",
-          ]);
-        } catch (e) {
-          console.warn(`Failed to disable secret for ${username}:`, e);
+      for (const u of usersToSuspend) {
+        // 1. Handle PPPoE Users
+        if (u.type !== "static" && u.pppoeUsername) {
+          const username = u.pppoeUsername.toLowerCase();
+          const secret = secrets.find((s: any) => s.name.toLowerCase() === username);
+          
+          if (secret) {
+            try {
+              // Instead of disabling, switch profile to 'Expired' to keep Walled Garden working
+              await client.write([
+                "/ppp/secret/set",
+                `=.id=${secret[".id"]}`,
+                "=profile=Expired",
+                "=disabled=no", // Ensure they are not disabled so they can connect to Walled Garden
+              ]);
+            } catch (e) {
+              console.warn(`Failed to update profile to Expired for ${username}:`, e);
+            }
+          }
+          
+          // Force kick any active session
+          const sessions = active.filter((s: any) => s.name.toLowerCase() === username);
+          for (const session of sessions) {
+            try {
+              await client.write([
+                "/ppp/active/remove",
+                `=.id=${session[".id"]}`,
+              ]);
+              console.log(`Successfully kicked active session for ${username}`);
+            } catch (e) {
+              console.warn(`Failed to remove active session for ${username}:`, e);
+            }
+          }
+        }
+
+        // 2. Handle Static IP Users
+        if (u.type === "static" && u.ipAddress) {
+          try {
+            // First check if already exists in the address list
+            const addressLists = await client.write([
+              "/ip/firewall/address-list/print",
+              `?list=expired-customers`,
+              `?address=${u.ipAddress}`
+            ]) as any[];
+
+            if (addressLists.length === 0) {
+              await client.write([
+                "/ip/firewall/address-list/add",
+                "=list=expired-customers",
+                `=address=${u.ipAddress}`,
+                `=comment=Expired User: ${u.pppoeUsername || u.ipAddress}`
+              ]);
+              console.log(`Successfully added static IP ${u.ipAddress} to expired-customers list`);
+            }
+          } catch (e) {
+            console.warn(`Failed to add static IP ${u.ipAddress} to firewall for suspension:`, e);
+          }
         }
       }
       
-      const sessions = active.filter(s => s.name.toLowerCase() === username);
-      for (const session of sessions) {
-        try {
-          await client.write([
-            "/ppp/active/remove",
-            `=.id=${session[".id"]}`,
-          ]);
-          console.log(`Successfully kicked active session for ${username}`);
-        } catch (e) {
-          console.warn(`Failed to remove active session for ${username}:`, e);
-        }
+      success = true; // All operations succeeded
+    } catch (err) {
+      console.warn(`[Attempt ${attempt}/${maxRetries}] suspendUsers error:`, err);
+      if (attempt < maxRetries) {
+        // Exponential backoff
+        await new Promise(r => setTimeout(r, 2000 * attempt));
       }
+    } finally {
+      try {
+        await client.close();
+      } catch {}
     }
-  } catch (err) {
-    console.warn("suspendUsers error:", err);
-  } finally {
-    try {
-      await client.close();
-    } catch {}
+  }
+
+  if (!success) {
+    console.error(`🚨 CRITICAL: suspendUsers failed after ${maxRetries} attempts on router ${routerId}`);
   }
 }
 
