@@ -31,6 +31,7 @@
     "net-snmp": "^3.26.3",
     "next": "16.2.5",
     "next-nprogress-bar": "^2.4.7",
+    "node-cron": "^4.5.0",
     "node-routeros": "^1.6.8",
     "node-schedule": "^2.1.1",
     "pdf-lib": "^1.17.1",

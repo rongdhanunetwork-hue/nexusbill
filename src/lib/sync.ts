@@ -262,6 +262,7 @@ export async function syncCustomerToMikrotik(
     }
   } catch (err) {
     console.warn(`Failed to sync customer "${pppoeUsername}" to MikroTik:`, err);
+    throw err; // Important: throw the error so callers know the sync failed!
   }
 }
 
