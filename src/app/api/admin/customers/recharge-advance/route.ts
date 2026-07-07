@@ -187,7 +187,7 @@ export async function POST(req: Request) {
       );
     } else if (customer.customerType === "static" && customer.ipAddress) {
       const { unsuspendStaticUsers } = await import("@/lib/mikrotik");
-      await unsuspendStaticUsers([{ ipAddress: customer.ipAddress }], customer.mikrotikId);
+      await unsuspendStaticUsers([{ ipAddress: customer.ipAddress }], customer.mikrotikId || undefined);
     }
 
     await insertAuditLog(session.userId, "RECHARGE_CUSTOMER", `Recharged customer ${customer.name} with amount ${amount}. New expiry: ${newExpireDate.toLocaleString()}`);
