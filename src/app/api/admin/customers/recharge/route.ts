@@ -85,7 +85,7 @@ export async function POST(req: Request) {
       );
     } else if (customer.customerType === "static" && customer.ipAddress) {
       const { unsuspendStaticUsers } = await import("@/lib/mikrotik");
-      await unsuspendStaticUsers([{ ipAddress: customer.ipAddress }], customer.mikrotikId);
+      await unsuspendStaticUsers([{ ipAddress: customer.ipAddress }], customer.mikrotikId || undefined);
     }
 
     return NextResponse.json({

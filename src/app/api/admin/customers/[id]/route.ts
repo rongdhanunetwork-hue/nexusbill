@@ -140,9 +140,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           // Sync Static IP
           const { suspendUsers, unsuspendStaticUsers } = await import("@/lib/mikrotik");
           if (effectiveStatus !== "active" && effectiveStatus !== "online") {
-            await suspendUsers([{ ipAddress: updated.ipAddress, type: "static" }], updated.mikrotikId);
+            await suspendUsers([{ ipAddress: updated.ipAddress, type: "static" }], updated.mikrotikId || undefined);
           } else {
-            await unsuspendStaticUsers([{ ipAddress: updated.ipAddress }], updated.mikrotikId);
+            await unsuspendStaticUsers([{ ipAddress: updated.ipAddress }], updated.mikrotikId || undefined);
           }
         }
       }
