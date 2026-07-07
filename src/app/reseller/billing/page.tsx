@@ -80,7 +80,8 @@ async function rollbackPayment(formData: FormData) {
     }
 
     const currentExpire = customer.expireDate ? new Date(customer.expireDate) : new Date();
-    const newExpire = new Date(currentExpire.getTime() - durationDays * 24 * 60 * 60 * 1000);
+    const newExpire = new Date(currentExpire);
+    newExpire.setDate(newExpire.getDate() - durationDays);
     
     const now = new Date();
     const isExpired = newExpire <= now;
@@ -174,7 +175,10 @@ async function rechargeCustomer(formData: FormData) {
   if (customer.expireDate && new Date(customer.expireDate) > baseDate) {
     baseDate = new Date(customer.expireDate);
   }
-  const newExpireDate = new Date(baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+  const newExpireDate = new Date(baseDate);
+  newExpireDate.setDate(newExpireDate.getDate() + durationDays);
+  const now = new Date();
+  newExpireDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
 
   // Deduct balance & activate customer
   await db.update(users).set({ walletBalance: String((balance - amount).toFixed(2)) }).where(eq(users.id, reseller.id));

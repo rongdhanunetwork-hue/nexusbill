@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   FileText, TrendingUp, Users, DollarSign, ArrowDown, ArrowUp, Calendar, TrendingDown, MessageSquare, Loader2
@@ -81,7 +81,12 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
   const [bulkSmsResult, setBulkSmsResult] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
+  
+  useEffect(() => {
+    const saved = localStorage.getItem('isp_page_size');
+    if (saved) setPageSize(Number(saved));
+  }, []);
 
   const handleTabChange = (tab: "income" | "due" | "customer" | "ledger" | "expense") => {
     setReportType(tab);
@@ -310,6 +315,18 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
               {approvedPayments.length > 0 && (
                 <div className="p-4 border-t border-white/10">
                   <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                     currentPage={currentPage}
                     totalPages={Math.max(1, Math.ceil(approvedPayments.length / pageSize))}
                     totalItems={approvedPayments.length}
@@ -375,6 +392,18 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
             {dueInvoices.length > 0 && (
               <div className="p-4 border-t border-white/10">
                 <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                   currentPage={currentPage}
                   totalPages={Math.max(1, Math.ceil(dueInvoices.length / pageSize))}
                   totalItems={dueInvoices.length}
@@ -435,6 +464,18 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
             {customers.length > 0 && (
               <div className="p-4 border-t border-white/10">
                 <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                   currentPage={currentPage}
                   totalPages={Math.max(1, Math.ceil(customers.length / pageSize))}
                   totalItems={customers.length}
@@ -551,6 +592,18 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
               {filteredTx.length > 0 && (
                 <div className="p-4 border-t border-white/10">
                   <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                     currentPage={currentPage}
                     totalPages={Math.max(1, Math.ceil(filteredTx.length / pageSize))}
                     totalItems={filteredTx.length}
@@ -613,6 +666,18 @@ export default function ReportsClient({ approvedPayments, dueInvoices, customers
               {allExpenses.length > 0 && (
                 <div className="p-4 border-t border-white/10">
                   <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                     currentPage={currentPage}
                     totalPages={Math.max(1, Math.ceil(allExpenses.length / pageSize))}
                     totalItems={allExpenses.length}

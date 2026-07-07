@@ -66,8 +66,7 @@ export async function GET(req: NextRequest) {
           }
 
           const newExpireDate = new Date(baseDate);
-          newExpireDate.setDate(newExpireDate.getDate() + (durationDays - 1));
-          newExpireDate.setHours(23, 59, 59, 999);
+          newExpireDate.setDate(newExpireDate.getDate() + durationDays);
 
           await db.update(users)
             .set({ 
@@ -122,14 +121,14 @@ export async function GET(req: NextRequest) {
         }
 
         // If Mikrotik update failed (e.g. router offline due to power cut), 
-        // we DO NOT mark them as expired in the DB. The Self-Healing Sync background task
-        // will keep retrying to disconnect them from Mikrotik since their status is still 'active'.
+        // we STILL mark them as expired in the DB! 
+        // The Self-Healing Sync background task will see their DB status is 'expired' 
+        // and will retry to disconnect them from Mikrotik as soon as it comes back online.
         if (!mikrotikSuccess) {
-           console.warn(`[Cron] Mikrotik sync failed for ${customer.name}, skipping DB expiration so Self-Healing Sync will retry!`);
-           continue; // Skip the rest of the loop for this user so they stay "active"
+           console.warn(`[Cron] Mikrotik sync failed for ${customer.name}, but still expiring in DB so Self-Healing Sync will disconnect them later.`);
         }
 
-        // Expiration Logic in DB (Only happens if Mikrotik was successful or not needed)
+        // Expiration Logic in DB 
         await db.update(users)
           .set({ status: "expired" })
           .where(eq(users.id, customer.id));

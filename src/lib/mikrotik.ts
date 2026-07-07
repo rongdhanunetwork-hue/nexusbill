@@ -641,12 +641,12 @@ export async function suspendUsers(
           
           if (secret) {
             try {
-              // Instead of disabling, switch profile to 'Expired' to keep Walled Garden working
+              // Disable the user completely to ensure they cannot connect and bypass internet blockage
               await client.write([
                 "/ppp/secret/set",
                 `=.id=${secret[".id"]}`,
                 "=profile=Expired",
-                "=disabled=no", // Ensure they are not disabled so they can connect to Walled Garden
+                "=disabled=yes", // Block them entirely to prevent free internet access
               ]);
             } catch (e) {
               console.warn(`Failed to update profile to Expired for ${username}:`, e);

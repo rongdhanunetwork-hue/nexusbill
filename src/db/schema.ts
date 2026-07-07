@@ -409,3 +409,55 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
 }));
 
+export const systemNotifications = pgTable("system_notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(), // The recipient
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  link: varchar("link", { length: 255 }),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const systemNotificationsRelations = relations(systemNotifications, ({ one }) => ({
+  user: one(users, {
+    fields: [systemNotifications.userId],
+    references: [users.id],
+  }),
+}));
+
+// ===== Service Links (FTP, Live TV, App Downloads, etc.) =====
+export const serviceCategories = pgTable("service_categories", {
+  id: serial("id").primaryKey(),
+  adminId: integer("admin_id").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  icon: varchar("icon", { length: 100 }).default("link"),
+  type: varchar("type", { length: 50 }).default("general"),
+  color: varchar("color", { length: 30 }).default("#00f3ff"),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const serviceLinks = pgTable("service_links", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id").notNull(),
+  adminId: integer("admin_id").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  url: text("url").notNull(),
+  description: text("description"),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const serviceCategoriesRelations = relations(serviceCategories, ({ many }) => ({
+  links: many(serviceLinks),
+}));
+
+export const serviceLinksRelations = relations(serviceLinks, ({ one }) => ({
+  category: one(serviceCategories, {
+    fields: [serviceLinks.categoryId],
+    references: [serviceCategories.id],
+  }),
+}));

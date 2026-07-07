@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pagination } from "@/components/ui/Pagination";
 import { Trash2 } from "lucide-react";
 
@@ -23,7 +23,12 @@ const CATEGORIES = [
 
 export default function ExpensesTable({ expenses, deleteAction }: { expenses: Expense[], deleteAction: (formData: FormData) => Promise<void> }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
+  
+  useEffect(() => {
+    const saved = localStorage.getItem('isp_page_size');
+    if (saved) setPageSize(Number(saved));
+  }, []);
 
   if (expenses.length === 0) {
     return <tr><td colSpan={5} className="p-8 text-center text-gray-500">No expense records yet.</td></tr>;
@@ -57,6 +62,18 @@ export default function ExpensesTable({ expenses, deleteAction }: { expenses: Ex
         <tr>
           <td colSpan={5} className="p-0 border-none">
             <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
               currentPage={currentPage}
               totalPages={Math.ceil(expenses.length / pageSize)}
               totalItems={expenses.length}

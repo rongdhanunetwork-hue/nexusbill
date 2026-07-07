@@ -7,7 +7,7 @@ import {
   FileText, Settings, Megaphone, LogOut, ShieldAlert,
   Menu, X, Loader2, LifeBuoy, Bell, TrendingDown, UserCog,
   Layers, MessageSquare, History, TrendingUp, ChevronDown,
-  ChevronRight, Search, Wifi, Box,
+  ChevronRight, Search, Wifi, Box, Link2,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { clsx } from "clsx";
@@ -47,7 +47,8 @@ const navigation: NavItem[] = [
     ],
   },
   { name: "Notice", href: "/admin/notices", icon: Megaphone },
-  { name: "Support", href: "/admin/tickets", icon: LifeBuoy },
+  { name: "Tickets", href: "/admin/tickets", icon: LifeBuoy },
+  { name: "Notifications", href: "/admin/notifications", icon: Bell },
   {
     name: "Reports", icon: FileText,
     children: [
@@ -56,6 +57,7 @@ const navigation: NavItem[] = [
       { name: "Audit Logs", href: "/admin/reports/audit-logs" },
     ],
   },
+  { name: "Service Links", href: "/admin/services", icon: Link2 },
   { name: "Expenses", href: "/admin/expenses", icon: TrendingDown },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
@@ -67,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [loggingOut, setLoggingOut] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>([]);
 
-  const [notifications, setNotifications] = useState<{ id: string; text: string; link: string }[]>([]);
+  const [notifications, setNotifications] = useState<{ id: string | number; text: string; message: string; link: string; isRead: boolean }[]>([]);
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const [adminProfile, setAdminProfile] = useState<{ name: string; photoUrl: string | null; role?: string | null; impersonatorId?: number | null } | null>(null);
@@ -112,12 +114,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [pathname]);
 
   useEffect(() => {
-    fetch("/api/admin/notifications")
+    fetch("/api/notifications")
       .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data)) { setNotifications(data); if (data.length > 0) setHasUnread(true); }
+        if (Array.isArray(data)) { 
+          setNotifications(data); 
+          if (data.some(n => !n.isRead)) setHasUnread(true); 
+        }
       }).catch(() => {});
   }, [pathname]);
+
+  const handleNotificationClick = async (id: string | number, link: string) => {
+    setShowNotif(false);
+    try {
+      await fetch("/api/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      if (notifications.filter(n => n.id !== id && !n.isRead).length === 0) {
+        setHasUnread(false);
+      }
+    } catch (err) {
+      console.error("Error marking as read", err);
+    }
+  };
 
   useEffect(() => {
     fetch("/api/admin/profile").then(r => r.json()).then(data => {
@@ -143,7 +165,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   async function handleLogout() {
     setLoggingOut(true);
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login/admin");
+    router.push("/");
     router.refresh();
   }
 
@@ -370,11 +392,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       {notifications.length === 0 ? (
                         <p className="px-4 py-3 text-xs text-gray-500 text-center">No new notifications</p>
                       ) : notifications.map(n => (
-                        <Link key={n.id} href={n.link} onClick={() => setShowNotif(false)}
-                          className="block px-4 py-2.5 text-xs text-gray-300 hover:text-white hover:bg-white/5 border-b border-white/5 last:border-b-0 transition-colors">
-                          {n.text}
+                        <Link key={n.id} href={n.link} onClick={() => handleNotificationClick(n.id, n.link)}
+                          className={`block px-4 py-2.5 text-xs hover:bg-white/5 border-b border-white/5 transition-colors ${n.isRead ? 'text-gray-400' : 'text-gray-200 font-medium bg-white/[0.02]'}`}>
+                          <div className="font-semibold mb-0.5">{n.text}</div>
+                          <div className="text-[10px] opacity-80 truncate">{n.message}</div>
                         </Link>
                       ))}
+                      
+                      <Link href="/admin/notifications" onClick={() => setShowNotif(false)} className="block px-4 py-2 text-center text-[10px] text-amber-400 font-semibold hover:bg-white/5">
+                        View All Notifications
+                      </Link>
                     </motion.div>
                   )}
                 </AnimatePresence>

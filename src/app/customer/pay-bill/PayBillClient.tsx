@@ -91,6 +91,32 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
       setIsSubmitting(false);
     }
   };
+  const [isBkashLoading, setIsBkashLoading] = useState(false);
+
+  const handleBkashAutoPay = async () => {
+    try {
+      setIsBkashLoading(true);
+      setError(null);
+      const res = await fetch("/api/bkash/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: packagePrice }),
+      });
+      const data = await res.json();
+      if (data.bkashURL) {
+        window.location.href = data.bkashURL;
+      } else {
+        const errorMsg = data.error || "Failed to initiate bKash payment";
+        setError(errorMsg);
+        alert(errorMsg);
+      }
+    } catch (err) {
+      setError("Network error connecting to bKash");
+      alert("Network error connecting to bKash");
+    } finally {
+      setIsBkashLoading(false);
+    }
+  };
 
   const paymentMethods = [
     { key: "bkash", label: "bKash Merchant 1", number: bkashNumber, color: "#E2136E", textColor: "#FF4C9C" }
@@ -103,8 +129,6 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
   if (bankCardNumber) {
     paymentMethods.push({ key: "bank", label: "Bank Card Details", number: bankCardNumber, color: "#00F3FF", textColor: "#00F3FF" });
   }
-
-
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -138,7 +162,7 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
                 onClick={() => setSubmitted(false)}
                 className="glass-button w-full sm:w-auto px-6 py-3 font-medium text-white"
               >
-                Submit Another Payment
+                Make Another Payment
               </button>
               <a
                 href="/customer/history"
@@ -154,28 +178,28 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
             <div className="glass-card overflow-hidden">
               <div className="p-6 border-b border-white/10 bg-white/5">
                 <h2 className="text-lg font-semibold text-white">Payment Instructions</h2>
-                <p className="text-sm text-gray-400 mt-2">নিচের নম্বরে Send Money করে অথবা সরাসরি অনলাইন লিংকের মাধ্যমে বিল পে করে Transaction ID ও Amount সাবমিট করুন।</p>
+                <p className="text-sm text-gray-400 mt-2">নিচের নম্বরে Send Money করে অথবা সরাসরি অনলাইন পেমেন্টের মাধ্যমে বিল পে করে Transaction ID ও Amount সাবমিট করুন।</p>
               </div>
 
-              {/* Online bKash Payment Link Banner */}
+              {/* Automated bKash Payment Banner */}
               <div className="mx-6 mt-6 p-5 rounded-2xl bg-gradient-to-r from-[#E2136E]/25 via-[#E2136E]/5 to-transparent border border-[#E2136E]/30 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="space-y-1.5 relative z-10">
                   <h3 className="text-[#FF4C9C] font-bold text-base flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#E2136E] animate-ping" />
-                    bKash Online Pay (বিকাশ অনলাইন পেমেন্ট)
+                    Auto Pay with bKash
                   </h3>
                   <p className="text-xs text-gray-300">
-                    সেন্ড মানি করার প্রয়োজন নেই; সরাসরি বিকাশ অনলাইন পেমেন্ট লিংকের মাধ্যমে বিল পে করতে ডানপাশের বাটনে ক্লিক করুন এবং ট্রানজাকশন আইডি নিচে সাবমিট করুন।
+                    ম্যানুয়ালি ট্রানজাকশন আইডি সাবমিট করার ঝামেলা ছাড়াই সরাসরি বিকাশের মাধ্যমে পেমেন্ট করতে ডানপাশের বাটনে ক্লিক করুন। পেমেন্ট সম্পন্ন হলে আপনার লাইন অটোমেটিক চালু হয়ে যাবে।
                   </p>
                 </div>
-                <a
-                  href="https://shop.bkash.com/rdn-internet-service-provider0/paymentlink/default-payment"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-[#E2136E] hover:bg-[#b00f55] text-white font-bold text-sm px-6 py-3 rounded-xl shadow-lg hover:shadow-[#E2136E]/30 hover:scale-105 active:scale-95 transition-all shrink-0 z-10 text-center w-full md:w-auto"
+                <button
+                  onClick={handleBkashAutoPay}
+                  disabled={isBkashLoading}
+                  className="bg-[#E2136E] hover:bg-[#b00f55] disabled:opacity-50 text-white font-bold text-sm px-6 py-3 rounded-xl shadow-lg hover:shadow-[#E2136E]/30 hover:scale-105 active:scale-95 transition-all shrink-0 z-10 flex items-center justify-center gap-2 w-full md:w-auto"
                 >
-                  অনলাইন পেমেন্ট করুন
-                </a>
+                  {isBkashLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                  {isBkashLoading ? "Processing..." : "Pay with bKash"}
+                </button>
               </div>
 
               <div className="p-6 grid sm:grid-cols-3 gap-4">

@@ -35,8 +35,9 @@ export async function POST(req: Request) {
       baseDate = new Date(customer.expireDate);
     }
     const newExpireDate = new Date(baseDate.getTime());
-    newExpireDate.setDate(newExpireDate.getDate() + (durationDays - 1));
-    newExpireDate.setHours(23, 59, 59, 999);
+    newExpireDate.setDate(newExpireDate.getDate() + durationDays);
+    const now = new Date();
+    newExpireDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
 
     // Perform database operations in transaction
     await db.transaction(async (tx) => {

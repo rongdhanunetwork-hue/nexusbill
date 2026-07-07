@@ -106,7 +106,12 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
   const [routersPage, setRoutersPage] = useState(1);
   const [oltsPage, setOltsPage] = useState(1);
   const [onusPage, setOnusPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
+  
+  useEffect(() => {
+    const saved = localStorage.getItem('isp_page_size');
+    if (saved) setPageSize(Number(saved));
+  }, []);
 
   // Reset page numbers when router changes
   useEffect(() => {
@@ -1073,6 +1078,18 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
             {/* Secrets Pagination */}
             {liveData && liveData.secrets.length > 0 && (
               <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                 currentPage={secretsPage}
                 totalPages={Math.max(1, Math.ceil(liveData.secrets.length / pageSize))}
                 totalItems={liveData.secrets.length}
@@ -1140,6 +1157,18 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
               {/* Active Sessions Pagination */}
               {liveData && liveData.active.length > 0 && (
                 <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                   currentPage={activePage}
                   totalPages={Math.max(1, Math.ceil(liveData.active.length / pageSize))}
                   totalItems={liveData.active.length}
@@ -1293,6 +1322,18 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
             </div>
             {routers.length > 0 && (
               <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                 currentPage={routersPage}
                 totalPages={Math.max(1, Math.ceil(routers.length / pageSize))}
                 totalItems={routers.length}
@@ -1519,6 +1560,18 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
             {olts.length > 0 && (
               <div className="mt-6">
                 <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                   currentPage={oltsPage}
                   totalPages={Math.max(1, Math.ceil(olts.length / pageSize))}
                   totalItems={olts.length}
@@ -2195,6 +2248,18 @@ export default function MikrotikPageClient({ role = "admin", initialTab = "live"
                 </div>
                 {onusData.onus && onusData.onus.length > 0 && (
                   <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                     currentPage={onusPage}
                     totalPages={Math.max(1, Math.ceil(onusData.onus.length / pageSize))}
                     totalItems={onusData.onus.length}

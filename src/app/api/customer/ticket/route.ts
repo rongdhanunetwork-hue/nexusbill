@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { tickets } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
-
+import { createNotificationForAdmins } from "@/lib/notifications";
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) {
@@ -22,6 +22,12 @@ export async function POST(req: Request) {
     message: message.trim(),
     status: "open",
   }).returning();
+
+  await createNotificationForAdmins(
+    "New Support Ticket",
+    `A new support ticket was opened: ${subject.trim()}`,
+    "/admin/tickets"
+  );
 
   return NextResponse.json(ticket, { status: 201 });
 }

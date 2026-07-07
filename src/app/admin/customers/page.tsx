@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, mikrotiks } from "@/db/schema";
-import { eq, asc, and, isNull } from "drizzle-orm";
+import { eq, asc, and, isNull, sql } from "drizzle-orm";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { Plus } from "lucide-react";
@@ -76,6 +76,15 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
     columns: { id: true, name: true }
   });
 
+  const now = new Date();
+  const startOfMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const { payments } = await import("@/db/schema");
+  const paidUsersThisMonthResult = await db.select({ userId: payments.userId })
+    .from(payments)
+    .innerJoin(users, eq(payments.userId, users.id))
+    .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${startOfMonthStr}::date and ${users.adminId} = ${session.userId} and ${users.role} = 'customer'`);
+  const paidUserIds = paidUsersThisMonthResult.map(r => r.userId);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -95,6 +104,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         activeSessions={[]}
         initialStatus={status}
         resellers={resellers}
+        paidUserIdsThisMonth={paidUserIds}
       />
     </div>
   );

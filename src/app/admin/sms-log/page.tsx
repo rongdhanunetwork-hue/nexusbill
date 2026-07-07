@@ -34,7 +34,12 @@ export default function SmsLogPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
+  
+  useEffect(() => {
+    const saved = localStorage.getItem('isp_page_size');
+    if (saved) setPageSize(Number(saved));
+  }, []);
 
   useEffect(() => {
     fetchLogs();
@@ -383,6 +388,18 @@ export default function SmsLogPage() {
           {filteredLogs.length > 0 && (
             <div className="p-4 border-t border-white/10">
               <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                 currentPage={currentPage}
                 totalPages={Math.max(1, Math.ceil(filteredLogs.length / pageSize))}
                 totalItems={filteredLogs.length}

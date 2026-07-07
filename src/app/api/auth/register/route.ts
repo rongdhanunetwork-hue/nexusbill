@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-
+import { createNotificationForAdmins } from "@/lib/notifications";
 export async function POST(req: Request) {
   try {
     const { name, phone, password, address, photoUrl, nidUrl } = await req.json();
@@ -31,6 +31,12 @@ export async function POST(req: Request) {
       approvalStatus: "pending",
       status: "offline",
     }).returning({ id: users.id, name: users.name, phone: users.phone });
+
+    await createNotificationForAdmins(
+      "New Registration Pending",
+      `${name.trim()} (${phone.trim()}) registered and is awaiting approval.`,
+      "/admin/customers?status=pending_approval"
+    );
 
     return NextResponse.json({
       success: true,

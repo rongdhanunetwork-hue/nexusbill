@@ -25,6 +25,7 @@ const nav: NavItem[] = [
   },
   { name: "All Users", href: "/superadmin/users", icon: Users },
   { name: "System Stats", href: "/superadmin/stats", icon: BarChart3 },
+  { name: "Notifications", href: "/superadmin/notifications", icon: Bell },
   { name: "Settings", href: "/superadmin/settings", icon: Settings },
 ];
 
@@ -34,7 +35,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>([]);
-  const [notifications, setNotifications] = useState<{ id: string; text: string; link: string }[]>([]);
+  const [notifications, setNotifications] = useState<{ id: string | number; text: string; message: string; link: string; isRead: boolean }[]>([]);
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const [profile, setProfile] = useState<{ name: string } | null>(null);
@@ -49,6 +50,34 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   }, [pathname]);
 
   useEffect(() => {
+    fetch("/api/notifications")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) { 
+          setNotifications(data); 
+          if (data.some(n => !n.isRead)) setHasUnread(true); 
+        }
+      }).catch(() => {});
+  }, [pathname]);
+
+  const handleNotificationClick = async (id: string | number, link: string) => {
+    setShowNotif(false);
+    try {
+      await fetch("/api/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      if (notifications.filter(n => n.id !== id && !n.isRead).length === 0) {
+        setHasUnread(false);
+      }
+    } catch (err) {
+      console.error("Error marking as read", err);
+    }
+  };
+
+  useEffect(() => {
     fetch("/api/superadmin/profile").then(r => r.json()).then(data => {
       if (data?.name) setProfile(data);
     }).catch(() => {});
@@ -57,7 +86,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   async function handleLogout() {
     setLoggingOut(true);
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login/superadmin");
+    router.push("/");
     router.refresh();
   }
 
@@ -200,8 +229,19 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                       className="absolute right-0 top-full mt-1 w-64 rounded-xl shadow-2xl overflow-hidden py-1 z-50"
                       style={{ background: "#1a1f2e", border: "1px solid rgba(255,255,255,0.1)" }}>
                       <h4 className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase border-b border-white/5">Notifications</h4>
-                      {notifications.length === 0 ? <p className="px-4 py-3 text-xs text-gray-500 text-center">No new notifications</p>
-                        : notifications.map(n => <Link key={n.id} href={n.link} onClick={() => setShowNotif(false)} className="block px-4 py-2.5 text-xs text-gray-300 hover:bg-white/5 border-b border-white/5 last:border-b-0">{n.text}</Link>)}
+                      {notifications.length === 0 ? (
+                        <p className="px-4 py-3 text-xs text-gray-500 text-center">No new notifications</p>
+                      ) : notifications.map(n => (
+                        <Link key={n.id} href={n.link} onClick={() => handleNotificationClick(n.id, n.link)}
+                          className={`block px-4 py-2.5 text-xs hover:bg-white/5 border-b border-white/5 transition-colors ${n.isRead ? 'text-gray-400' : 'text-gray-200 font-medium bg-white/[0.02]'}`}>
+                          <div className="font-semibold mb-0.5">{n.text}</div>
+                          <div className="text-[10px] opacity-80 truncate">{n.message}</div>
+                        </Link>
+                      ))}
+                      
+                      <Link href="/superadmin/notifications" onClick={() => setShowNotif(false)} className="block px-4 py-2 text-center text-[10px] text-amber-400 font-semibold hover:bg-white/5">
+                        View All Notifications
+                      </Link>
                     </motion.div>
                   )}
                 </AnimatePresence>

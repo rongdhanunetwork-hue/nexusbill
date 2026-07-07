@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { 
   Search, Edit, Trash, Wifi, WifiOff, Eye, Zap, Clock, 
@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePopup } from "@/components/ui/PopupProvider";
-import { Pagination } from "@/components/ui/Pagination";
+import { Pagination, PageSizeSelector } from "@/components/ui/Pagination";
 
 interface Customer {
   id: number;
@@ -46,6 +46,7 @@ export default function CustomersClient({
   activeSessions = [],
   initialStatus = "All Status",
   resellers = [],
+  paidUserIdsThisMonth = [],
   role = "admin",
 }: {
   allCustomers: Customer[];
@@ -54,6 +55,7 @@ export default function CustomersClient({
   activeSessions?: any[];
   initialStatus?: string;
   resellers?: {id: number, name: string}[];
+  paidUserIdsThisMonth?: number[];
   role?: "admin" | "reseller" | "employee";
 }) {
   const basePath = role === "reseller" ? "/reseller" : role === "employee" ? "/employee" : "/admin";
@@ -242,6 +244,10 @@ export default function CustomersClient({
     if (initialStatus === "unpaid_month") return "Unpaid (Month)";
     if (initialStatus === "pending_approval") return "Pending Approval";
     if (initialStatus === "today_expire") return "Today Expiring";
+    if (initialStatus === "expired_1") return "1 Day Expired";
+    if (initialStatus === "expired_2") return "2 Day Expired";
+    if (initialStatus === "expired_3") return "3 Day Expired";
+    if (initialStatus === "expired_4") return "4 Day Expired";
     const formatted = initialStatus.charAt(0).toUpperCase() + initialStatus.slice(1).toLowerCase();
     if (["All Status", "Active", "Online", "Offline", "Expired", "Upcoming"].includes(formatted)) {
       return formatted;
@@ -251,17 +257,53 @@ export default function CustomersClient({
 
   const [statusFilter, setStatusFilter] = useState(getInitialStatus());
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
-
+  const [pageSize, setPageSize] = useState(20);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
+
+  const [isRestored, setIsRestored] = useState(false);
+
+  useEffect(() => {
+    const savedPageSize = localStorage.getItem('isp_page_size');
+    if (savedPageSize) setPageSize(Number(savedPageSize));
+
+    try {
+      const saved = sessionStorage.getItem("customers_state");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.searchTerm !== undefined) setSearchTerm(parsed.searchTerm);
+        if (parsed.selectedAreaId !== undefined) setSelectedAreaId(parsed.selectedAreaId);
+        if (parsed.selectedPackageId !== undefined) setSelectedPackageId(parsed.selectedPackageId);
+        if (parsed.statusFilter !== undefined && initialStatus === "All Status") setStatusFilter(parsed.statusFilter);
+        if (parsed.currentPage !== undefined) setCurrentPage(parsed.currentPage);
+      }
+    } catch(e){}
+    setIsRestored(true);
+  }, [initialStatus]);
+
+  useEffect(() => {
+    if (isRestored) {
+      try {
+        sessionStorage.setItem("customers_state", JSON.stringify({
+          searchTerm, selectedAreaId, selectedPackageId, statusFilter, currentPage
+        }));
+      } catch(e){}
+    }
+  }, [searchTerm, selectedAreaId, selectedPackageId, statusFilter, currentPage, isRestored]);
+
+  const prevFilters = useRef({ searchTerm, selectedAreaId, selectedPackageId, statusFilter });
+  useEffect(() => {
+    if (isRestored) {
+      const p = prevFilters.current;
+      if (p.searchTerm !== searchTerm || p.selectedAreaId !== selectedAreaId || p.selectedPackageId !== selectedPackageId || p.statusFilter !== statusFilter) {
+         setCurrentPage(1);
+         prevFilters.current = { searchTerm, selectedAreaId, selectedPackageId, statusFilter };
+      }
+    }
+  }, [searchTerm, selectedAreaId, selectedPackageId, statusFilter, isRestored]);
 
   useEffect(() => {
     setSelectedCustomerIds([]);
   }, [searchTerm, selectedAreaId, selectedPackageId, statusFilter, currentPage]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedAreaId, selectedPackageId, statusFilter]);
 
   // Calculate days remaining
   const getDaysLeft = (expireDate: string | Date | null) => {
@@ -752,15 +794,26 @@ const handleImportSubmit = async () => {
 
       {/* Control Panel (Hides in Print) */}
       <div className="p-5 border-b border-white/10 bg-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search by name, phone or PPPoE..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-2.5 glass-input bg-slate-800 focus:ring-neon-blue focus:ring-2"
-          />
+        <div className="flex flex-col gap-2 w-full max-w-md">
+          <div className="relative w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search by name, phone or PPPoE..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-2.5 glass-input bg-slate-800 focus:ring-neon-blue focus:ring-2"
+            />
+          </div>
+          <div className="flex justify-start mt-1">
+            <PageSizeSelector 
+              pageSize={pageSize} 
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                localStorage.setItem('isp_page_size', newSize.toString());
+              }} 
+            />
+          </div>
         </div>
 
         <div className="flex flex-row flex-wrap items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
@@ -1252,6 +1305,10 @@ const handleImportSubmit = async () => {
           totalItems={filteredCustomers.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+          }}
         />
       )}
 

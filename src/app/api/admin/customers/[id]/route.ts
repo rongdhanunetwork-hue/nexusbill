@@ -119,10 +119,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
       if (newUsername) {
         // Only sync if crucial connection details changed
+        const isNowExpired = updated.expireDate && new Date(updated.expireDate) <= new Date();
+        const effectiveStatus = isNowExpired ? "expired" : updated.status;
+
         const needsMikrotikSync = 
           (body.password !== undefined && body.password.length >= 6) ||
           (updated.packageId !== oldCustomer.packageId) ||
           (updated.status !== oldCustomer.status) ||
+          (isNowExpired && oldCustomer.status === "active") || // Changed to expired due to time
           (oldUsername !== newUsername);
           
         if (needsMikrotikSync) {
@@ -131,7 +135,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             newUsername,
             body.password || undefined,
             updated.packageId,
-            updated.status,
+            effectiveStatus,
             updated.mikrotikId
           );
         }

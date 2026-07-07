@@ -100,8 +100,9 @@ export async function POST(req: Request) {
         daysToAdd = numDuration;
       }
       
-      newExpireDate.setDate(newExpireDate.getDate() + (daysToAdd - 1));
-      newExpireDate.setHours(23, 59, 59, 999);
+      newExpireDate.setDate(newExpireDate.getDate() + daysToAdd);
+      const now = new Date();
+      newExpireDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
     }
 
     // If Reseller, deduct balance

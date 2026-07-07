@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, sql } from "drizzle-orm";
 import CustomersClient from "@/app/admin/customers/CustomersClient";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +14,15 @@ export default async function EmployeeCustomersPage({ searchParams }: { searchPa
     with: { package: true, mikrotik: true }
   });
 
+  const now = new Date();
+  const startOfMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const { payments } = await import("@/db/schema");
+  const paidUsersThisMonthResult = await db.select({ userId: payments.userId })
+    .from(payments)
+    .innerJoin(users, eq(payments.userId, users.id))
+    .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${startOfMonthStr}::date and ${users.role} = 'customer'`);
+  const paidUserIds = paidUsersThisMonthResult.map(r => r.userId);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -26,6 +35,7 @@ export default async function EmployeeCustomersPage({ searchParams }: { searchPa
         activeSessions={[]}
         initialStatus={status}
         role="employee"
+        paidUserIdsThisMonth={paidUserIds}
       />
     </div>
   );

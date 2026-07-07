@@ -67,7 +67,10 @@ async function approvePayment(formData: FormData) {
     if (user.expireDate && new Date(user.expireDate) > baseDate) {
       baseDate = new Date(user.expireDate);
     }
-    const newExpireDate = new Date(baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    const newExpireDate = new Date(baseDate);
+    newExpireDate.setDate(newExpireDate.getDate() + durationDays);
+    const now = new Date();
+    newExpireDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
 
     await db.update(users).set({ status: "active", expireDate: newExpireDate }).where(eq(users.id, userId));
     await db.insert(invoices).values({ userId, amount, status: "paid", dueDate: newExpireDate });

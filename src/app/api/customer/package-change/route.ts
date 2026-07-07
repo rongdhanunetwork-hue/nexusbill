@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { packageChangeRequests, users, packages } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
+import { createNotificationForAdmins } from "@/lib/notifications";
 
 // GET /api/customer/package-change — fetch logged-in customer's package change requests
 export async function GET() {
@@ -78,6 +79,12 @@ export async function POST(req: NextRequest) {
       requestedPackageId: pkgId,
       status: "pending",
     }).returning();
+
+    await createNotificationForAdmins(
+      "Package Change Request",
+      `Customer ${customer.name || customer.phone} requested a package change to ${targetPackage.name}`,
+      "/admin/package-requests"
+    );
 
     return NextResponse.json({ success: true, request: newRequest });
   } catch (error) {

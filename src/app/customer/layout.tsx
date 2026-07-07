@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, CreditCard, History, LifeBuoy, User,
-  LogOut, Menu, X, Loader2, Bell, TrendingUp, Megaphone,
+  LogOut, Menu, X, Loader2, Bell, TrendingUp, Megaphone, Globe,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { clsx } from "clsx";
@@ -15,6 +15,8 @@ import AvatarImage from "@/components/ui/AvatarImage";
 const navigation = [
   { name: "My Account", href: "/customer", icon: LayoutDashboard },
   { name: "Profile", href: "/customer/profile", icon: User },
+  { name: "Live Server", href: "/customer/services", icon: Globe },
+  { name: "Notifications", href: "/customer/notifications", icon: Bell },
   { name: "Pay Bill", href: "/customer/pay-bill", icon: CreditCard },
   { name: "Package Change", href: "/customer/package-change", icon: TrendingUp },
   { name: "Notices", href: "/customer/notices", icon: Megaphone },
@@ -27,7 +29,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [notifications, setNotifications] = useState<{ id: string; text: string; link: string }[]>([]);
+  const [notifications, setNotifications] = useState<{ id: string | number; text: string; message: string; link: string; isRead: boolean }[]>([]);
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const [customerInfo, setCustomerInfo] = useState<{ name: string; photoUrl: string | null; systemSettings?: Record<string, string> } | null>(null);
@@ -39,15 +41,37 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   }, []);
 
   useEffect(() => {
-    fetch("/api/customer/notifications").then(r => r.json()).then(data => {
-      if (Array.isArray(data)) { setNotifications(data); if (data.length > 0) setHasUnread(true); }
-    }).catch(() => {});
+    fetch("/api/notifications")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) { 
+          setNotifications(data); 
+          if (data.some(n => !n.isRead)) setHasUnread(true); 
+        }
+      }).catch(() => {});
   }, [pathname]);
+
+  const handleNotificationClick = async (id: string | number, link: string) => {
+    setShowNotif(false);
+    try {
+      await fetch("/api/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      if (notifications.filter(n => n.id !== id && !n.isRead).length === 0) {
+        setHasUnread(false);
+      }
+    } catch (err) {
+      console.error("Error marking as read", err);
+    }
+  };
 
   async function handleLogout() {
     setLoggingOut(true);
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login/customer");
+    router.push("/");
     router.refresh();
   }
 
@@ -152,8 +176,19 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                       className="absolute right-0 top-full mt-1 w-72 rounded-xl shadow-2xl overflow-hidden py-1 z-50"
                       style={{ background: "#1a1f2e", border: "1px solid rgba(255,255,255,0.1)" }}>
                       <h4 className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase border-b border-white/5">Notifications / ঘোষণা</h4>
-                      {notifications.length === 0 ? <p className="px-4 py-3 text-xs text-gray-500 text-center">কোনো নতুন নোটিফিকেশন নেই</p>
-                        : notifications.map(n => <Link key={n.id} href={n.link} onClick={() => setShowNotif(false)} className="block px-4 py-2.5 text-xs text-gray-300 hover:text-white hover:bg-white/5 border-b border-white/5 last:border-b-0">{n.text}</Link>)}
+                      {notifications.length === 0 ? (
+                        <p className="px-4 py-3 text-xs text-gray-500 text-center">কোনো নতুন নোটিফিকেশন নেই</p>
+                      ) : notifications.map(n => (
+                        <Link key={n.id} href={n.link} onClick={() => handleNotificationClick(n.id, n.link)}
+                          className={`block px-4 py-2.5 text-xs hover:bg-white/5 border-b border-white/5 transition-colors ${n.isRead ? 'text-gray-400' : 'text-gray-200 font-medium bg-white/[0.02]'}`}>
+                          <div className="font-semibold mb-0.5">{n.text}</div>
+                          <div className="text-[10px] opacity-80 truncate">{n.message}</div>
+                        </Link>
+                      ))}
+                      
+                      <Link href="/customer/notifications" onClick={() => setShowNotif(false)} className="block px-4 py-2 text-center text-[10px] text-amber-400 font-semibold hover:bg-white/5">
+                        View All Notifications
+                      </Link>
                     </motion.div>
                   )}
                 </AnimatePresence>

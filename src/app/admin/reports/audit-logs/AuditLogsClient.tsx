@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Activity, Calendar, ShieldAlert } from "lucide-react";
 import { motion } from "framer-motion";
 import { Pagination } from "@/components/ui/Pagination";
@@ -22,7 +22,12 @@ export default function AuditLogsClient({ initialLogs }: { initialLogs: AuditLog
   const [search, setSearch] = useState("");
   const [filterAction, setFilterAction] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
+  
+  useEffect(() => {
+    const saved = localStorage.getItem('isp_page_size');
+    if (saved) setPageSize(Number(saved));
+  }, []);
 
   const filteredLogs = initialLogs.filter(log => {
     const matchesSearch = log.user?.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -126,6 +131,18 @@ export default function AuditLogsClient({ initialLogs }: { initialLogs: AuditLog
           {filteredLogs.length > 0 && (
             <div className="p-4 border-t border-white/10">
               <Pagination
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            localStorage.setItem('isp_page_size', newSize.toString());
+            // @ts-ignore
+            if (typeof setCurrentPage !== 'undefined') setCurrentPage(1);
+            // @ts-ignore
+            if (typeof setCurrentActivePage !== 'undefined') setCurrentActivePage(1);
+            // @ts-ignore
+            if (typeof setCurrentSecretsPage !== 'undefined') setCurrentSecretsPage(1);
+            // @ts-ignore
+            if (typeof setRoutersPage !== 'undefined') setRoutersPage(1);
+          }}
                 currentPage={currentPage}
                 totalPages={Math.max(1, Math.ceil(filteredLogs.length / pageSize))}
                 totalItems={filteredLogs.length}
