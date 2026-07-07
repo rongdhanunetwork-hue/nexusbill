@@ -709,9 +709,47 @@ export async function suspendUsers(
 
   if (!success) {
     console.error(`🚨 CRITICAL: suspendUsers failed after ${maxRetries} attempts on router ${routerId}`);
+    throw new Error(`suspendUsers failed after ${maxRetries} attempts`);
   }
 }
 
-// force reload
+}
 
-// force reload 3
+export async function unsuspendStaticUsers(
+  usersToUnsuspend: { ipAddress?: string | null }[], 
+  routerId?: number
+): Promise<void> {
+  if (usersToUnsuspend.length === 0) return;
+  
+  const client = await getClient(routerId);
+  try {
+    await client.connect();
+    for (const u of usersToUnsuspend) {
+      if (u.ipAddress) {
+        try {
+          const addressLists = await client.write([
+            "/ip/firewall/address-list/print",
+            `?list=expired-customers`,
+            `?address=${u.ipAddress}`
+          ]) as any[];
+
+          for (const item of addressLists) {
+            await client.write([
+              "/ip/firewall/address-list/remove",
+              `=.id=${item[".id"]}`
+            ]);
+            console.log(`Successfully removed static IP ${u.ipAddress} from expired-customers list`);
+          }
+        } catch (e) {
+          console.warn(`Failed to remove static IP ${u.ipAddress} from firewall:`, e);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`unsuspendStaticUsers error:`, err);
+  } finally {
+    try {
+      await client.close();
+    } catch {}
+  }
+}
