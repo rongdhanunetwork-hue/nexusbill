@@ -101,7 +101,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
       } finally {
         if (active) {
            setLoading(false);
-           timeoutId = setTimeout(fetchResources, 2000);
+           timeoutId = setTimeout(fetchResources, 30000);
         }
       }
     };
