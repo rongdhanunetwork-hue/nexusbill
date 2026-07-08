@@ -505,10 +505,12 @@ export async function getRouterDetails(routerId?: number): Promise<{
   const client = await getClient(routerId);
   try {
     await client.connect();
-    const secretsData = await client.write("/ppp/secret/print");
-    const activeData = await client.write("/ppp/active/print");
-    const profilesData = await client.write("/ppp/profile/print");
-    const resourceData = await client.write("/system/resource/print");
+    const [secretsData, activeData, profilesData, resourceData] = await Promise.all([
+      client.write("/ppp/secret/print"),
+      client.write("/ppp/active/print"),
+      client.write("/ppp/profile/print"),
+      client.write("/system/resource/print")
+    ]);
 
     return {
       secrets: secretsData as unknown as PppoeSecret[],
