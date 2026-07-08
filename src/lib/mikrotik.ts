@@ -108,7 +108,11 @@ export async function getSystemResource(routerId?: number): Promise<SystemResour
       const topCandidates = validIfaces.slice(0, 5).map(i => i.name).join(",");
       
       if (topCandidates.length > 0) {
-        const stats = await client.write(["/interface/monitor-traffic", `=interface=${topCandidates}`, "=once=yes"]);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Monitor traffic timeout")), 3000));
+        const stats = await Promise.race([
+          client.write(["/interface/monitor-traffic", `=interface=${topCandidates}`, "=once=yes"]),
+          timeoutPromise
+        ]);
         
         let highestCurrentRx = -1;
         for (const s of stats as any[]) {
