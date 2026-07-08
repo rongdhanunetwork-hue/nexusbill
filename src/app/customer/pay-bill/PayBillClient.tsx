@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Upload, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon } from "lucide-react";
+import { useState } from "react";
+import { Upload, CheckCircle2, Loader2, Image as ImageIcon, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
@@ -10,17 +10,31 @@ interface Props {
   bankCardNumber: string;
   packagePrice: string;
   packageName: string;
+  pppoeId?: string;
+  customerName?: string;
+  billDate?: string;
+  newBillDate?: string;
 }
 
-export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumber, packagePrice, packageName }: Props) {
+export default function PayBillClient({ 
+  bkashNumber, 
+  bkashNumber2, 
+  bankCardNumber, 
+  packagePrice, 
+  packageName,
+  pppoeId,
+  customerName,
+  billDate,
+  newBillDate
+}: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const [screenshotUrl, setScreenshotUrl] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const [showManual, setShowManual] = useState(false);
+  
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -30,10 +44,7 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
     formData.append("file", file);
 
     try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (data.success) {
         setScreenshotUrl(data.url);
@@ -55,17 +66,15 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
     const method = String(form.get("method") || "bkash");
 
     if (trxId.length < 5 || !amount) {
-      setError("Transaction ID (min 5 chars) and amount required.");
+      setError("Transaction ID and amount required.");
       return;
     }
-
     if (!screenshotUrl) {
-      setError("Payment screenshot is mandatory. Please upload the screenshot.");
+      setError("Payment screenshot is mandatory.");
       return;
     }
-    
     if (parseFloat(amount) !== parseFloat(packagePrice)) {
-      setError(`You must pay exactly ৳${packagePrice} for your package.`);
+      setError(`You must pay exactly ৳${packagePrice}.`);
       return;
     }
 
@@ -78,19 +87,16 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ trxId, amount, method, screenshotUrl }),
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Submit failed. Please try again.");
-      } else {
-        setSubmitted(true);
-      }
+      if (!res.ok) setError(data.error || "Submit failed.");
+      else setSubmitted(true);
     } catch {
-      setError("Network error. Please check your connection.");
+      setError("Network error.");
     } finally {
       setIsSubmitting(false);
     }
   };
+
   const [isBkashLoading, setIsBkashLoading] = useState(false);
 
   const handleBkashAutoPay = async () => {
@@ -106,235 +112,145 @@ export default function PayBillClient({ bkashNumber, bkashNumber2, bankCardNumbe
       if (data.bkashURL) {
         window.location.href = data.bkashURL;
       } else {
-        const errorMsg = data.error || "Failed to initiate bKash payment";
-        setError(errorMsg);
-        alert(errorMsg);
+        setError(data.error || "Failed to initiate payment");
       }
     } catch (err) {
       setError("Network error connecting to bKash");
-      alert("Network error connecting to bKash");
     } finally {
       setIsBkashLoading(false);
     }
   };
 
-  const paymentMethods = [
-    { key: "bkash", label: "bKash Merchant 1", number: bkashNumber, color: "#E2136E", textColor: "#FF4C9C" }
-  ];
-
-  if (bkashNumber2) {
-    paymentMethods.push({ key: "bkash2", label: "bKash Merchant 2", number: bkashNumber2, color: "#E2136E", textColor: "#FF4C9C" });
-  }
-
-  if (bankCardNumber) {
-    paymentMethods.push({ key: "bank", label: "Bank Card Details", number: bankCardNumber, color: "#00F3FF", textColor: "#00F3FF" });
-  }
-
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-3xl font-bold text-white mb-8">
-        Pay Bill
+    <div className="max-w-3xl mx-auto space-y-8 pb-16">
+      <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-3xl md:text-4xl font-bold text-white mb-8 text-center tracking-tight flex items-center justify-center gap-3">
+        <FileText className="text-neon-blue" size={32} />
+        Payment Invoice
       </motion.h1>
 
       <AnimatePresence mode="wait">
         {submitted ? (
-          <motion.div
-            key="success"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="glass-card p-12 text-center relative overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-b from-neon-green/10 to-transparent" />
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", damping: 15, delay: 0.1 }}
-              className="w-24 h-24 bg-neon-green/20 text-neon-green rounded-full flex items-center justify-center mx-auto mb-6 relative z-10 shadow-[0_0_30px_rgba(57,255,20,0.3)]"
-            >
-              <CheckCircle2 size={48} />
-            </motion.div>
-            <h2 className="text-2xl font-bold text-white mb-4 relative z-10">Payment Successful!</h2>
-            <p className="text-gray-400 mb-8 relative z-10">
-              আপনার পেমেন্ট সফলভাবে রিসিভ করা হয়েছে এবং আপনার ইন্টারনেট লাইন অটোমেটিক চালু/রিচার্জ হয়ে গেছে!
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 relative z-10">
-              <button
-                onClick={() => setSubmitted(false)}
-                className="glass-button w-full sm:w-auto px-6 py-3 font-medium text-white"
-              >
-                Make Another Payment
-              </button>
-              <a
-                href="/customer/history"
-                className="bg-gradient-to-r from-neon-blue to-teal-400 text-slate-900 w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-center hover:shadow-[0_0_20px_rgba(0,243,255,0.4)] hover:scale-105 active:scale-95 transition-all"
-              >
-                View History (হিস্ট্রি দেখুন)
-              </a>
-            </div>
+          <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-12 text-center relative overflow-hidden">
+             <CheckCircle2 className="w-20 h-20 text-neon-green mx-auto mb-6" />
+             <h2 className="text-2xl font-bold text-white mb-4">Payment Submitted!</h2>
+             <p className="text-gray-400">Your manual payment is under review. Please wait for admin approval.</p>
           </motion.div>
         ) : (
-          <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-            {/* Payment Instructions */}
-            <div className="glass-card overflow-hidden">
-              <div className="p-6 border-b border-white/10 bg-white/5">
-                <h2 className="text-lg font-semibold text-white">Payment Instructions</h2>
-                <p className="text-sm text-gray-400 mt-2">নিচের নম্বরে Send Money করে অথবা সরাসরি অনলাইন পেমেন্টের মাধ্যমে বিল পে করে Transaction ID ও Amount সাবমিট করুন।</p>
+          <motion.div key="invoice" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+            
+            {/* INVOICE CARD */}
+            <div className="glass-card overflow-hidden shadow-2xl border border-white/10">
+              <div className="bg-gradient-to-r from-neon-blue/20 via-[#e2136e]/20 to-neon-blue/20 py-5 text-center border-b border-white/10">
+                <h2 className="text-2xl font-bold text-white tracking-wide uppercase">Payment by bKash</h2>
               </div>
-
-              {/* Automated bKash Payment Banner */}
-              <div className="mx-6 mt-6 p-5 rounded-2xl bg-gradient-to-r from-[#E2136E]/25 via-[#E2136E]/5 to-transparent border border-[#E2136E]/30 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="space-y-1.5 relative z-10">
-                  <h3 className="text-[#FF4C9C] font-bold text-base flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#E2136E] animate-ping" />
-                    Auto Pay with bKash
-                  </h3>
-                  <p className="text-xs text-gray-300">
-                    ম্যানুয়ালি ট্রানজাকশন আইডি সাবমিট করার ঝামেলা ছাড়াই সরাসরি বিকাশের মাধ্যমে পেমেন্ট করতে ডানপাশের বাটনে ক্লিক করুন। পেমেন্ট সম্পন্ন হলে আপনার লাইন অটোমেটিক চালু হয়ে যাবে।
-                  </p>
+              
+              <div className="flex flex-col divide-y divide-white/5">
+                <div className="flex flex-col sm:flex-row hover:bg-white/5 transition-colors">
+                  <div className="sm:w-1/3 p-4 font-semibold text-gray-400 bg-white/5">PPPoE Id</div>
+                  <div className="sm:w-2/3 p-4 text-white font-bold tracking-wide">{pppoeId}</div>
                 </div>
-                <button
-                  onClick={handleBkashAutoPay}
-                  disabled={isBkashLoading}
-                  className="bg-[#E2136E] hover:bg-[#b00f55] disabled:opacity-50 text-white font-bold text-sm px-6 py-3 rounded-xl shadow-lg hover:shadow-[#E2136E]/30 hover:scale-105 active:scale-95 transition-all shrink-0 z-10 flex items-center justify-center gap-2 w-full md:w-auto"
-                >
-                  {isBkashLoading ? <Loader2 size={16} className="animate-spin" /> : null}
-                  {isBkashLoading ? "Processing..." : "Pay with bKash"}
-                </button>
-              </div>
-
-              <div className="p-6 grid sm:grid-cols-3 gap-4">
-                {paymentMethods.map((m) => (
-                  <div
-                    key={m.key}
-                    className="rounded-xl p-5 border"
-                    style={{
-                      background: `linear-gradient(135deg, ${m.color}20, ${m.color}08)`,
-                      borderColor: `${m.color}40`,
-                    }}
-                  >
-                    <div className="font-bold mb-2 text-base" style={{ color: m.textColor }}>
-                      {m.label}
-                    </div>
-                    <div className="text-xl text-white font-mono tracking-wider">{m.number}</div>
-                  </div>
-                ))}
+                <div className="flex flex-col sm:flex-row hover:bg-white/5 transition-colors">
+                  <div className="sm:w-1/3 p-4 font-semibold text-gray-400 bg-white/5">Customer Name</div>
+                  <div className="sm:w-2/3 p-4 text-white font-medium">{customerName}</div>
+                </div>
+                <div className="flex flex-col sm:flex-row hover:bg-white/5 transition-colors">
+                  <div className="sm:w-1/3 p-4 font-semibold text-gray-400 bg-white/5">Bill Date</div>
+                  <div className="sm:w-2/3 p-4 text-red-400 font-medium">{billDate}</div>
+                </div>
+                <div className="flex flex-col sm:flex-row hover:bg-white/5 transition-colors">
+                  <div className="sm:w-1/3 p-4 font-semibold text-neon-green bg-white/5">New Bill Date</div>
+                  <div className="sm:w-2/3 p-4 text-neon-green font-bold">{newBillDate}</div>
+                </div>
+                <div className="flex flex-col sm:flex-row hover:bg-white/5 transition-colors">
+                  <div className="sm:w-1/3 p-4 font-semibold text-gray-400 bg-white/5">Package</div>
+                  <div className="sm:w-2/3 p-4 text-white font-medium">{packageName}</div>
+                </div>
+                <div className="flex flex-col sm:flex-row hover:bg-white/5 transition-colors">
+                  <div className="sm:w-1/3 p-4 font-semibold text-gray-400 bg-white/5">Price</div>
+                  <div className="sm:w-2/3 p-4 text-white font-medium">৳ {packagePrice}</div>
+                </div>
+                <div className="flex flex-col sm:flex-row hover:bg-white/5 transition-colors">
+                  <div className="sm:w-1/3 p-4 font-semibold text-gray-400 bg-white/5">Gateway Charge</div>
+                  <div className="sm:w-2/3 p-4 text-white font-medium">৳ 0</div>
+                </div>
+                <div className="flex flex-col sm:flex-row bg-neon-blue/10 border-t border-neon-blue/30">
+                  <div className="sm:w-1/3 p-5 font-bold text-neon-blue text-lg">Total Payable</div>
+                  <div className="sm:w-2/3 p-5 text-neon-blue font-black text-2xl">৳ {packagePrice}</div>
+                </div>
               </div>
             </div>
 
-            {/* Submit Form */}
-            <motion.form
-              onSubmit={handleSubmit}
-              className="glass-card p-6 md:p-8 space-y-6"
-              animate={error ? { x: [-10, 10, -10, 10, 0] } : {}}
-              transition={{ duration: 0.4 }}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Payment Method</label>
-                  <select
-                    name="method"
-                    required
-                    className="w-full px-4 py-3 glass-input appearance-none bg-slate-800 text-white"
-                  >
-                    {paymentMethods.map((m) => (
-                      <option key={m.key} value={m.key} className="bg-slate-800">
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Amount (৳) <span className="text-neon-green text-xs font-bold bg-neon-green/10 px-2 py-0.5 rounded ml-2">{packageName}</span>
-                  </label>
-                  <input
-                    name="amount"
-                    type="number"
-                    required
-                    readOnly
-                    value={packagePrice}
-                    className="w-full px-4 py-3 glass-input bg-slate-800/80 text-gray-300 cursor-not-allowed"
-                    title={`You must pay exactly ৳${packagePrice} for your package.`}
-                  />
-                  <p className="text-[10px] text-amber-400 mt-1">*Amount is fixed according to your active package.</p>
-                </div>
-              </div>
+            {error && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-center font-medium shadow-lg">
+                {error}
+              </motion.div>
+            )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Transaction ID</label>
-                <input
-                  type="text"
-                  name="trxId"
-                  required
-                  placeholder="e.g. TXN123456789"
-                  className={`w-full px-4 py-3 glass-input uppercase ${error ? "border-red-500 ring-1 ring-red-500/30" : ""}`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Screenshot (Mandatory) <span className="text-red-400">*</span></label>
-                <input type="hidden" name="screenshotUrl" value={screenshotUrl} />
-                
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed ${screenshotUrl ? 'border-neon-green/50 bg-neon-green/5' : 'border-white/20 hover:border-white/30'} rounded-xl p-6 text-center transition-colors cursor-pointer relative overflow-hidden`}
-                >
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    ref={fileInputRef} 
-                    onChange={handleFileUpload} 
-                  />
-                  
-                  {isUploading ? (
-                    <div className="flex flex-col items-center justify-center space-y-2 py-4">
-                      <Loader2 className="animate-spin text-neon-blue" size={28} />
-                      <p className="text-sm text-gray-400">Uploading...</p>
-                    </div>
-                  ) : screenshotUrl ? (
-                    <div className="flex flex-col items-center justify-center space-y-2">
-                      <CheckCircle2 className="text-neon-green" size={28} />
-                      <p className="text-sm text-neon-green font-medium">Screenshot Uploaded Successfully!</p>
-                      <img src={screenshotUrl} alt="Preview" className="h-16 rounded mt-2 object-cover border border-white/10" />
-                      <p className="text-xs text-gray-400 mt-2">Click again to change</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center space-y-2 py-4">
-                      <Upload className="text-gray-400" size={28} />
-                      <p className="text-sm text-gray-300 font-medium">Tap or click to upload screenshot</p>
-                      <p className="text-xs text-red-400 mt-1">Payment screenshot is required!</p>
-                      <p className="text-xs text-gray-500 mt-1">Supports JPG, PNG, WEBP</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3"
-                >
-                  <AlertCircle size={16} />
-                  {error}
-                </motion.div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-neon-blue to-teal-400 text-slate-900 py-4 rounded-xl font-bold text-lg hover:shadow-[0_0_25px_rgba(0,243,255,0.4)] transition-all disabled:opacity-50 flex justify-center items-center gap-2"
+            <div className="flex flex-col items-center justify-center gap-6 pt-4">
+              <button 
+                onClick={handleBkashAutoPay}
+                disabled={isBkashLoading}
+                className="group relative overflow-hidden bg-[#e2136e] text-white px-10 py-4 rounded-xl shadow-[0_0_40px_-10px_#e2136e] flex items-center justify-center gap-4 w-full max-w-sm transition-all hover:scale-105 active:scale-95"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={20} className="animate-spin" /> Submitting...
-                  </>
-                ) : (
-                  "Submit Payment"
-                )}
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out" />
+                {isBkashLoading ? <Loader2 className="animate-spin relative z-10" size={24} /> : null}
+                <span className="font-bold text-xl relative z-10 tracking-wide">Pay with bKash</span>
               </button>
-            </motion.form>
+            </div>
+
+            <div className="mt-16 text-center">
+              <button 
+                onClick={() => setShowManual(!showManual)} 
+                className="text-gray-400 hover:text-white text-sm font-medium px-6 py-2 rounded-full border border-white/10 hover:border-white/30 hover:bg-white/5 transition-all"
+              >
+                {showManual ? "Hide Manual Payment Options" : "Or pay manually (Send Money / Bank)"}
+              </button>
+            </div>
+
+            {showManual && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="pt-2">
+                <form onSubmit={handleSubmit} className="glass-card p-6 md:p-8 space-y-6">
+                  <h3 className="text-xl font-bold text-white mb-4">Manual Submission</h3>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Payment Method</label>
+                      <select name="method" className="w-full bg-slate-800 rounded-xl px-4 py-3 text-white border border-white/10">
+                        <option value="bkash">bKash ({bkashNumber})</option>
+                        {bkashNumber2 && <option value="bkash2">bKash 2 ({bkashNumber2})</option>}
+                        {bankCardNumber && <option value="bank">Bank ({bankCardNumber})</option>}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Amount Paid</label>
+                      <input name="amount" type="number" defaultValue={packagePrice} readOnly className="w-full bg-slate-800 rounded-xl px-4 py-3 text-white border border-white/10 opacity-70" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Transaction ID (TrxID)</label>
+                    <input name="trxId" required className="w-full bg-slate-800 rounded-xl px-4 py-3 text-white border border-white/10" placeholder="e.g. 9HR45..." />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Upload Screenshot</label>
+                    <div className="flex items-center gap-4">
+                      <label className="flex-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 border border-white/10 border-dashed rounded-xl px-4 py-6 cursor-pointer transition-colors">
+                        {isUploading ? <Loader2 className="animate-spin text-neon-blue" /> : <Upload className="text-neon-blue" />}
+                        <span className="text-gray-300 font-medium">Click to upload image</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                      </label>
+                      {screenshotUrl && (
+                        <div className="w-24 h-24 rounded-xl overflow-hidden border border-white/10 shrink-0">
+                          <img src={screenshotUrl} alt="Receipt" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <button disabled={isSubmitting} className="w-full py-4 rounded-xl bg-neon-blue text-white font-bold tracking-wide hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_-5px_rgba(0,243,255,0.5)]">
+                    {isSubmitting ? <Loader2 className="animate-spin" /> : "Submit Payment Details"}
+                  </button>
+                </form>
+              </motion.div>
+            )}
+
           </motion.div>
         )}
       </AnimatePresence>

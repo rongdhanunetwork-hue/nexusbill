@@ -68,6 +68,48 @@ export async function GET(req: Request) {
     });
 
     if (pendingPayment) {
+      // Find the user to get their package and current expire date
+      const customer = await db.query.users.findFirst({
+        where: eq(users.id, pendingPayment.userId),
+        with: { package: true }
+      });
+
+      if (customer) {
+        // Process Auto Recharge Logic
+        let baseDate = new Date();
+        const isCustomerActive = customer.status === "active" && customer.expireDate && new Date(customer.expireDate) > baseDate;
+        if (isCustomerActive) {
+          baseDate = new Date(customer.expireDate!);
+        }
+        
+        let newExpireDate = new Date(baseDate);
+        const durationDays = customer.package?.durationDays || 30;
+        newExpireDate.setDate(newExpireDate.getDate() + durationDays);
+        const now = new Date();
+        newExpireDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+
+        // Update user status and expire date
+        await db.update(users)
+          .set({ status: "active", expireDate: newExpireDate })
+          .where(eq(users.id, customer.id));
+
+        // Sync to Mikrotik
+        if (customer.pppoeUsername) {
+          try {
+            const { syncCustomerToMikrotik } = await import("@/lib/sync");
+            await syncCustomerToMikrotik(
+              customer.pppoeUsername,
+              undefined,
+              customer.packageId,
+              "active",
+              customer.mikrotikId
+            );
+          } catch (e) {
+            console.error("Failed to sync to mikrotik:", e);
+          }
+        }
+      }
+
       // Update payment
       await db.update(payments)
         .set({ 
@@ -81,11 +123,6 @@ export async function GET(req: Request) {
       await db.update(invoices)
         .set({ status: "paid" })
         .where(and(eq(invoices.userId, pendingPayment.userId), eq(invoices.status, "unpaid")));
-
-      // Automatically activate user connection if it was suspended
-      await db.update(users)
-        .set({ status: "active" })
-        .where(and(eq(users.id, pendingPayment.userId), eq(users.status, "suspended")));
     }
 
     redirectUrl.searchParams.set("bkash_status", "success");

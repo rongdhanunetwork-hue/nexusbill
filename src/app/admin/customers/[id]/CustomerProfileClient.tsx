@@ -1146,14 +1146,9 @@ useEffect(() => {
                   <div className="text-neon-blue mt-1"><Wifi size={18} /></div>
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">PPPoE Password</p>
-                    <p className="text-white font-medium">{showPassword ? (plainTextPassword || "••••••••") : "••••••••"}</p>
+                    <p className="text-white font-medium">{plainTextPassword || "Not Found in MikroTik"}</p>
                   </div>
                 </div>
-                {plainTextPassword && (
-                  <button onClick={() => setShowPassword(!showPassword)} className="text-gray-400 hover:text-white">
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                )}
               </div>
               <Info icon={<IdCard size={18} />} label="NID Number" value={displayNidNumber || "Not set"} />
               <Info icon={<Clock size={18} />} label="Date of Birth" value={displayDob ? displayDob.toLocaleDateString() : "Not set"} />

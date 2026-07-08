@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { payments, invoices } from "@/db/schema";
+import { payments, invoices, users } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 
 export async function POST(req: Request) {
@@ -11,6 +11,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     const amount = body.amount;
     
+    const user = await db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.id, session.userId)
+    });
+    const payerReference = user?.pppoeUsername || session.userId.toString();
+
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     }
@@ -59,7 +64,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         mode: "0011",
-        payerReference: session.userId.toString(),
+        payerReference: payerReference,
         callbackURL: `${baseUrl}/api/bkash/execute`,
         amount: amount.toString(),
         currency: "BDT",

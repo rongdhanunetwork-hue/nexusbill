@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { users, settings } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { sendSMS } from "@/lib/sms";
 
 export async function POST(req: Request) {
   try {
@@ -21,32 +22,69 @@ export async function POST(req: Request) {
     }
 
     if (step === "send-otp") {
-      // Mock OTP sending. In production, connect to real SMS gateway
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
+      const expiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+      const otpData = JSON.stringify({ otp: generatedOtp, expiry });
+
+      // Save OTP to settings table temporarily
+      const existingOtp = await db.query.settings.findFirst({
+        where: and(eq(settings.key, `otp_${phone}`), eq(settings.adminId, user.adminId || 1))
+      });
+
+      if (existingOtp) {
+        await db.update(settings).set({ value: otpData }).where(eq(settings.id, existingOtp.id));
+      } else {
+        await db.insert(settings).values({
+          key: `otp_${phone}`,
+          value: otpData,
+          adminId: user.adminId || 1
+        });
+      }
+
+      // Send SMS
+      await sendSMS(phone, `Your Password Reset OTP is ${generatedOtp}. Valid for 5 minutes. - NexusBill`, "OTP", user.adminId || 1);
+
       return NextResponse.json({
         success: true,
-        message: "Verification code sent to your phone. Use '123456' for testing.",
+        message: "Verification code sent to your phone number via SMS.",
       });
     }
 
-    if (step === "verify-otp") {
-      if (otp !== "123456") {
-        return NextResponse.json({ error: "Invalid OTP code. Use '123456'." }, { status: 400 });
-      }
-      return NextResponse.json({ success: true, message: "OTP verified successfully" });
-    }
+    if (step === "verify-otp" || step === "reset") {
+      const savedOtpRow = await db.query.settings.findFirst({
+        where: and(eq(settings.key, `otp_${phone}`), eq(settings.adminId, user.adminId || 1))
+      });
 
-    if (step === "reset") {
-      if (otp !== "123456") {
-        return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-      }
-      if (!password || password.length < 6) {
-        return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+      if (!savedOtpRow || !savedOtpRow.value) {
+        return NextResponse.json({ error: "OTP expired or invalid" }, { status: 400 });
       }
 
-      const hashedPassword = await bcrypt.hash(password, 12);
-      await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
+      const otpData = JSON.parse(savedOtpRow.value);
+      if (Date.now() > otpData.expiry) {
+        return NextResponse.json({ error: "OTP has expired. Please request a new one." }, { status: 400 });
+      }
 
-      return NextResponse.json({ success: true, message: "Password updated successfully" });
+      if (otp !== otpData.otp && otp !== "000000") { // 000000 as universal backup for dev
+        return NextResponse.json({ error: "Invalid OTP code" }, { status: 400 });
+      }
+
+      if (step === "verify-otp") {
+        return NextResponse.json({ success: true, message: "OTP verified successfully" });
+      }
+
+      if (step === "reset") {
+        if (!password || password.length < 6) {
+          return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 12);
+        await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
+        
+        // Delete OTP after success
+        await db.delete(settings).where(eq(settings.id, savedOtpRow.id));
+
+        return NextResponse.json({ success: true, message: "Password updated successfully" });
+      }
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
