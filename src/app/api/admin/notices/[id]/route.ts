@@ -43,7 +43,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { title, message, type, imageUrl } = body;
 
     await db.update(notices)
-      .set({ title, message, type, imageUrl, updatedAt: new Date() })
+      .set({ title, message, type, imageUrl })
       .where(eq(notices.id, noticeId));
 
     return NextResponse.json({ success: true, message: "Notice updated successfully" });
