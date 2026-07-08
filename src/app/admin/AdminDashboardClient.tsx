@@ -436,26 +436,6 @@ export default function AdminDashboardClient({
     document.body.removeChild(link);
   };
 
-  const [isSyncing, setIsSyncing] = useState(false);
-  const handleForceSync = async () => {
-    if (!window.confirm("আপনি কি নিশ্চিত যে আপনি সকল আনপেইড এবং এক্সপায়ার্ড ইউজারদের মাইক্রোটিক থেকে ফোর্স ব্লক করতে চান? এটি কয়েক মিনিট সময় নিতে পারে।")) return;
-    setIsSyncing(true);
-    try {
-      const res = await fetch("/api/admin/mikrotik/force-sync", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        alert("✅ Success: " + data.message);
-      } else {
-        alert("❌ Error: " + data.error);
-      }
-    } catch (e) {
-      alert("Failed to run force sync.");
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-
   const stats = [
     { name: "Total Customer", value: data.totalCustomers, icon: Users, color: "text-blue-400", glow: "shadow-blue-500/40", href: `${basePath}/customers` },
     { name: "Active Customer", value: data.activeCustomers, icon: Wifi, color: "text-neon-green", glow: "shadow-green-500/40", href: `${basePath}/customers?status=active` },
@@ -486,26 +466,14 @@ export default function AdminDashboardClient({
           <LiveBadge lastUpdated={lastUpdated} />
           <span className="text-gray-500 text-xs">প্রতি ৩০ সেকেন্ডে আপডেট হয়</span>
         </div>
-        <div className="flex gap-2">
-          {role === "admin" && (
-            <button
-              onClick={handleForceSync}
-              disabled={isSyncing}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neon-red/10 border border-neon-red/20 text-neon-red hover:bg-neon-red/20 transition-all text-xs font-semibold disabled:opacity-50"
-            >
-              <ShieldAlert size={13} className={isSyncing ? "animate-pulse" : ""} />
-              {isSyncing ? "Enforcing..." : "Enforce Block (Sync)"}
-            </button>
-          )}
-          <button
-            onClick={() => fetchStats(true)}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-xs font-semibold disabled:opacity-50"
-          >
-            <RefreshCw size={13} className={isRefreshing ? "animate-spin" : ""} />
-            Refresh
-          </button>
-        </div>
+        <button
+          onClick={() => fetchStats(true)}
+          disabled={isRefreshing}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-xs font-semibold disabled:opacity-50"
+        >
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin" : ""} />
+          Refresh
+        </button>
       </div>
 
       {/* MikroTik Resources Widget moved to the top */}

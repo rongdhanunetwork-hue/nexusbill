@@ -3,8 +3,6 @@ import { users, smsLogs } from "@/db/schema";
 import { eq, lt, gt, and, isNotNull, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
-export const maxDuration = 60;
-
 // Secret key to prevent unauthorized access
 const CRON_SECRET = process.env.CRON_SECRET || "isp-cron-secret-2024";
 
