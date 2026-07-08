@@ -36,7 +36,7 @@ async function getClient(routerId?: number) {
     port: config.port,
     user: config.user,
     password: config.pass,
-    timeout: parseInt(process.env.MIKROTIK_API_TIMEOUT || '8'),
+    timeout: parseInt(process.env.MIKROTIK_API_TIMEOUT || '30'),
   });
   client.on("error", (err) => {
     console.warn("MikroTik socket error caught:", err.message);
