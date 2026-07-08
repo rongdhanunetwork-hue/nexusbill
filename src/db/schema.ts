@@ -83,6 +83,7 @@ export const mikrotiks = pgTable("mikrotiks", {
   apiPort: integer("api_port").default(80),
   username: varchar("username", { length: 255 }).notNull(),
   password: text("password").notNull(),
+  webPort: integer("web_port").default(80),
   status: boolean("status").default(true),
   resellerId: integer("reseller_id"),
   adminId: integer("admin_id"),

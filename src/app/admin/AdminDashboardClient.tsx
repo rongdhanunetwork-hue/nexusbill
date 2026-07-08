@@ -199,7 +199,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
             </motion.div>
 
             {/* Box 2: Traffic Monitor (Byte Graph only) */}
-            {res && trafficHistory[router.routerId] && trafficHistory[router.routerId].length > 1 && (
+            {res && trafficHistory[router.routerId] && trafficHistory[router.routerId].length > 0 && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} 
                 className="p-4 rounded-xl border border-white/5 bg-black/20 shadow-md col-span-1 lg:col-span-2 flex flex-col h-full"
               >
