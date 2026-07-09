@@ -235,28 +235,29 @@ export async function createPppoeSecret(data: {
 }
 
 export async function updatePppoeSecret(id: string, data: Partial<PppoeSecret>, routerId?: number): Promise<void> {
-  const body: Record<string, string> = { ".id": id };
+  const body: Record<string, any> = {};
   if (data.name !== undefined) body.name = data.name;
   if (data.password !== undefined) body.password = data.password;
   if (data.profile !== undefined) body.profile = data.profile;
   if (data.comment !== undefined) body.comment = data.comment;
   if (data.disabled !== undefined) {
-    body.disabled = (data.disabled === "true" || data.disabled === "yes") ? "yes" : "no";
+    body.disabled = (data.disabled === "true" || data.disabled === "yes" || data.disabled === true) ? "true" : "false";
   }
 
-  await restCall(routerId, 'POST', '/ppp/secret/set', body);
+  // Use standard REST PATCH for updates
+  await restCall(routerId, 'PATCH', `/ppp/secret/${id.replace('*', '%2A')}`, body);
 }
 
 export async function deletePppoeSecret(id: string, routerId?: number): Promise<void> {
-  await restCall(routerId, 'POST', '/ppp/secret/remove', { ".id": id });
+  await restCall(routerId, 'DELETE', `/ppp/secret/${id.replace('*', '%2A')}`);
 }
 
 export async function enablePppoeSecret(id: string, routerId?: number): Promise<void> {
-  await restCall(routerId, 'POST', '/ppp/secret/set', { ".id": id, disabled: "no" });
+  await restCall(routerId, 'PATCH', `/ppp/secret/${id.replace('*', '%2A')}`, { disabled: "false" });
 }
 
 export async function disablePppoeSecret(id: string, routerId?: number): Promise<void> {
-  await restCall(routerId, 'POST', '/ppp/secret/set', { ".id": id, disabled: "yes" });
+  await restCall(routerId, 'PATCH', `/ppp/secret/${id.replace('*', '%2A')}`, { disabled: "true" });
 }
 
 // ───── Active PPPoE Sessions (currently online) ──────────
@@ -325,23 +326,23 @@ export async function updatePppoeProfile(id: string, data: {
   remoteAddress?: string;
   rateLimit?: string;
 }, routerId?: number): Promise<void> {
-  const body: Record<string, string> = { ".id": id };
+  const body: Record<string, string> = {};
   if (data.name) body.name = data.name;
   if (data.localAddress !== undefined) body["local-address"] = data.localAddress;
   if (data.remoteAddress !== undefined) body["remote-address"] = data.remoteAddress;
   if (data.rateLimit !== undefined) body["rate-limit"] = data.rateLimit;
 
-  await restCall(routerId, 'POST', '/ppp/profile/set', body);
+  await restCall(routerId, 'PATCH', `/ppp/profile/${id.replace('*', '%2A')}`, body);
 }
 
 export async function deletePppoeProfile(id: string, routerId?: number): Promise<void> {
-  await restCall(routerId, 'POST', '/ppp/profile/remove', { ".id": id });
+  await restCall(routerId, 'DELETE', `/ppp/profile/${id.replace('*', '%2A')}`);
 }
 
 // ───── Session Management ─────────────────────────────────
 
 export async function disconnectPppoeActive(id: string, routerId?: number): Promise<void> {
-  await restCall(routerId, 'POST', '/ppp/active/remove', { ".id": id });
+  await restCall(routerId, 'DELETE', `/ppp/active/${id.replace('*', '%2A')}`);
 }
 
 export async function rebootRouter(routerId?: number): Promise<void> {
@@ -518,11 +519,11 @@ export async function suspendUsers(
           const username = u.pppoeUsername.toLowerCase();
           const secret = secretsArr.find((s: any) => s.name?.toLowerCase() === username);
           if (secret) {
-            try { await mikrotikRest(config, 'POST', '/ppp/secret/set', { ".id": secret[".id"], profile: "Expired", disabled: "yes" }); } catch (e) { }
+            try { await mikrotikRest(config, 'PATCH', `/ppp/secret/${secret[".id"].replace('*', '%2A')}`, { profile: "Expired", disabled: "true" }); } catch (e) { console.warn("Error suspending secret:", e) }
           }
           const sessions = activeArr.filter((s: any) => s.name?.toLowerCase() === username);
           for (const session of sessions) {
-            try { await mikrotikRest(config, 'POST', '/ppp/active/remove', { ".id": session[".id"] }); } catch (e) { }
+            try { await mikrotikRest(config, 'DELETE', `/ppp/active/${session[".id"].replace('*', '%2A')}`); } catch (e) { console.warn("Error kicking session:", e) }
           }
         }
         if (u.type === "static" && u.ipAddress) {
