@@ -301,6 +301,14 @@ export default function CustomersClient({
     }
   }, [searchTerm, selectedAreaId, selectedPackageId, statusFilter, isRestored]);
 
+  // Robust fallback: if current page exceeds maximum allowed pages, reset to 1
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
+    if (currentPage > maxPage) {
+      setCurrentPage(1);
+    }
+  }, [filteredCustomers, pageSize, currentPage]);
+
   useEffect(() => {
     setSelectedCustomerIds([]);
   }, [searchTerm, selectedAreaId, selectedPackageId, statusFilter, currentPage]);
@@ -1086,9 +1094,9 @@ const handleImportSubmit = async () => {
                           {/* Connection Badge */}
                           {activeSession ? (
                             isExpired ? (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-neon-blue/20 text-neon-blue border border-neon-blue/30 animate-pulse">
-                                <span className="w-1.5 h-1.5 rounded-full bg-neon-blue online-pulsing-dot shrink-0" />
-                                active
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse" title="Connected but internet is blocked">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 online-pulsing-dot shrink-0" />
+                                blocked
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-neon-green/20 text-neon-green border border-neon-green/30">

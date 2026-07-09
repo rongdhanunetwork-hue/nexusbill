@@ -110,6 +110,18 @@ export async function GET(req: Request) {
             console.error("Failed to sync to mikrotik:", e);
           }
         }
+
+        // Notify Admins
+        try {
+          const { createNotificationForAdmins } = await import("@/lib/notifications");
+          await createNotificationForAdmins(
+            "bKash Payment Received!",
+            `${customer.name} just paid ৳${pendingPayment.amount} via bKash.`,
+            `/admin/customers/${customer.id}`
+          );
+        } catch (e) {
+          console.error("Failed to create notification:", e);
+        }
       }
 
       // Update payment
