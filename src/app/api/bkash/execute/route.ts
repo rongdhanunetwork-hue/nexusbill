@@ -8,7 +8,9 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const paymentID = url.searchParams.get("paymentID");
     const status = url.searchParams.get("status");
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+    const protocol = req.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
     
     // Determine redirect path for UI
     const redirectUrl = new URL("/customer/pay-bill", baseUrl);
@@ -131,7 +133,9 @@ export async function GET(req: Request) {
 
   } catch (error) {
     console.error("bKash Execute Error:", error);
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+    const protocol = req.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
     const redirectUrl = new URL("/customer/pay-bill", baseUrl);
     redirectUrl.searchParams.set("bkash_status", "server_error");
     return NextResponse.redirect(redirectUrl);

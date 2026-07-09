@@ -53,7 +53,9 @@ export async function POST(req: Request) {
     // Step 2: Create Payment
     const intent = "sale";
     const invoiceNumber = `INV-${Date.now()}-${session.userId}`;
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+    const protocol = req.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
     
     const createRes = await fetch(`${base_url}/tokenized/checkout/create`, {
       method: "POST",
