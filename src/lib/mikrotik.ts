@@ -241,7 +241,7 @@ export async function updatePppoeSecret(id: string, data: Partial<PppoeSecret>, 
   if (data.profile !== undefined) body.profile = data.profile;
   if (data.comment !== undefined) body.comment = data.comment;
   if (data.disabled !== undefined) {
-    body.disabled = (data.disabled === "true" || data.disabled === "yes" || data.disabled === true) ? "true" : "false";
+    body.disabled = (data.disabled === "true" || data.disabled === "yes" || (data.disabled as any) === true) ? "true" : "false";
   }
 
   // Use standard REST PATCH for updates
