@@ -301,13 +301,7 @@ export default function CustomersClient({
     }
   }, [searchTerm, selectedAreaId, selectedPackageId, statusFilter, isRestored]);
 
-  // Robust fallback: if current page exceeds maximum allowed pages, reset to 1
-  useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
-    if (currentPage > maxPage) {
-      setCurrentPage(1);
-    }
-  }, [filteredCustomers, pageSize, currentPage]);
+
 
   useEffect(() => {
     setSelectedCustomerIds([]);
@@ -385,6 +379,14 @@ export default function CustomersClient({
   const paginatedCustomers = useMemo(() => {
     return filteredCustomers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   }, [filteredCustomers, currentPage, pageSize]);
+
+  // Robust fallback: if current page exceeds maximum allowed pages, reset to 1
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
+    if (currentPage > maxPage) {
+      setCurrentPage(1);
+    }
+  }, [filteredCustomers, pageSize, currentPage]);
 
   // Calculate values for Recharge Modal
   // If admin selected a new package, use that package's price for calculation
