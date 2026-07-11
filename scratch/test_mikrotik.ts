@@ -16,7 +16,7 @@ async function main() {
       console.log(`- Total Secrets: ${secrets.length}`);
       console.log(`- Active Sessions: ${active.length}`);
 
-      const target = "RDN-AMANAT-1076";
+      const target = "RDN-AMANAT-1032";
       
       const s = secrets.find(sec => sec.name?.toLowerCase() === target.toLowerCase());
       console.log(`\nSecret for ${target}:`, s ? { name: s.name, profile: s.profile, disabled: s.disabled, id: s[".id"] } : "Not found");

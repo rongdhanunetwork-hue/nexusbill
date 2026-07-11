@@ -245,11 +245,12 @@ export async function updatePppoeSecret(id: string, data: Partial<PppoeSecret>, 
   }
 
   // Use standard REST PATCH for updates
-  await restCall(routerId, 'PATCH', `/ppp/secret/${id.replace('*', '%2A')}`, body);
+  await restCall(routerId, 'PATCH', `/ppp/secret/${id}`, body);
 }
 
 export async function deletePppoeSecret(id: string, routerId?: number): Promise<void> {
-  await restCall(routerId, 'DELETE', `/ppp/secret/${id.replace('*', '%2A')}`);
+  // Use standard REST DELETE
+  await restCall(routerId, 'DELETE', `/ppp/secret/${id}`);
 }
 
 export async function enablePppoeSecret(id: string, routerId?: number): Promise<void> {
@@ -342,7 +343,7 @@ export async function deletePppoeProfile(id: string, routerId?: number): Promise
 // ───── Session Management ─────────────────────────────────
 
 export async function disconnectPppoeActive(id: string, routerId?: number): Promise<void> {
-  await restCall(routerId, 'DELETE', `/ppp/active/${id.replace('*', '%2A')}`);
+  await restCall(routerId, 'DELETE', `/ppp/active/${id}`);
 }
 
 export async function rebootRouter(routerId?: number): Promise<void> {
