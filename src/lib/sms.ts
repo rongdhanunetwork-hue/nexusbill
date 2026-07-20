@@ -133,30 +133,51 @@ async function sendViaRtcom(
   senderId: string,
   acode: string | null
 ): Promise<SMSResult> {
-  // Normalize phone — add +880
-  let normalizedPhone = phone.replace(/\s+/g, "").replace(/^0/, "880");
-  if (!normalizedPhone.startsWith("880")) {
-    normalizedPhone = "880" + normalizedPhone.replace(/^88/, "");
-  }
-  // RT Communications often requires a leading plus sign
-  normalizedPhone = "+" + normalizedPhone;
-
-  const url = `https://api.rtcom.xyz/onetomany?acode=${acode}&api_key=${apiKey}&senderid=${senderId}&type=${/[^\x00-\x7F]/.test(message) ? "unicode" : "text"}&msg=${encodeURIComponent(message)}&contacts=${encodeURIComponent(normalizedPhone)}&transactionType=T&contentID=`;
-  
   if (!acode) {
     return { success: false, error: "Account Code (acode) is required for RT Communications" };
   }
 
-  const response = await fetch(url, {
-    method: "POST"
-  });
-
-  if (!response.ok) {
-
-    throw new Error(`RT Communications API error: ${response.status}`);
+  // Normalize phone — BD format: 8801XXXXXXXXX (no +, no leading 0)
+  let normalizedPhone = phone.replace(/\s+/g, "");
+  if (normalizedPhone.startsWith("0")) {
+    normalizedPhone = "880" + normalizedPhone.slice(1);
+  } else if (normalizedPhone.startsWith("+88")) {
+    normalizedPhone = normalizedPhone.slice(1); // remove +
+  } else if (!normalizedPhone.startsWith("880")) {
+    normalizedPhone = "880" + normalizedPhone;
   }
 
+  const msgType = /[^\x00-\x7F]/.test(message) ? "unicode" : "text";
+  const url = `https://api.rtcom.xyz/onetomany`;
+
+  console.log(`[SMS][RTCOM] Sending to ${normalizedPhone}, senderid=${senderId}, acode=${acode}`);
+
+  const payload = {
+    acode: acode,
+    api_key: apiKey,
+    senderid: senderId,
+    type: msgType,
+    msg: message,
+    contacts: normalizedPhone,
+    transactionType: "T",
+    contentID: ""
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
   const text = await response.text();
+  console.log(`[SMS][RTCOM] Raw response: ${text}`);
+
+  if (!response.ok) {
+    throw new Error(`RT Communications API error: ${response.status} - ${text}`);
+  }
+
   try {
     const data = JSON.parse(text);
     if (data.response && data.response.code === 200) {
@@ -164,9 +185,12 @@ async function sendViaRtcom(
     }
     return { 
       success: false, 
-      error: data.response?.message || `RT Communications response code: ${data.response?.code}` 
+      error: data.response?.message || data.message || `RT Communications response code: ${data.response?.code}` 
     };
   } catch {
+    if (text.toLowerCase().includes("success")) {
+      return { success: true, message: "SMS sent via RT Communications" };
+    }
     return { success: false, error: `RT Communications raw response: ${text}` };
   }
 }
