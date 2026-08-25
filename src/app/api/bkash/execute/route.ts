@@ -87,8 +87,7 @@ export async function GET(req: Request) {
         let newExpireDate = new Date(baseDate);
         const durationDays = customer.package?.durationDays || 30;
         newExpireDate.setDate(newExpireDate.getDate() + durationDays);
-        const now = new Date();
-        newExpireDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+        newExpireDate.setHours(23, 59, 59, 999);
 
         // Update user status and expire date
         await db.update(users)

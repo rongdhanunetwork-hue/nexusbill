@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
 
           const newExpireDate = new Date(baseDate);
           newExpireDate.setDate(newExpireDate.getDate() + durationDays);
+          newExpireDate.setHours(23, 59, 59, 999);
 
           await db.update(users)
             .set({ 

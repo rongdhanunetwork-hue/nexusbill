@@ -101,8 +101,7 @@ export async function POST(req: Request) {
       }
       
       newExpireDate.setDate(newExpireDate.getDate() + daysToAdd);
-      const now = new Date();
-      newExpireDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      newExpireDate.setHours(23, 59, 59, 999);
     }
 
     // If Reseller, deduct balance

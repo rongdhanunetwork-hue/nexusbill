@@ -23,7 +23,11 @@ export async function GET() {
 
     // 1. Expiration check
     if (customer.expireDate) {
-      const daysLeft = Math.ceil((new Date(customer.expireDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      const exp = new Date(customer.expireDate);
+      exp.setHours(0, 0, 0, 0);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const daysLeft = Math.round((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       if (daysLeft >= 0 && daysLeft <= 3) {
         notifications.push({
           id: "package-expiry",

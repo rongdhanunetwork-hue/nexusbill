@@ -71,7 +71,12 @@ export default function CustomerDashboardClient({
 
   useEffect(() => {
     if (expireDate) {
-      const days = Math.ceil((new Date(expireDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      const exp = new Date(expireDate);
+      exp.setHours(0, 0, 0, 0);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const diff = exp.getTime() - now.getTime();
+      const days = Math.round(diff / (1000 * 60 * 60 * 24));
       setDaysRemaining(days > 0 ? days : 0);
     }
   }, [expireDate]);

@@ -311,11 +311,11 @@ export default function CustomersClient({
   const getDaysLeft = (expireDate: string | Date | null) => {
     if (!expireDate) return null;
     const exp = new Date(expireDate);
+    exp.setHours(0, 0, 0, 0);
     const today = new Date();
-    // Do not zero out hours. We want the exact difference so that
-    // expiration at 23:59:59 yields exactly N days left.
+    today.setHours(0, 0, 0, 0);
     const diffTime = exp.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.round(diffTime / (1000 * 60 * 60 * 24));
   };
 
   // Filter logic
