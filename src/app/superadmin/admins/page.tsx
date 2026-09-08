@@ -17,21 +17,63 @@ interface Admin {
 
 export default function SuperAdminAdminsPage() {
   const [admins, setAdmins] = useState<Admin[]>([]);
+  const [rentalRequests, setRentalRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [impersonatingId, setImpersonatingId] = useState<number | null>(null);
+  const [approvingReqId, setApprovingReqId] = useState<number | null>(null);
 
   async function fetchAdmins() {
     setLoading(true);
-    const res = await fetch("/api/superadmin/admins");
-    const data = await res.json();
-    if (Array.isArray(data)) setAdmins(data);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/superadmin/admins");
+      const data = await res.json();
+      if (Array.isArray(data)) setAdmins(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  async function handleImpersonate(adminId: number) {
+  async function fetchRentalRequests() {
+    try {
+      const res = await fetch("/api/superadmin/rental-requests");
+      const data = await res.json();
+      if (Array.isArray(data)) setRentalRequests(data);
+    } catch (e) {
+      console.error("Fetch rental requests error:", e);
+    }
+  }
+
+  async function handleApproveRental(requestId: number) {
+    setApprovingReqId(requestId);
+    try {
+      const res = await fetch(`/api/superadmin/rental-requests/${requestId}/approve`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setStatusMsg({ type: "success", text: "Software rental payment approved & extended by +30 days!" });
+        fetchAdmins();
+        fetchRentalRequests();
+      } else {
+        setStatusMsg({ type: "error", text: data.error || "Failed to approve request" });
+      }
+    } catch (err) {
+      setStatusMsg({ type: "error", text: "Error approving rental request" });
+    } finally {
+      setApprovingReqId(null);
+      setTimeout(() => setStatusMsg(null), 4000);
+    }
+  }
+
+  useEffect(() => {
+    fetchAdmins();
+    fetchRentalRequests();
+  }, []);
     setImpersonatingId(adminId);
     try {
       const res = await fetch("/api/superadmin/impersonate", {
@@ -118,6 +160,40 @@ export default function SuperAdminAdminsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Pending Rental Requests Section */}
+      {rentalRequests.filter(r => r.status === "pending").length > 0 && (
+        <div className="bg-amber-950/40 border border-amber-500/30 rounded-2xl p-4 space-y-3">
+          <h3 className="text-sm font-bold text-amber-300 flex items-center gap-2">
+            💳 পেন্ডিং সফটওয়্যার রেন্টাল পেমেন্ট রিকোয়েস্ট ({rentalRequests.filter(r => r.status === "pending").length})
+          </h3>
+          <div className="space-y-2">
+            {rentalRequests.filter(r => r.status === "pending").map(req => (
+              <div key={req.id} className="bg-slate-900/90 border border-white/10 p-3.5 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <p className="text-sm font-bold text-white">{req.adminName} <span className="text-xs text-gray-400 font-mono">({req.adminPhone})</span></p>
+                  <p className="text-xs text-amber-400 font-semibold mt-0.5">
+                    টাকা: ৳{req.amount} — মেথড: <span className="uppercase font-mono">{req.paymentMethod}</span> {req.trxId ? `(TrxID: ${req.trxId})` : ""}
+                  </p>
+                  {req.note && <p className="text-xs text-gray-400 mt-0.5">নোট: {req.note}</p>}
+                </div>
+                <button
+                  onClick={() => handleApproveRental(req.id)}
+                  disabled={approvingReqId === req.id}
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs rounded-xl transition-all shadow-lg shadow-green-500/20 flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                >
+                  {approvingReqId === req.id ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <CheckCircle size={14} />
+                  )}
+                  <span>এপ্রুভ করুন (+৩০ দিন)</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Search + Refresh */}
       <div className="flex gap-3">

@@ -270,6 +270,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
 interface DashboardProps {
   role?: "admin" | "reseller" | "employee";
   adminExpireDate?: string | null;
+  monthlyRentalFee?: number | string;
   totalCustomers: number;
   activeCustomers: number;
   onlineCustomers: number;
@@ -466,6 +467,13 @@ export default function AdminDashboardClient({
   ];
 
   const [isPayingRental, setIsPayingRental] = useState(false);
+  const [showRentalModal, setShowRentalModal] = useState(false);
+  const [rentalMethod, setRentalMethod] = useState<"bkash" | "cash">("bkash");
+  const [rentalTrxId, setRentalTrxId] = useState("");
+  const [rentalNote, setRentalNote] = useState("");
+  const [rentalSuccessMsg, setRentalSuccessMsg] = useState<string | null>(null);
+
+  const rentalFeeAmount = initialProps.monthlyRentalFee || 500;
 
   const handlePayRentalBkash = async () => {
     setIsPayingRental(true);
@@ -473,7 +481,7 @@ export default function AdminDashboardClient({
       const res = await fetch("/api/admin/rental/pay-bkash", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: 500 }),
+        body: JSON.stringify({ amount: rentalFeeAmount }),
       });
       const resData = await res.json();
       if (resData.bkashURL) {
@@ -483,6 +491,38 @@ export default function AdminDashboardClient({
       }
     } catch (e) {
       alert("Payment error occurred");
+    } finally {
+      setIsPayingRental(false);
+    }
+  };
+
+  const handlePayRentalCash = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsPayingRental(true);
+    try {
+      const res = await fetch("/api/admin/rental/request-cash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: rentalFeeAmount,
+          paymentMethod: "cash",
+          trxId: rentalTrxId,
+          note: rentalNote,
+          days: 30,
+        }),
+      });
+      const resData = await res.json();
+      if (resData.success) {
+        setRentalSuccessMsg("আপনার ক্যাশ পেমেন্ট রিকোয়েস্ট সুপার এডমিনের কাছে পাঠানো হয়েছে! সুপার এডমিন এপ্রুভ করলেই আপনার পোর্টাল চালু হবে।");
+        setTimeout(() => {
+          setShowRentalModal(false);
+          setRentalSuccessMsg(null);
+        }, 4000);
+      } else {
+        alert(resData.error || "Request submission failed");
+      }
+    } catch (e) {
+      alert("Failed to submit cash payment request");
     } finally {
       setIsPayingRental(false);
     }
@@ -510,47 +550,157 @@ export default function AdminDashboardClient({
         </button>
       </div>
 
-      {/* Admin Software Rental Expiration Warning & bKash Renewal Banner */}
+      {/* Admin Software Rental Expiration Warning & Renewal Banner */}
       {role === "admin" && isRentalNearExpiry && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl ${
+          className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl ${
             daysUntilAdminExpire <= 0
-              ? "bg-red-950/60 border-red-500/50 text-red-200"
-              : "bg-amber-950/60 border-amber-500/50 text-amber-200"
+              ? "bg-gradient-to-r from-red-950/90 to-rose-900/90 border-red-500/50 text-red-200"
+              : "bg-gradient-to-r from-amber-950/90 to-yellow-900/90 border-amber-500/50 text-amber-200"
           }`}
         >
-          <div className="flex items-center gap-3">
-            <div className={`p-3 rounded-xl ${daysUntilAdminExpire <= 0 ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}>
-              <AlertTriangle className="w-6 h-6 animate-bounce" />
+          <div className="flex items-center gap-3.5">
+            <div className={`p-3.5 rounded-2xl ${daysUntilAdminExpire <= 0 ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"}`}>
+              <AlertTriangle className="w-7 h-7 animate-bounce" />
             </div>
             <div>
-              <h4 className="font-bold text-sm sm:text-base">
+              <h4 className="font-bold text-base sm:text-lg">
                 {daysUntilAdminExpire <= 0
                   ? "⚠️ আপনার সফটওয়্যার ব্যবহারের মেয়াদ শেষ হয়ে গেছে!"
-                  : `⚠️ সফটওয়্যার ভাড়ার মেয়াদ শেষ হতে আর মাত্র ${daysUntilAdminExpire} দিন বাকি আছে!`}
+                  : `⚠️ সফটওয়্যার ভাড়ার মেয়াদ শেষ হতে আর মাত্র ${daysUntilAdminExpire} দিন বাকি!`}
               </h4>
-              <p className="text-xs opacity-80 mt-0.5">
-                সফটওয়্যারটি সচল রাখতে এবং সেবা বজায় রাখতে বিকাশ এর মাধ্যমে ভাড়া পরিশোধ করুন (মেয়াদ +৩০ দিন বাড়বে)।
+              <p className="text-xs sm:text-sm opacity-90 mt-0.5">
+                মাসিক সফটওয়্যার ফি: <span className="font-bold text-white">৳{rentalFeeAmount}</span> (বিকাশ অথবা হ্যান্ড ক্যাশ দিয়ে পরিশোধ করতে পারবেন)।
               </p>
             </div>
           </div>
           <button
-            onClick={handlePayRentalBkash}
-            disabled={isPayingRental}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 text-white font-bold text-xs sm:text-sm hover:from-pink-500 hover:to-rose-500 shadow-lg shadow-pink-500/30 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50"
+            onClick={() => setShowRentalModal(true)}
+            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white font-bold text-xs sm:text-sm hover:brightness-110 shadow-xl shadow-pink-500/30 transition-all flex items-center justify-center gap-2 shrink-0 border border-white/20"
           >
-            {isPayingRental ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <span>বিকাশ দিয়ে ভাড়া পরিশোধ করুন (৳500)</span>
-              </>
-            )}
+            <span>💳 সফটওয়্যার ভাড়া পরিশোধ করুন (৳{rentalFeeAmount})</span>
           </button>
         </motion.div>
       )}
+
+      {/* Software Rental Payment Modal */}
+      {showRentalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-slate-900 border border-white/15 rounded-2xl max-w-lg w-full p-6 space-y-6 shadow-2xl text-left"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  💳 সফটওয়্যার ভাড়া পরিশোধ (Software Renewal)
+                </h3>
+                <p className="text-xs text-gray-400 mt-1">মাসিক সাবস্ক্রিপশন ফি: <span className="text-neon-green font-bold text-sm">৳{rentalFeeAmount}</span></p>
+              </div>
+              <button
+                onClick={() => setShowRentalModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {rentalSuccessMsg ? (
+              <div className="p-4 rounded-xl bg-green-500/20 border border-green-500/40 text-green-300 text-sm font-semibold text-center space-y-2">
+                <p>{rentalSuccessMsg}</p>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {/* Method selector tabs */}
+                <div className="grid grid-cols-2 gap-3 p-1 bg-white/5 rounded-xl border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setRentalMethod("bkash")}
+                    className={`py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                      rentalMethod === "bkash"
+                        ? "bg-pink-600 text-white shadow-lg shadow-pink-500/30"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    ⚡ bKash Auto Pay
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRentalMethod("cash")}
+                    className={`py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                      rentalMethod === "cash"
+                        ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/30"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    💵 Cash / Hand Payment
+                  </button>
+                </div>
+
+                {rentalMethod === "bkash" ? (
+                  <div className="space-y-4 text-center p-4 bg-pink-950/20 border border-pink-500/20 rounded-xl">
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      বিকাশ দিয়ে অটোমেটিক পেমেন্ট করার সাথে সাথে আপনার সফটওয়্যার সাবস্ক্রিপশন <span className="text-neon-green font-bold">+৩০ দিন বেড়ে যাবে</span> এবং অ্যাকাউন্ট সাথে সাথে অ্যাক্টিভ হয়ে যাবে।
+                    </p>
+                    <button
+                      onClick={handlePayRentalBkash}
+                      disabled={isPayingRental}
+                      className="w-full py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-pink-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isPayingRental ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <span>বিকাশ গেটওয়েতে পে করুন (৳{rentalFeeAmount})</span>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handlePayRentalCash} className="space-y-4 text-xs">
+                    <div className="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-xl text-emerald-300">
+                      <p>ক্যাশ পেমেন্ট বা ব্যাংক ট্রান্সফার করলে এখানে TrxID বা বিস্তারিত লিখে সুপার এডমিনের কাছে সাবমিট করুন। সুপার এডমিন চেক করে এপ্রুভ করলেই আপনার প্যানেল চালু হয়ে যাবে।</p>
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">Transaction ID / Reference (যদি থাকে)</label>
+                      <input
+                        type="text"
+                        value={rentalTrxId}
+                        onChange={(e) => setRentalTrxId(e.target.value)}
+                        placeholder="e.g. CASH-10025 or bKash TrxID"
+                        className="w-full glass-input px-3 py-2 bg-slate-800 text-white rounded-lg border border-white/10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">পেমেন্ট নোট / রেফারেন্স</label>
+                      <textarea
+                        value={rentalNote}
+                        onChange={(e) => setRentalNote(e.target.value)}
+                        placeholder="ক্যাশ পেমেন্ট বিস্তারিত বা রেফারেন্স নাম..."
+                        rows={2}
+                        className="w-full glass-input px-3 py-2 bg-slate-800 text-white rounded-lg border border-white/10"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isPayingRental}
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isPayingRental ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <span>ক্যাশ পেমেন্ট রিকোয়েস্ট পাঠান (৳{rentalFeeAmount})</span>
+                      )}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
+
 
 
       {/* MikroTik Resources Widget moved to the top */}

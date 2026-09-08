@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     if (isNaN(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     const admin = await db.query.users.findFirst({
       where: eq(users.id, id),
-      columns: { id: true, name: true, phone: true, address: true, role: true, status: true, createdAt: true, expireDate: true },
+      columns: { id: true, name: true, phone: true, address: true, role: true, status: true, createdAt: true, expireDate: true, monthlyRentalFee: true },
     });
     if (!admin || admin.role !== "admin") return NextResponse.json({ error: "Not found" }, { status: 404 });
     
@@ -41,7 +41,7 @@ export async function GET(req: Request) {
   const admins = await db.query.users.findMany({
     where: eq(users.role, "admin"),
     orderBy: [desc(users.createdAt)],
-    columns: { id: true, name: true, phone: true, address: true, status: true, createdAt: true, expireDate: true },
+    columns: { id: true, name: true, phone: true, address: true, status: true, createdAt: true, expireDate: true, monthlyRentalFee: true },
   });
 
   return NextResponse.json(admins);
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
   const session = await checkSuperAdmin();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { name, phone, password, address, validityDays } = await req.json();
+  const { name, phone, password, address, validityDays, monthlyRentalFee } = await req.json();
   if (!name || !phone || !password || password.length < 6) {
     return NextResponse.json({ error: "Invalid data. Password must be at least 6 characters." }, { status: 400 });
   }
@@ -79,6 +79,7 @@ export async function POST(req: Request) {
     status: "active",
     walletBalance: "0",
     expireDate: expireDate,
+    monthlyRentalFee: monthlyRentalFee ? monthlyRentalFee.toString() : "500",
   }).returning({ id: users.id, name: users.name });
 
   return NextResponse.json({ success: true, admin: newAdmin });
@@ -89,7 +90,7 @@ export async function PATCH(req: Request) {
   const session = await checkSuperAdmin();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id, status, name, phone, address, newPassword, validityDays, subscriptionSettings } = await req.json();
+  const { id, status, name, phone, address, newPassword, validityDays, monthlyRentalFee, subscriptionSettings } = await req.json();
   if (!id) return NextResponse.json({ error: "Missing admin ID" }, { status: 400 });
 
   const updateData: Record<string, any> = {};
@@ -97,6 +98,7 @@ export async function PATCH(req: Request) {
   if (name) updateData.name = name;
   if (phone) updateData.phone = phone;
   if (address !== undefined) updateData.address = address;
+  if (monthlyRentalFee !== undefined) updateData.monthlyRentalFee = monthlyRentalFee.toString();
   if (newPassword && newPassword.length >= 6) {
     updateData.password = await bcrypt.hash(newPassword, 12);
   }

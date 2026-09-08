@@ -63,6 +63,7 @@ export const users = pgTable("users", {
   gpsCoordinates: varchar("gps_coordinates", { length: 100 }),
   joiningDate: timestamp("joining_date").defaultNow(),
   plainPassword: varchar("plain_password", { length: 255 }),
+  monthlyRentalFee: decimal("monthly_rental_fee", { precision: 10, scale: 2 }).default("500"),
 });
 
 export const packages = pgTable("packages", {
@@ -496,3 +497,15 @@ export const adminPaymentLogs = pgTable("admin_payment_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const adminRentalRequests = pgTable("admin_rental_requests", {
+  id: serial("id").primaryKey(),
+  adminId: integer("admin_id").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: varchar("payment_method", { length: 50 }).default("cash"), // cash, bkash_manual, bank
+  trxId: varchar("trx_id", { length: 100 }),
+  note: text("note"),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected
+  requestedDays: integer("requested_days").default(30),
+  createdAt: timestamp("created_at").defaultNow(),
+  approvedAt: timestamp("approved_at"),
+});
