@@ -200,6 +200,19 @@ export const expenses = pgTable("expenses", {
   adminId: integer("admin_id"),
 });
 
+export const customerRouters = pgTable("customer_routers", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  model: varchar("model", { length: 255 }),
+  ipAddress: varchar("ip_address", { length: 50 }),
+  macAddress: varchar("mac_address", { length: 100 }),
+  username: varchar("username", { length: 255 }),
+  password: varchar("password", { length: 255 }),
+  port: integer("port").default(80),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   package: one(packages, {
@@ -231,6 +244,14 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   packageChangeRequests: many(packageChangeRequests),
   withdrawalRequests: many(withdrawalRequests),
+  routers: many(customerRouters),
+}));
+
+export const customerRoutersRelations = relations(customerRouters, ({ one }) => ({
+  user: one(users, {
+    fields: [customerRouters.userId],
+    references: [users.id],
+  }),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({

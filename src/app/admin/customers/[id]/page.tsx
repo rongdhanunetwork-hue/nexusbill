@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { users, payments, invoices, dataUsage } from "@/db/schema";
+import { users, payments, invoices, dataUsage, customerRouters } from "@/db/schema";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { getRouterDetails } from "@/lib/mikrotik";
@@ -114,12 +114,15 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
     }
   }
 
+  const routers = await db.query.customerRouters.findMany({ where: eq(customerRouters.userId, customerId) });
+
   return (
     <CustomerProfileClient
       customer={customer as any}
       payments={customerPayments as any}
       invoices={customerInvoices as any}
       usageHistory={last7DaysUsage as any}
+      customerRouters={routers as any[]}
       isOnline={isOnline}
       activeSession={activeSession}
       plainTextPassword={plainTextPassword}

@@ -280,6 +280,8 @@ interface DashboardProps {
   expired4Day: number;
   todayRecharge: number;
   todayCollection?: number;
+  bkashToday?: number;
+  cashToday?: number;
   expectedCollection?: number;
   paidThisMonthCount?: number;
   unpaidThisMonthCount?: number;
@@ -313,6 +315,8 @@ export default function AdminDashboardClient({
     expired4Day: initialProps.expired4Day,
     expectedCollection: initialProps.expectedCollection ?? 0,
     todayCollection: initialProps.todayCollection ?? 0,
+    bkashToday: initialProps.bkashToday ?? 0,
+    cashToday: initialProps.cashToday ?? 0,
     todayRecharge: initialProps.todayRecharge,
     totalizerCollection: initialProps.totalizerCollection,
     dueAmount: initialProps.dueAmount,
@@ -364,6 +368,8 @@ export default function AdminDashboardClient({
         expired4Day: d.expired4Day ?? 0,
         expectedCollection: d.expectedCollection ?? 0,
         todayCollection: d.todayCollection ?? 0,
+        bkashToday: d.bkashToday ?? 0,
+        cashToday: d.cashToday ?? 0,
         todayRecharge: d.todayRecharge ?? 0,
         totalizerCollection: d.totalizerCollection ?? 0,
         dueAmount: d.dueAmount ?? 0,
@@ -542,11 +548,19 @@ export default function AdminDashboardClient({
         <Link href={`${basePath}/billing`} className="block group">
           <motion.div initial={false} animate={{ opacity: 1 }} className="glass-card p-5 flex items-center justify-between relative overflow-hidden h-full cursor-pointer">
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
-            <div className="relative z-10">
+            <div className="relative z-10 w-full">
               <p className="text-gray-400 font-medium mb-1 text-xs group-hover:text-indigo-300 transition-colors">Today's Collection</p>
               <h2 className="text-2xl font-bold text-white tracking-wider"><AnimatedCounter value={data.todayCollection} prefix="৳" /></h2>
+              <div className="mt-2 flex gap-3 text-[10px] font-semibold">
+                <span className="bg-pink-500/20 text-pink-400 px-2 py-0.5 rounded border border-pink-500/30">
+                  bKash: ৳{data.bkashToday?.toLocaleString() || 0}
+                </span>
+                <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded border border-green-500/30">
+                  Cash: ৳{data.cashToday?.toLocaleString() || 0}
+                </span>
+              </div>
             </div>
-            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.2)] relative z-10 group-hover:scale-110 transition-transform">
+            <div className="w-10 h-10 shrink-0 rounded-lg bg-white/5 flex items-center justify-center text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.2)] relative z-10 group-hover:scale-110 transition-transform">
               <DollarSign size={20} />
             </div>
           </motion.div>

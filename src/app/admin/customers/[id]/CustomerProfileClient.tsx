@@ -82,6 +82,7 @@ export default function CustomerProfileClient({
   payments,
   invoices,
   usageHistory,
+  customerRouters = [],
   isOnline,
   activeSession,
   plainTextPassword,
@@ -96,6 +97,7 @@ export default function CustomerProfileClient({
   payments: Payment[];
   invoices: Invoice[];
   usageHistory: UsageRecord[];
+  customerRouters?: any[];
   isOnline: boolean;
   activeSession?: any;
   plainTextPassword?: string;
@@ -108,7 +110,7 @@ export default function CustomerProfileClient({
 }) {
   const basePath = role === "reseller" ? "/reseller" : role === "employee" ? "/employee" : "/admin";
 
-  const [activeTab, setActiveTab] = useState<"service" | "billing" | "activity" | "ledger">("service");
+  const [activeTab, setActiveTab] = useState<"service" | "billing" | "activity" | "ledger" | "routers">("service");
   
   // Modals for tools
   const [showPingModal, setShowPingModal] = useState(false);
@@ -153,6 +155,15 @@ const [billType, setBillType] = useState<"bill" | "advance">("bill");
   const [smsText, setSmsText] = useState("");
   const [smsLoading, setSmsLoading] = useState(false);
   const [packagesList, setPackagesList] = useState<any[]>([]);
+
+  // Add Router Modal State
+  const [showAddRouterModal, setShowAddRouterModal] = useState(false);
+  const [newRouterModel, setNewRouterModel] = useState("");
+  const [newRouterIp, setNewRouterIp] = useState("");
+  const [newRouterPort, setNewRouterPort] = useState("80");
+  const [newRouterUsername, setNewRouterUsername] = useState("");
+  const [newRouterPassword, setNewRouterPassword] = useState("");
+  const [addingRouter, setAddingRouter] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/packages")
@@ -255,7 +266,45 @@ const [billType, setBillType] = useState<"bill" | "advance">("bill");
     }
   };
 
-  
+  const handleAddRouter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddingRouter(true);
+    try {
+      const res = await fetch(`/api/admin/customers/${customer.id}/routers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: newRouterModel,
+          ipAddress: newRouterIp,
+          port: newRouterPort,
+          username: newRouterUsername,
+          password: newRouterPassword
+        })
+      });
+      if (res.ok) {
+        setShowAddRouterModal(false);
+        setNewRouterModel(""); setNewRouterIp(""); setNewRouterUsername(""); setNewRouterPassword("");
+        window.location.reload();
+      } else {
+        const d = await res.json();
+        await showAlert({ title: "Failed", message: d.error || "Failed to add router", type: "error" });
+      }
+    } catch {
+      await showAlert({ title: "Error", message: "Network error", type: "error" });
+    } finally {
+      setAddingRouter(false);
+    }
+  };
+
+  const handleDeleteRouter = async (routerId: number) => {
+    if (!window.confirm("Are you sure you want to delete this router?")) return;
+    try {
+      const res = await fetch(`/api/admin/customers/${customer.id}/routers?routerId=${routerId}`, { method: "DELETE" });
+      if (res.ok) {
+        window.location.reload();
+      }
+    } catch {}
+  };
 
   const triggerSuspend = async () => {
     if (!window.confirm("Are you sure you want to suspend this customer?")) return;
@@ -1119,7 +1168,8 @@ useEffect(() => {
             { id: "service", label: "Service Details" },
             { id: "billing", label: "Billing Details" },
             { id: "activity", label: "Activity Log" },
-            { id: "ledger", label: "Ledger" }
+            { id: "ledger", label: "Ledger" },
+            { id: "routers", label: "Routers & Devices" }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1187,6 +1237,76 @@ useEffect(() => {
                     <div key={p.id} className="p-4 flex justify-between items-center text-sm">
                       <div><span className="text-white font-medium">৳{p.amount}</span> <span className="text-gray-400 text-xs ml-2">({p.method || "Cash"})</span></div>
                       <span className="text-gray-400 text-xs">{p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "N/A"}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "routers" && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-white font-semibold">Customer Routers</h4>
+                <button 
+                  onClick={() => setShowAddRouterModal(true)}
+                  className="bg-neon-blue/20 hover:bg-neon-blue text-neon-blue hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors border border-neon-blue/50"
+                >
+                  <Plus size={14} /> Add Router
+                </button>
+              </div>
+              
+              {!customerRouters || customerRouters.length === 0 ? (
+                <p className="text-gray-500">No routers have been added for this customer.</p>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {customerRouters.map(router => (
+                    <div key={router.id} className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                        <Router size={40} className="text-neon-blue" />
+                      </div>
+                      
+                      <button 
+                        onClick={() => handleDeleteRouter(router.id)}
+                        className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-colors z-10"
+                        title="Delete Router"
+                      >
+                        <Trash size={14} />
+                      </button>
+
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded bg-neon-blue/20 text-neon-blue flex items-center justify-center">
+                          <Router size={16} />
+                        </div>
+                        <div>
+                          <h5 className="font-bold text-white text-sm">{router.model || "Unknown Router"}</h5>
+                          <p className="text-xs text-gray-400">{router.ipAddress || "No IP"}:{router.port || 80}</p>
+                        </div>
+                      </div>
+
+                      <div className="text-xs space-y-1 mt-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Username:</span>
+                          <span className="text-white font-mono bg-black/20 px-1 rounded">{router.username || "N/A"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Password:</span>
+                          <span className="text-white font-mono bg-black/20 px-1 rounded">{router.password || "N/A"}</span>
+                        </div>
+                      </div>
+
+                      {router.ipAddress && (
+                        <div className="pt-2">
+                          <a 
+                            href={`http://${router.ipAddress}:${router.port || 80}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full flex items-center justify-center gap-2 py-2 bg-neon-blue/20 hover:bg-neon-blue/30 text-neon-blue rounded-lg text-xs font-bold transition-all border border-neon-blue/30"
+                          >
+                            <Eye size={14} /> 🌐 Web Access
+                          </a>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1371,23 +1491,14 @@ useEffect(() => {
                         if (newBase) {
                           const expDateObj = new Date(newBase);
                           if (billingType === "monthly") {
-                            expDateObj.setMonth(expDateObj.getMonth() + 1);
+                            expDateObj.setDate(expDateObj.getDate() + 30);
                           } else {
                             expDateObj.setDate(expDateObj.getDate() + (parseInt(rechargeDays) || 1));
                           }
                           const yyyy = expDateObj.getFullYear();
                           const mm = String(expDateObj.getMonth() + 1).padStart(2, '0');
                           const dd = String(expDateObj.getDate()).padStart(2, '0');
-                          let hh = "23";
-                          let min = "59";
-                          if (rechargeCustomer?.expireDate) {
-                            const origExp = new Date(rechargeCustomer.expireDate);
-                            if (!isNaN(origExp.getTime())) {
-                              hh = String(origExp.getHours()).padStart(2, '0');
-                              min = String(origExp.getMinutes()).padStart(2, '0');
-                            }
-                          }
-                          setCustomExpireDate(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
+                          setCustomExpireDate(`${yyyy}-${mm}-${dd}T23:59`);
                         }
                       }}
                       className="w-full glass-input px-3 py-2 bg-slate-800 text-xs text-white" 
@@ -1678,6 +1789,61 @@ useEffect(() => {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAddRouterModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-[#1e293b] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+              <div className="flex justify-between items-center p-5 border-b border-white/10 bg-white/5">
+                <h3 className="text-white font-bold flex items-center gap-2">
+                  <Router size={18} className="text-neon-blue" /> Add Customer Router
+                </h3>
+                <button onClick={() => setShowAddRouterModal(false)} className="text-gray-400 hover:text-white">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <form onSubmit={handleAddRouter} className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-400 font-medium">Router Model</label>
+                  <input type="text" value={newRouterModel} onChange={e => setNewRouterModel(e.target.value)} required placeholder="e.g., TP-Link Archer C6" className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-neon-blue focus:ring-1 focus:ring-neon-blue outline-none" />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">IP Address</label>
+                    <input type="text" value={newRouterIp} onChange={e => setNewRouterIp(e.target.value)} placeholder="e.g., 192.168.0.1" className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-neon-blue outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Port (Optional)</label>
+                    <input type="number" value={newRouterPort} onChange={e => setNewRouterPort(e.target.value)} placeholder="80" className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-neon-blue outline-none" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Web Username</label>
+                    <input type="text" value={newRouterUsername} onChange={e => setNewRouterUsername(e.target.value)} placeholder="admin" className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-neon-blue outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Web Password</label>
+                    <input type="text" value={newRouterPassword} onChange={e => setNewRouterPassword(e.target.value)} placeholder="password" className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-neon-blue outline-none" />
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end gap-3">
+                  <button type="button" onClick={() => setShowAddRouterModal(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={addingRouter} className="px-4 py-2 rounded-lg text-sm font-medium bg-neon-blue hover:bg-neon-blue/80 text-white transition-colors disabled:opacity-50">
+                    {addingRouter ? "Adding..." : "Add Router"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

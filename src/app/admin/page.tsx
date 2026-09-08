@@ -36,6 +36,8 @@ export default async function AdminDashboard() {
     allDbCustomers,
     todayRechargeResult,
     todayCollectionResult,
+    bkashTodayResult,
+    cashTodayResult,
     collectionResult,
     dueResult,
     routerResult,
@@ -56,6 +58,16 @@ export default async function AdminDashboard() {
       .from(payments)
       .innerJoin(users, eq(payments.userId, users.id))
       .where(sql`${payments.status} = 'approved' and ${payments.createdAt} >= ${todayStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
+    // bKash Collection
+    db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` })
+      .from(payments)
+      .innerJoin(users, eq(payments.userId, users.id))
+      .where(sql`${payments.status} = 'approved' and ${payments.method} = 'বিকাশ' and ${payments.createdAt} >= ${todayStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
+    // Hand Cash Collection
+    db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` })
+      .from(payments)
+      .innerJoin(users, eq(payments.userId, users.id))
+      .where(sql`${payments.status} = 'approved' and ${payments.method} = 'হ্যান্ড ক্যাশ' and ${payments.createdAt} >= ${todayStr}::date and ${users.adminId} = ${adminId} and ${users.resellerId} is null and ${users.role} = 'customer'`),
     db.select({ sum: sql<number>`cast(coalesce(sum(${payments.amount}), 0) as int)` })
       .from(payments)
       .innerJoin(users, eq(payments.userId, users.id))
@@ -213,6 +225,8 @@ export default async function AdminDashboard() {
       expired4Day={expired4Day}
       todayRecharge={todayRechargeResult[0]?.count || 0}
       todayCollection={todayCollection}
+      bkashToday={bkashTodayResult[0]?.sum || 0}
+      cashToday={cashTodayResult[0]?.sum || 0}
       expectedCollection={expectedCollection}
       paidThisMonthCount={paidThisMonthCount}
       unpaidThisMonthCount={unpaidThisMonthCount}

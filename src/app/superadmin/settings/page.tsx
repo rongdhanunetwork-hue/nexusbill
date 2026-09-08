@@ -22,6 +22,18 @@ export default function SuperAdminSettingsPage() {
   const [nagadNumber, setNagadNumber] = useState("");
   const [rocketNumber, setRocketNumber] = useState("");
 
+  // bKash API Setup
+  const [bkashAppKey, setBkashAppKey] = useState("");
+  const [bkashAppSecret, setBkashAppSecret] = useState("");
+  const [bkashUsername, setBkashUsername] = useState("");
+  const [bkashPassword, setBkashPassword] = useState("");
+  const [bkashBaseUrl, setBkashBaseUrl] = useState("");
+
+  // SMS Gateway Setup
+  const [smsGatewayUrl, setSmsGatewayUrl] = useState("");
+  const [smsApiKey, setSmsApiKey] = useState("");
+  const [smsSenderId, setSmsSenderId] = useState("");
+
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
   async function fetchSettings() {
@@ -39,6 +51,16 @@ export default function SuperAdminSettingsPage() {
       setBkashNumber2(data.bkash_number_2 || "");
       setNagadNumber(data.nagad_number || "");
       setRocketNumber(data.rocket_number || "");
+      
+      setBkashAppKey(data.bkash_app_key || "");
+      setBkashAppSecret(data.bkash_app_secret || "");
+      setBkashUsername(data.bkash_username || "");
+      setBkashPassword(data.bkash_password || "");
+      setBkashBaseUrl(data.bkash_base_url || "");
+
+      setSmsGatewayUrl(data.sms_gateway_url || "");
+      setSmsApiKey(data.sms_api_key || "");
+      setSmsSenderId(data.sms_sender_id || "");
     } catch (err) {
       console.error(err);
       setError("Failed to load global settings");
@@ -77,6 +99,16 @@ export default function SuperAdminSettingsPage() {
           bkash_number_2: bkashNumber2,
           nagad_number: nagadNumber,
           rocket_number: rocketNumber,
+          
+          bkash_app_key: bkashAppKey,
+          bkash_app_secret: bkashAppSecret,
+          bkash_username: bkashUsername,
+          bkash_password: bkashPassword,
+          bkash_base_url: bkashBaseUrl,
+
+          sms_gateway_url: smsGatewayUrl,
+          sms_api_key: smsApiKey,
+          sms_sender_id: smsSenderId,
         }),
       });
 
@@ -198,6 +230,74 @@ export default function SuperAdminSettingsPage() {
             </div>
           </div>
 
+          <div className="rounded-2xl p-6 space-y-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <h2 className="text-base font-bold text-white border-b border-white/5 pb-2">bKash Payment API (Automation)</h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">bKash App Key</label>
+                <input value={bkashAppKey} onChange={e => setBkashAppKey(e.target.value)}
+                  className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">bKash App Secret</label>
+                <input value={bkashAppSecret} onChange={e => setBkashAppSecret(e.target.value)} type="password"
+                  className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">bKash API Username</label>
+                <input value={bkashUsername} onChange={e => setBkashUsername(e.target.value)}
+                  className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">bKash API Password</label>
+                <input value={bkashPassword} onChange={e => setBkashPassword(e.target.value)} type="password"
+                  className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">bKash Base URL</label>
+                <input value={bkashBaseUrl} onChange={e => setBkashBaseUrl(e.target.value)} placeholder="https://tokenized.sandbox.bka.sh/v1.2.0-beta"
+                  className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl p-6 space-y-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <h2 className="text-base font-bold text-white border-b border-white/5 pb-2">SMS Gateway Configuration</h2>
+            <div className="text-xs text-gray-400 mb-2">Available variables for SMS URL: [TO] and [MESSAGE]</div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Gateway API URL</label>
+                <input value={smsGatewayUrl} onChange={e => setSmsGatewayUrl(e.target.value)} placeholder="https://api.sms.com/send?to=[TO]&msg=[MESSAGE]&apikey=xxx"
+                  className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">API Key (Optional)</label>
+                <input value={smsApiKey} onChange={e => setSmsApiKey(e.target.value)}
+                  className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Sender ID (Optional)</label>
+                <input value={smsSenderId} onChange={e => setSmsSenderId(e.target.value)}
+                  className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+              </div>
+            </div>
+          </div>
           <div className="space-y-4">
             {error && (
               <div className="p-3 bg-red-500/10 border border-red-500/20 text-xs text-red-400 rounded-xl">
