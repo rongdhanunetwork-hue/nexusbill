@@ -483,3 +483,16 @@ export const serviceLinksRelations = relations(serviceLinks, ({ one }) => ({
     references: [serviceCategories.id],
   }),
 }));
+
+export const adminPaymentLogs = pgTable("admin_payment_logs", {
+  id: serial("id").primaryKey(),
+  adminId: integer("admin_id").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  trxId: varchar("trx_id", { length: 100 }),
+  method: varchar("method", { length: 50 }).default("bkash"),
+  daysAdded: integer("days_added").default(30),
+  oldExpireDate: timestamp("old_expire_date"),
+  newExpireDate: timestamp("new_expire_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+

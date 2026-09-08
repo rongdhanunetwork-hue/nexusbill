@@ -212,10 +212,16 @@ export default async function AdminDashboard() {
     }
   });
 
+  const currentAdmin = await db.query.users.findFirst({
+    where: eq(users.id, adminId),
+  });
+
   return (
     <AdminDashboardClient
+      adminExpireDate={currentAdmin?.expireDate ? new Date(currentAdmin.expireDate).toISOString() : null}
       totalCustomers={totalCustomers}
       activeCustomers={activeCustomers}
+
       onlineCustomers={0}
       offlineCustomers={activeCustomers}
       expiredCustomers={expiredCustomers}

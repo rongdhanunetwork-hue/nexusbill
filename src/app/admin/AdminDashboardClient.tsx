@@ -269,6 +269,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
 // ─── Initial Props (for SSR/first render) ────────────────────────────────────
 interface DashboardProps {
   role?: "admin" | "reseller" | "employee";
+  adminExpireDate?: string | null;
   totalCustomers: number;
   activeCustomers: number;
   onlineCustomers: number;
@@ -464,6 +465,33 @@ export default function AdminDashboardClient({
     ] : []),
   ];
 
+  const [isPayingRental, setIsPayingRental] = useState(false);
+
+  const handlePayRentalBkash = async () => {
+    setIsPayingRental(true);
+    try {
+      const res = await fetch("/api/admin/rental/pay-bkash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: 500 }),
+      });
+      const resData = await res.json();
+      if (resData.bkashURL) {
+        window.location.href = resData.bkashURL;
+      } else {
+        alert(resData.error || "bKash payment setup failed");
+      }
+    } catch (e) {
+      alert("Payment error occurred");
+    } finally {
+      setIsPayingRental(false);
+    }
+  };
+
+  const adminExpDate = initialProps.adminExpireDate ? new Date(initialProps.adminExpireDate) : null;
+  const daysUntilAdminExpire = adminExpDate ? Math.ceil((adminExpDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 999;
+  const isRentalNearExpiry = daysUntilAdminExpire <= 7;
+
   return (
     <div className="space-y-8">
       {/* Live Header */}
@@ -481,6 +509,49 @@ export default function AdminDashboardClient({
           Refresh
         </button>
       </div>
+
+      {/* Admin Software Rental Expiration Warning & bKash Renewal Banner */}
+      {role === "admin" && isRentalNearExpiry && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl ${
+            daysUntilAdminExpire <= 0
+              ? "bg-red-950/60 border-red-500/50 text-red-200"
+              : "bg-amber-950/60 border-amber-500/50 text-amber-200"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className={`p-3 rounded-xl ${daysUntilAdminExpire <= 0 ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}>
+              <AlertTriangle className="w-6 h-6 animate-bounce" />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm sm:text-base">
+                {daysUntilAdminExpire <= 0
+                  ? "⚠️ আপনার সফটওয়্যার ব্যবহারের মেয়াদ শেষ হয়ে গেছে!"
+                  : `⚠️ সফটওয়্যার ভাড়ার মেয়াদ শেষ হতে আর মাত্র ${daysUntilAdminExpire} দিন বাকি আছে!`}
+              </h4>
+              <p className="text-xs opacity-80 mt-0.5">
+                সফটওয়্যারটি সচল রাখতে এবং সেবা বজায় রাখতে বিকাশ এর মাধ্যমে ভাড়া পরিশোধ করুন (মেয়াদ +৩০ দিন বাড়বে)।
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handlePayRentalBkash}
+            disabled={isPayingRental}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 text-white font-bold text-xs sm:text-sm hover:from-pink-500 hover:to-rose-500 shadow-lg shadow-pink-500/30 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50"
+          >
+            {isPayingRental ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <span>বিকাশ দিয়ে ভাড়া পরিশোধ করুন (৳500)</span>
+              </>
+            )}
+          </button>
+        </motion.div>
+      )}
+
 
       {/* MikroTik Resources Widget moved to the top */}
       {role === "admin" && <MikrotikResourcesWidget refreshTrigger={refreshTrigger} />}
