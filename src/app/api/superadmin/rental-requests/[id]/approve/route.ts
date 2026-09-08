@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { adminRentalRequests, users, adminPaymentLogs, systemNotifications } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
-import { sendSms } from "@/lib/sms";
+import { sendSMS } from "@/lib/sms";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -68,9 +68,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     // 4. Send SMS to Admin
     if (adminUser.phone) {
-      const smsMessage = `Dear ${adminUser.name}, your software rental payment of BDT ${rentalReq.amount} (${rentalReq.paymentMethod.toUpperCase()}) has been APPROVED. Your new validity: ${newExpireDate.toLocaleDateString('en-GB')}. Thank you!`;
+      const pMethod = (rentalReq.paymentMethod || "CASH").toUpperCase();
+      const smsMessage = `Dear ${adminUser.name}, your software rental payment of BDT ${rentalReq.amount} (${pMethod}) has been APPROVED. Your new validity: ${newExpireDate.toLocaleDateString('en-GB')}. Thank you!`;
       try {
-        await sendSms(adminUser.phone, smsMessage);
+        await sendSMS(adminUser.phone, smsMessage);
       } catch (e) {
         console.error("SMS notification error:", e);
       }

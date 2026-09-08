@@ -24,14 +24,14 @@ export async function POST(req: Request) {
     const timeout = setTimeout(() => controller.abort(), 3000); // 3 sec timeout
 
     try {
-      const response = await fetch(targetUrl, {
+      const response: Response | null = await fetch(targetUrl, {
         method: "HEAD",
         signal: controller.signal,
       }).catch(() => null);
 
       clearTimeout(timeout);
 
-      const isOnline = response !== null || (response && response.status < 500);
+      const isOnline = response !== null;
 
       return NextResponse.json({
         online: isOnline,

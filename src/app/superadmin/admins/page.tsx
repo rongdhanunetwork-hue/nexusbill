@@ -74,6 +74,8 @@ export default function SuperAdminAdminsPage() {
     fetchAdmins();
     fetchRentalRequests();
   }, []);
+
+  async function handleImpersonate(adminId: number) {
     setImpersonatingId(adminId);
     try {
       const res = await fetch("/api/superadmin/impersonate", {
@@ -95,8 +97,6 @@ export default function SuperAdminAdminsPage() {
       setImpersonatingId(null);
     }
   }
-
-  useEffect(() => { fetchAdmins(); }, []);
 
   async function handleDelete(id: number) {
     if (!confirm("Are you sure you want to delete this admin?")) return;

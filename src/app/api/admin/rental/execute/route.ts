@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, adminPaymentLogs, systemNotifications } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { sendSms } from "@/lib/sms";
+import { sendSMS } from "@/lib/sms";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -102,7 +102,7 @@ export async function GET(req: Request) {
     if (adminUser.phone) {
       const smsMessage = `Dear ${adminUser.name}, your ISP Billing software rental payment of BDT ${executeData.amount || 500} via bKash (TrxID: ${executeData.trxID || paymentID}) is successful. Your new valid till: ${newExpireDate.toLocaleDateString('en-GB')}. Thank you!`;
       try {
-        await sendSms(adminUser.phone, smsMessage);
+        await sendSMS(adminUser.phone, smsMessage);
       } catch (e) {
         console.error("Failed to send rental renewal SMS:", e);
       }
