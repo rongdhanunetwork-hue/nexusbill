@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Users, Wifi, WifiOff, Clock, DollarSign, Activity, AlertTriangle, Router, RadioTower, Download, Upload, CalendarCheck, RefreshCw, MoreHorizontal, Eye, Edit, FileText, ShieldAlert, HardDrive } from "lucide-react";
+import { Users, Wifi, WifiOff, Clock, DollarSign, Activity, AlertTriangle, Router, RadioTower, Download, Upload, CalendarCheck, RefreshCw, MoreHorizontal, Eye, Edit, FileText, ShieldAlert, HardDrive, X } from "lucide-react";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, BarChart, Bar, LabelList, Legend, AreaChart, Area } from "recharts";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
@@ -270,6 +270,7 @@ function MikrotikResourcesWidget({ refreshTrigger }: { refreshTrigger: number })
 interface DashboardProps {
   role?: "admin" | "reseller" | "employee";
   adminExpireDate?: string | null;
+  adminStatus?: string;
   monthlyRentalFee?: number | string;
   totalCustomers: number;
   activeCustomers: number;
@@ -468,6 +469,7 @@ export default function AdminDashboardClient({
 
   const [isPayingRental, setIsPayingRental] = useState(false);
   const [showRentalModal, setShowRentalModal] = useState(false);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [rentalMethod, setRentalMethod] = useState<"bkash" | "cash">("bkash");
   const [rentalTrxId, setRentalTrxId] = useState("");
   const [rentalNote, setRentalNote] = useState("");
@@ -530,7 +532,119 @@ export default function AdminDashboardClient({
 
   const adminExpDate = initialProps.adminExpireDate ? new Date(initialProps.adminExpireDate) : null;
   const daysUntilAdminExpire = adminExpDate ? Math.ceil((adminExpDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 999;
-  const isRentalNearExpiry = daysUntilAdminExpire <= 7;
+  const isRentalNearExpiry = daysUntilAdminExpire > 0 && daysUntilAdminExpire <= 7;
+  const isSubscriptionExpired = role === "admin" && (daysUntilAdminExpire <= 0 || initialProps.adminStatus === "suspended" || initialProps.adminStatus === "expired");
+
+  // Render Expired Subscription Lockout Screen if expired or suspended
+  if (isSubscriptionExpired) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-xl w-full bg-slate-900/90 border border-red-500/40 rounded-3xl p-8 space-y-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center relative overflow-hidden backdrop-blur-xl"
+        >
+          <div className="w-20 h-20 rounded-2xl bg-red-500/15 text-red-500 flex items-center justify-center mx-auto border border-red-500/30 shadow-[0_0_25px_rgba(239,68,68,0.3)]">
+            <ShieldAlert className="w-10 h-10 animate-pulse" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-extrabold text-white">
+              🔒 আপনার সফটওয়্যার সাবস্ক্রিপশনের মেয়াদ শেষ!
+            </h2>
+            <p className="text-sm text-gray-300 leading-relaxed max-w-md mx-auto">
+              আপনার অ্যাডমিন প্যানেলটি ব্যবহারের নির্ধারিত মেয়াদের অবসান ঘটেছে। সেবা পুনরুজ্জীবিত করতে এবং ড্যাশবোর্ড সচল করতে নিচের মাধ্যমগুলোর যেকোনো একটি বেছে নিন।
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left space-y-2">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-gray-400">মাসিক সাবস্ক্রিপশন ফি:</span>
+              <span className="text-neon-green font-extrabold text-base">৳{rentalFeeAmount}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-gray-400">বর্তমান স্ট্যাটাস:</span>
+              <span className="text-red-400 font-bold px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20">মেয়াদ উত্তীর্ণ / লকড</span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={handlePayRentalBkash}
+              disabled={isPayingRental}
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:brightness-110 text-white font-extrabold text-sm shadow-xl shadow-pink-500/30 transition-all flex items-center justify-center gap-2 border border-white/20 disabled:opacity-50"
+            >
+              {isPayingRental ? (
+                <RefreshCw className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <span>⚡ বিকাশ দিয়ে অটো রিচার্জ করুন (৳{rentalFeeAmount})</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={() => setShowRentalModal(true)}
+              className="w-full py-3 px-6 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-200 font-bold text-xs transition-all border border-white/10 flex items-center justify-center gap-2"
+            >
+              <span>💵 ক্যাশ পেমেন্ট রিকোয়েস্ট / রেফারেন্স দিন</span>
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-500 pt-2">
+            যেকোনো সহায়তার জন্য সুপার অ্যাডমিনের সাথে সরাসরি যোগাযোগ করুন।
+          </p>
+
+          {/* Rental Payment Modal inside Lockout Screen */}
+          {showRentalModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+              <div className="bg-slate-900 border border-white/15 rounded-2xl max-w-md w-full p-6 space-y-5 text-left shadow-2xl">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <h4 className="font-bold text-white text-sm">💵 ক্যাশ/ব্যাংক পেমেন্ট রিকোয়েস্ট</h4>
+                  <button onClick={() => setShowRentalModal(false)} className="text-gray-400 hover:text-white">✕</button>
+                </div>
+                {rentalSuccessMsg ? (
+                  <div className="p-3 bg-green-500/20 border border-green-500/40 text-green-300 text-xs rounded-xl font-bold text-center">
+                    {rentalSuccessMsg}
+                  </div>
+                ) : (
+                  <form onSubmit={handlePayRentalCash} className="space-y-4 text-xs">
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">TrxID / Reference ID</label>
+                      <input
+                        type="text"
+                        value={rentalTrxId}
+                        onChange={(e) => setRentalTrxId(e.target.value)}
+                        placeholder="e.g. CASH-1001 or TrxID"
+                        className="w-full glass-input px-3 py-2 bg-slate-800 text-white rounded-lg border border-white/10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">নোট / বিবরণ</label>
+                      <textarea
+                        value={rentalNote}
+                        onChange={(e) => setRentalNote(e.target.value)}
+                        placeholder="ক্যাশ জমা নেওয়ার বিবরণ..."
+                        rows={2}
+                        className="w-full glass-input px-3 py-2 bg-slate-800 text-white rounded-lg border border-white/10"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isPayingRental}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all disabled:opacity-50"
+                    >
+                      {isPayingRental ? "পাঠানো হচ্ছে..." : "সুপার এডমিনে রিকোয়েস্ট পাঠান"}
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -550,35 +664,39 @@ export default function AdminDashboardClient({
         </button>
       </div>
 
-      {/* Admin Software Rental Expiration Warning & Renewal Banner */}
-      {role === "admin" && isRentalNearExpiry && (
+      {/* Admin Software Rental Expiration Warning & Renewal Banner (Glassmorphic & Closeable) */}
+      {role === "admin" && isRentalNearExpiry && !isBannerDismissed && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl ${
-            daysUntilAdminExpire <= 0
-              ? "bg-gradient-to-r from-red-950/90 to-rose-900/90 border-red-500/50 text-red-200"
-              : "bg-gradient-to-r from-amber-950/90 to-yellow-900/90 border-amber-500/50 text-amber-200"
-          }`}
+          exit={{ opacity: 0, y: -10 }}
+          className="p-5 rounded-2xl bg-slate-900/90 border border-amber-500/30 backdrop-blur-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_8px_32px_0_rgba(245,158,11,0.15)] relative overflow-hidden group"
         >
-          <div className="flex items-center gap-3.5">
-            <div className={`p-3.5 rounded-2xl ${daysUntilAdminExpire <= 0 ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"}`}>
-              <AlertTriangle className="w-7 h-7 animate-bounce" />
+          <button
+            onClick={() => setIsBannerDismissed(true)}
+            className="absolute top-3 right-3 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-1.5 rounded-lg transition-colors z-10"
+            title="বন্ধ করুন"
+          >
+            <X size={16} />
+          </button>
+
+          <div className="flex items-center gap-3.5 pr-6">
+            <div className="p-3.5 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)] shrink-0">
+              <AlertTriangle className="w-6 h-6 animate-bounce" />
             </div>
             <div>
-              <h4 className="font-bold text-base sm:text-lg">
-                {daysUntilAdminExpire <= 0
-                  ? "⚠️ আপনার সফটওয়্যার ব্যবহারের মেয়াদ শেষ হয়ে গেছে!"
-                  : `⚠️ সফটওয়্যার ভাড়ার মেয়াদ শেষ হতে আর মাত্র ${daysUntilAdminExpire} দিন বাকি!`}
+              <h4 className="font-bold text-base text-amber-300">
+                ⚠️ সফটওয়্যার ভাড়ার মেয়াদ শেষ হতে আর মাত্র <span className="text-white underline decoration-amber-500 font-extrabold">{daysUntilAdminExpire} দিন</span> বাকি!
               </h4>
-              <p className="text-xs sm:text-sm opacity-90 mt-0.5">
-                মাসিক সফটওয়্যার ফি: <span className="font-bold text-white">৳{rentalFeeAmount}</span> (বিকাশ অথবা হ্যান্ড ক্যাশ দিয়ে পরিশোধ করতে পারবেন)।
+              <p className="text-xs text-gray-300 mt-1">
+                মাসিক সফটওয়্যার ফি: <span className="font-bold text-neon-green">৳{rentalFeeAmount}</span> (বিকাশ অথবা হ্যান্ড ক্যাশ দিয়ে পরিশোধ করতে পারবেন)।
               </p>
             </div>
           </div>
+
           <button
             onClick={() => setShowRentalModal(true)}
-            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white font-bold text-xs sm:text-sm hover:brightness-110 shadow-xl shadow-pink-500/30 transition-all flex items-center justify-center gap-2 shrink-0 border border-white/20"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-pink-600 hover:from-amber-400 hover:to-pink-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 shrink-0 border border-amber-400/30"
           >
             <span>💳 সফটওয়্যার ভাড়া পরিশোধ করুন (৳{rentalFeeAmount})</span>
           </button>

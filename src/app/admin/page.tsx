@@ -219,6 +219,7 @@ export default async function AdminDashboard() {
   return (
     <AdminDashboardClient
       adminExpireDate={currentAdmin?.expireDate ? new Date(currentAdmin.expireDate).toISOString() : null}
+      adminStatus={currentAdmin?.status || "active"}
       monthlyRentalFee={currentAdmin?.monthlyRentalFee || "500"}
       totalCustomers={totalCustomers}
       activeCustomers={activeCustomers}
