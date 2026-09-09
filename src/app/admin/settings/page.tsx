@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Save, Shield, Globe, Phone, Loader2, CheckCircle2, Eye, EyeOff, MessageSquare, Clock, Send, AlertTriangle, Download } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Save, Shield, Globe, Phone, Loader2, CheckCircle2, Eye, EyeOff, MessageSquare, Clock, Send, AlertTriangle, Download, X } from "lucide-react";
 import ImageUploadField from "@/components/ui/ImageUploadField";
 
 interface SettingsMap {
@@ -34,11 +34,76 @@ export default function SettingsPage() {
   const [cronLoading, setCronLoading] = useState(false);
   const [cronResult, setCronResult] = useState<string | null>(null);
 
+  // Rental payment states
+  const [showRentalModal, setShowRentalModal] = useState(false);
+  const [rentalPayType, setRentalPayType] = useState<"bkash" | "cash">("bkash");
+  const [rentalLoading, setRentalLoading] = useState(false);
+  const [cashTrxId, setCashTrxId] = useState("");
+  const [cashNote, setCashNote] = useState("");
+  const [rentalMessage, setRentalMessage] = useState<string | null>(null);
+  const [adminProfile, setAdminProfile] = useState<any>(null);
+
   useEffect(() => {
     fetch("/api/admin/settings")
       .then((r) => r.json())
       .then((data) => { setSettings(data); setLoading(false); });
+
+    fetch("/api/admin/profile")
+      .then((r) => r.json())
+      .then((d) => setAdminProfile(d.user || d))
+      .catch(() => {});
   }, []);
+
+  async function handlePayBkashRental() {
+    setRentalLoading(true);
+    setRentalMessage(null);
+    try {
+      const res = await fetch("/api/admin/rental/pay-bkash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: adminProfile?.monthlyRentalFee || 500 }),
+      });
+      const data = await res.json();
+      if (data.bkashURL) {
+        window.location.href = data.bkashURL;
+      } else {
+        setRentalMessage(`❌ Error: ${data.error || "bKash credentials not configured"}`);
+      }
+    } catch (e) {
+      setRentalMessage(`❌ Error: ${String(e)}`);
+    } finally {
+      setRentalLoading(false);
+    }
+  }
+
+  async function handleRequestCashRental(e: React.FormEvent) {
+    e.preventDefault();
+    setRentalLoading(true);
+    setRentalMessage(null);
+    try {
+      const res = await fetch("/api/admin/rental/request-cash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: adminProfile?.monthlyRentalFee || 500,
+          trxId: cashTrxId,
+          note: cashNote,
+        }),
+      });
+      const data = await res.json();
+      setRentalLoading(false);
+      if (res.ok) {
+        setRentalMessage("✅ ক্যাশ পেমেন্ট রিকোয়েস্ট সফলভাবে জমা হয়েছে! সুপারএডমিন অনুমোদন করলে আপনার মেয়াদ অটোমেটিক ৩০ দিন বাড়িয়ে দেওয়া হবে।");
+        setCashTrxId("");
+        setCashNote("");
+      } else {
+        setRentalMessage(`❌ Error: ${data.error || "Failed to submit cash request"}`);
+      }
+    } catch (e) {
+      setRentalLoading(false);
+      setRentalMessage(`❌ Error: ${String(e)}`);
+    }
+  }
 
   async function handleSaveGeneral(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -370,6 +435,101 @@ export default function SettingsPage() {
           </button>
         </motion.div>
       </form>
+
+      {/* Software Rental Payment Modal */}
+      <AnimatePresence>
+        {showRentalModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-slate-900 border border-yellow-500/30 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+              <div className="p-5 border-b border-white/10 flex items-center justify-between bg-yellow-500/10">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  💳 সফটওয়্যার ভাড়া পরিশোধ (Pay Rent)
+                </h3>
+                <button onClick={() => setShowRentalModal(false)} className="text-gray-400 hover:text-white transition">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5">
+                <div className="p-4 rounded-xl bg-slate-950 border border-white/10 text-center space-y-1">
+                  <span className="text-xs text-gray-400">নির্ধারিত মাস ভিত্তিক ভাড়া</span>
+                  <div className="text-2xl font-bold text-yellow-400">৳{adminProfile?.monthlyRentalFee || 500} / মাস</div>
+                  <p className="text-[11px] text-gray-400">পেমেন্ট সফল হলে আপনার মেয়াদের সাথে আরো ৩০ দিন যোগ হবে</p>
+                </div>
+
+                <div className="flex rounded-xl bg-slate-950 p-1 border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setRentalPayType("bkash")}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${rentalPayType === "bkash" ? "bg-pink-600 text-white shadow" : "text-gray-400 hover:text-white"}`}
+                  >
+                    bKash (অটো পেমেন্ট)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRentalPayType("cash")}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${rentalPayType === "cash" ? "bg-amber-600 text-white shadow" : "text-gray-400 hover:text-white"}`}
+                  >
+                    ক্যাশ / ব্যাংক রিকোয়েস্ট
+                  </button>
+                </div>
+
+                {rentalPayType === "bkash" ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      bKash গেটওয়ের মাধ্যমে আপনার বিকাশ অ্যাকাউন্ট থেকে স্বয়ংক্রিয়ভাবে অনলাইন পেমেন্ট করে তাৎক্ষণিক সফটওয়্যার মেয়াদ বাড়াতে নিচের বোতামে চাপুন।
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handlePayBkashRental}
+                      disabled={rentalLoading}
+                      className="w-full py-3 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-sm shadow-lg shadow-pink-600/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {rentalLoading ? <Loader2 size={16} className="animate-spin" /> : "bKash দিয়ে পেমেন্ট করুন (৳" + (adminProfile?.monthlyRentalFee || 500) + ")"}
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleRequestCashRental} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 mb-1">Transaction ID / রেফারেন্স (TrxID)</label>
+                      <input
+                        required
+                        value={cashTrxId}
+                        onChange={e => setCashTrxId(e.target.value)}
+                        placeholder="e.g. TRX98124018 বা Cash"
+                        className="w-full px-3.5 py-2.5 bg-slate-950 text-white text-xs rounded-xl border border-white/10 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 mb-1">নোট / পেমেন্ট বিবরণ (অপশনাল)</label>
+                      <textarea
+                        value={cashNote}
+                        onChange={e => setCashNote(e.target.value)}
+                        placeholder="ক্যাশ প্রদান করেছেন বা ব্যাংক ট্রান্সফারের তথ্য লিখুন..."
+                        className="w-full px-3.5 py-2 bg-slate-950 text-white text-xs rounded-xl border border-white/10 focus:outline-none h-16 resize-none"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={rentalLoading}
+                      className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm shadow-lg shadow-amber-600/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {rentalLoading ? <Loader2 size={16} className="animate-spin" /> : "ক্যাশ রিকোয়েস্ট পাঠান"}
+                    </button>
+                  </form>
+                )}
+
+                {rentalMessage && (
+                  <div className={`p-3 rounded-xl text-xs font-medium border ${rentalMessage.startsWith("✅") ? "bg-green-500/10 border-green-500/20 text-green-400" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
+                    {rentalMessage}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
