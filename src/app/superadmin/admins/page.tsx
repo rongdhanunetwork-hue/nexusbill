@@ -138,15 +138,26 @@ export default function SuperAdminAdminsPage() {
             <UserCog size={20} style={{ color: "#06b6d4" }} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Admin Management</h1>
-            <p className="text-xs text-gray-400">{admins.length} admin(s) in the system</p>
+            <h1 className="text-xl font-bold text-white flex items-center gap-2">
+              Admin Management
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${admins.length >= 5 ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"}`}>
+                {admins.length} / 5 Admins
+              </span>
+            </h1>
+            <p className="text-xs text-gray-400">সর্বোচ্চ ৫ জন এডমিন অ্যাকাউন্ট তৈরি ও পরিচালনা করা যাবে</p>
           </div>
         </div>
-        <Link href="/superadmin/admins/new"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all"
-          style={{ background: "rgba(251,191,36,0.12)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.25)" }}>
-          <Plus size={16} /> Add Admin
-        </Link>
+        {admins.length >= 5 ? (
+          <div className="px-3.5 py-2 rounded-xl text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/30" title="সর্বোচ্চ ৫ জন এডমিন পূর্ণ হয়েছে">
+            ⚠️ Max 5 Admins Reached
+          </div>
+        ) : (
+          <Link href="/superadmin/admins/new"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all"
+            style={{ background: "rgba(251,191,36,0.12)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.25)" }}>
+            <Plus size={16} /> Add Admin
+          </Link>
+        )}
       </div>
 
       {/* Status Message */}

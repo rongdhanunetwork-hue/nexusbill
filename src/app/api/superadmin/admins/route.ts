@@ -53,6 +53,18 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { name, phone, password, address, validityDays, monthlyRentalFee } = await req.json();
+
+  // Enforce Max 5 Admins Limit
+  const existingAdminsCount = await db.query.users.findMany({
+    where: eq(users.role, "admin"),
+  });
+
+  if (existingAdminsCount.length >= 5) {
+    return NextResponse.json({
+      error: "সর্বোচ্চ ৫ জন এডমিন তৈরি করার সীমা পূর্ণ হয়ে গেছে! নতুন এডমিন যোগ করতে পূর্বের কোনো এডমিন মুছে ফেলুন।"
+    }, { status: 400 });
+  }
+
   if (!name || !phone || !password || password.length < 6) {
     return NextResponse.json({ error: "Invalid data. Password must be at least 6 characters." }, { status: 400 });
   }
