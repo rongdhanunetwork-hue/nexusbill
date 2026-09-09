@@ -273,26 +273,46 @@ export default function SuperAdminSettingsPage() {
 
           <div className="rounded-2xl p-6 space-y-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
             <h2 className="text-base font-bold text-white border-b border-white/5 pb-2">SMS Gateway Configuration</h2>
-            <div className="text-xs text-gray-400 mb-2">Available variables for SMS URL: [TO] and [MESSAGE]</div>
+            <div className="text-xs text-gray-400 mb-2">Select a provider preset or write a custom URL with [TO] and [MESSAGE] placeholders.</div>
+
+            {/* Provider Quick Presets */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              <button type="button" onClick={() => setSmsGatewayUrl("https://api.greenweb.com.bd/api.php?token=[API_KEY]&to=[TO]&message=[MESSAGE]")}
+                className="px-2.5 py-1 text-xs rounded-lg font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition">
+                + GreenWeb BD
+              </button>
+              <button type="button" onClick={() => setSmsGatewayUrl("https://api.bdbulksms.net/api.php?token=[API_KEY]&to=[TO]&message=[MESSAGE]")}
+                className="px-2.5 py-1 text-xs rounded-lg font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition">
+                + BDBulkSMS
+              </button>
+              <button type="button" onClick={() => setSmsGatewayUrl("https://smsplus.sslwireless.com/api/v3/send-sms?api_token=[API_KEY]&sid=[SENDER_ID]&msisdn=[TO]&sms=[MESSAGE]")}
+                className="px-2.5 py-1 text-xs rounded-lg font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition">
+                + SSL Wireless
+              </button>
+              <button type="button" onClick={() => setSmsGatewayUrl("https://api.elitbuzz-bd.com/smsapi?api_key=[API_KEY]&type=text&contacts=[TO]&senderid=[SENDER_ID]&msg=[MESSAGE]")}
+                className="px-2.5 py-1 text-xs rounded-lg font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition">
+                + Elitbuzz
+              </button>
+            </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Gateway API URL</label>
-                <input value={smsGatewayUrl} onChange={e => setSmsGatewayUrl(e.target.value)} placeholder="https://api.sms.com/send?to=[TO]&msg=[MESSAGE]&apikey=xxx"
+                <input value={smsGatewayUrl} onChange={e => setSmsGatewayUrl(e.target.value)} placeholder="https://api.sms.com/send?to=[TO]&msg=[MESSAGE]&apikey=[API_KEY]"
                   className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">API Key (Optional)</label>
-                <input value={smsApiKey} onChange={e => setSmsApiKey(e.target.value)}
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">API Key (Replaces [API_KEY])</label>
+                <input value={smsApiKey} onChange={e => setSmsApiKey(e.target.value)} placeholder="Enter API Key / Token"
                   className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Sender ID (Optional)</label>
-                <input value={smsSenderId} onChange={e => setSmsSenderId(e.target.value)}
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Sender ID (Replaces [SENDER_ID])</label>
+                <input value={smsSenderId} onChange={e => setSmsSenderId(e.target.value)} placeholder="8809648906893"
                   className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
               </div>
