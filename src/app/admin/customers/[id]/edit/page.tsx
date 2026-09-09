@@ -57,6 +57,8 @@ interface Customer {
   onuMac: string | null;
   gpsCoordinates: string | null;
   note: string | null;
+  ipAddress?: string | null;
+  macAddress?: string | null;
 }
 
 export default function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
@@ -83,6 +85,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   const [district, setDistrict] = useState("");
   const [thana, setThana] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [authType, setAuthType] = useState("pppoe");
 
   useEffect(() => {
     Promise.all([
@@ -111,6 +114,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       setDivision(customerData.division || "");
       setDistrict(customerData.district || "");
       setThana(customerData.thana || "");
+      setAuthType(customerData.pppoeUsername ? "pppoe" : "static");
       setLoading(false);
     }).catch(() => {
       setError("Failed to load customer details.");
@@ -158,7 +162,9 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       phone: String(form.get("phone") || "").trim(),
       alternatePhone: String(form.get("alternatePhone") || "").trim(),
       nidNumber: String(form.get("nidNumber") || "").trim(),
-      pppoeUsername: String(form.get("pppoeUsername") || "").trim(),
+      pppoeUsername: authType === "pppoe" ? String(form.get("pppoeUsername") || "").trim() : null,
+      ipAddress: authType === "static" ? String(form.get("ipAddress") || "").trim() : null,
+      macAddress: authType === "static" ? String(form.get("macAddress") || "").trim() : null,
       photoUrl: String(form.get("photoUrl") || "").trim(),
       address: String(form.get("address") || "").trim(),
       division,
@@ -268,34 +274,49 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
               <Field label="Alternate Phone" name="alternatePhone" defaultValue={customer.alternatePhone || ""} placeholder="Optional Number" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Field label="National ID (NID) *" name="nidNumber" required defaultValue={customer.nidNumber || ""} placeholder="NID Number" />
-              <div className="md:col-span-2">
-                <Field label="PPPoE ID / Username" name="pppoeUsername" defaultValue={customer.pppoeUsername || ""} placeholder="Set Mikrotik Username" />
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Network Auth Type *</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer bg-slate-900/60 px-4 py-3 rounded-xl border border-white/5 hover:border-cyan-500/50 transition">
+                    <input type="radio" name="authType" value="pppoe" checked={authType === "pppoe"} onChange={() => setAuthType("pppoe")} className="text-cyan-500 bg-slate-950 border-gray-700" />
+                    <span className="text-white text-sm font-medium">PPPoE (Dial-up)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer bg-slate-900/60 px-4 py-3 rounded-xl border border-white/5 hover:border-cyan-500/50 transition">
+                    <input type="radio" name="authType" value="static" checked={authType === "static"} onChange={() => setAuthType("static")} className="text-cyan-500 bg-slate-950 border-gray-700" />
+                    <span className="text-white text-sm font-medium">Static IP / Hotspot User</span>
+                  </label>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">New Password</label>
-                <div className="relative">
-                  <input
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    defaultValue={""}
-                    placeholder="Enter new password to change"
-                    className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+            {authType === "pppoe" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-cyan-950/20 p-5 rounded-2xl border border-cyan-500/10">
+                <Field label="PPPoE ID / Username *" name="pppoeUsername" required defaultValue={customer.pppoeUsername || ""} placeholder="Set Mikrotik Username" />
+                <div>
+                  <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">New PPPoE Password</label>
+                  <div className="relative">
+                    <input
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      defaultValue={""}
+                      placeholder="Leave blank to keep current"
+                      className="w-full glass-input px-4 py-3 bg-slate-900/60 text-white rounded-xl focus:outline-none"
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors" tabIndex={-1}>
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
               </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-fuchsia-950/20 p-5 rounded-2xl border border-fuchsia-500/10">
+                <Field label="Static IP Address *" name="ipAddress" required defaultValue={customer.ipAddress || ""} placeholder="e.g. 10.20.30.40" />
+                <Field label="Router MAC Address (ARP)" name="macAddress" defaultValue={customer.macAddress || ""} placeholder="Optional MAC Binding" />
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <ImageUploadField label="Profile Picture" name="photoUrl" defaultValue={customer.photoUrl || ""} />
               <Field label="Address" name="address" defaultValue={customer.address || ""} placeholder="House, Street, Area info" />
             </div>

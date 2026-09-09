@@ -14,7 +14,19 @@ import {
   getPppoeInterfaces,
   PppoeSecret,
   suspendUsers,
-  disconnectPppoeActive
+  disconnectPppoeActive,
+  createHotspotUser,
+  updateHotspotUser,
+  deleteHotspotUser,
+  getHotspotActive,
+  createSimpleQueue,
+  updateSimpleQueue,
+  deleteSimpleQueue,
+  getSimpleQueues,
+  createArpBinding,
+  deleteArpBinding,
+  getArpBindings,
+  restCall
 } from "./mikrotik";
 
 const globalForSync = globalThis as typeof globalThis & {
@@ -288,6 +300,93 @@ export async function syncCustomerToMikrotik(
   } catch (err) {
     console.warn(`Failed to sync customer "${pppoeUsername}" to MikroTik:`, err);
     throw err; // Important: throw the error so callers know the sync failed!
+  }
+}
+
+/**
+ * Universal Sync Function based on User ID.
+ * Branches between PPPoE, Static IP, and Hotspot.
+ */
+export async function syncUserToMikrotik(userId: number, plainTextPassword?: string) {
+  try {
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+      with: { package: true }
+    });
+    
+    if (!user) return;
+    const finalRouterId = user.mikrotikId || undefined;
+    if (finalRouterId === undefined && user.adminId && user.adminId !== 1) return;
+
+    const isDisabled = (user.status !== "active" && user.status !== "online") ? "true" : "false";
+    const profile = user.status !== "active" && user.status !== "online" ? "Expired" : (user.package?.name || "default");
+    
+    if (user.pppoeUsername) {
+      await syncCustomerToMikrotik(user.pppoeUsername, plainTextPassword, user.packageId, user.status, finalRouterId);
+    } 
+    else if (user.ipAddress) {
+      // 1. Simple Queue logic
+      const speed = user.package?.speed ? user.package.speed.toLowerCase().replace("mbps", "M").replace(/\s/g, "") : "unlimited/unlimited";
+      const maxLimit = speed.includes("/") ? speed : `${speed}/${speed}`; // Tx/Rx or basic guess
+      
+      const queues = await getSimpleQueues(finalRouterId);
+      const queueName = user.pppoeUsername || user.name || `Static_${user.id}`;
+      const existingQueue = queues.find((q: any) => q.target?.includes(user.ipAddress));
+      
+      if (existingQueue) {
+        await updateSimpleQueue(existingQueue[".id"], { 
+          name: queueName,
+          maxLimit,
+          disabled: isDisabled 
+        }, finalRouterId);
+      } else {
+        await createSimpleQueue({ 
+          name: queueName,
+          target: user.ipAddress,
+          maxLimit,
+          disabled: isDisabled,
+          comment: "Created via Billing"
+        }, finalRouterId);
+      }
+
+      // 2. ARP Binding logic
+      if (user.macAddress) {
+        const arps = await getArpBindings(finalRouterId);
+        const existingArp = arps.find((a: any) => a.address === user.ipAddress);
+        if (!existingArp) {
+          await createArpBinding({
+            address: user.ipAddress,
+            macAddress: user.macAddress,
+            comment: user.pppoeUsername || user.name
+          }, finalRouterId);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`Failed universal sync for user ${userId}:`, err);
+  }
+}
+
+/**
+ * Universal Delete Sync
+ */
+export async function syncDeleteUserFromMikrotik(user: any) {
+  try {
+    const finalRouterId = user.mikrotikId || undefined;
+    if (user.pppoeUsername) {
+      await syncDeleteCustomerFromMikrotik(user.pppoeUsername, finalRouterId, [user.id]);
+    } 
+    else if (user.ipAddress) {
+      const queues = await getSimpleQueues(finalRouterId);
+      const existingQueue = queues.find((q: any) => q.target?.includes(user.ipAddress));
+      if (existingQueue) await deleteSimpleQueue(existingQueue[".id"], finalRouterId);
+
+      const arps = await getArpBindings(finalRouterId);
+      const existingArp = arps.find((a: any) => a.address === user.ipAddress);
+      if (existingArp) await deleteArpBinding(existingArp[".id"], finalRouterId);
+    }
+  } catch (err) {
+    console.warn("Failed universal delete sync:", err);
   }
 }
 

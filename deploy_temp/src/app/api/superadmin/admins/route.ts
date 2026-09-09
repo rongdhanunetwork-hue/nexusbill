@@ -1,0 +1,160 @@
+import { NextResponse } from "next/server";
+import { db } from "@/db";
+import { users, settings } from "@/db/schema";
+import { eq, desc, and } from "drizzle-orm";
+import { getSession } from "@/lib/auth";
+import bcrypt from "bcryptjs";
+
+async function checkSuperAdmin() {
+  const session = await getSession();
+  if (!session || session.role !== "superadmin") return null;
+  return session;
+}
+
+// GET: list all admins
+export async function GET(req: Request) {
+  const session = await checkSuperAdmin();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  const idStr = searchParams.get("id");
+  if (idStr) {
+    const id = Number(idStr);
+    if (isNaN(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+    const admin = await db.query.users.findFirst({
+      where: eq(users.id, id),
+      columns: { id: true, name: true, phone: true, address: true, role: true, status: true, createdAt: true, expireDate: true, monthlyRentalFee: true },
+    });
+    if (!admin || admin.role !== "admin") return NextResponse.json({ error: "Not found" }, { status: 404 });
+    
+    const adminSettings = await db.query.settings.findMany({
+      where: eq(settings.adminId, id)
+    });
+    const map: Record<string, string> = {};
+    for (const row of adminSettings) {
+      if (row.key && row.value != null) map[row.key] = row.value;
+    }
+
+    return NextResponse.json({ ...admin, settings: map });
+  }
+
+  const admins = await db.query.users.findMany({
+    where: eq(users.role, "admin"),
+    orderBy: [desc(users.createdAt)],
+    columns: { id: true, name: true, phone: true, address: true, status: true, createdAt: true, expireDate: true, monthlyRentalFee: true },
+  });
+
+  return NextResponse.json(admins);
+}
+
+// POST: create new admin
+export async function POST(req: Request) {
+  const session = await checkSuperAdmin();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { name, phone, password, address, validityDays, monthlyRentalFee } = await req.json();
+
+  // Enforce Max 5 Admins Limit
+  const existingAdminsCount = await db.query.users.findMany({
+    where: eq(users.role, "admin"),
+  });
+
+  if (existingAdminsCount.length >= 5) {
+    return NextResponse.json({
+      error: "সর্বোচ্চ ৫ জন এডমিন তৈরি করার সীমা পূর্ণ হয়ে গেছে! নতুন এডমিন যোগ করতে পূর্বের কোনো এডমিন মুছে ফেলুন।"
+    }, { status: 400 });
+  }
+
+  if (!name || !phone || !password || password.length < 6) {
+    return NextResponse.json({ error: "Invalid data. Password must be at least 6 characters." }, { status: 400 });
+  }
+
+  const existing = await db.query.users.findFirst({ where: eq(users.phone, phone.trim()) });
+  if (existing) return NextResponse.json({ error: "Phone number already registered." }, { status: 409 });
+
+  const hashed = await bcrypt.hash(password, 12);
+  
+  let expireDate = null;
+  if (validityDays) {
+    expireDate = new Date();
+    expireDate.setDate(expireDate.getDate() + (parseInt(validityDays) - 1));
+    expireDate.setHours(23, 59, 59, 999);
+  }
+
+  const [newAdmin] = await db.insert(users).values({
+    name: name.trim(),
+    phone: phone.trim(),
+    password: hashed,
+    role: "admin",
+    address: address?.trim() || null,
+    approvalStatus: "approved",
+    status: "active",
+    walletBalance: "0",
+    expireDate: expireDate,
+    monthlyRentalFee: monthlyRentalFee ? monthlyRentalFee.toString() : "500",
+  }).returning({ id: users.id, name: users.name });
+
+  return NextResponse.json({ success: true, admin: newAdmin });
+}
+
+// PATCH: update admin status
+export async function PATCH(req: Request) {
+  const session = await checkSuperAdmin();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id, status, name, phone, address, newPassword, validityDays, monthlyRentalFee, subscriptionSettings } = await req.json();
+  if (!id) return NextResponse.json({ error: "Missing admin ID" }, { status: 400 });
+
+  const updateData: Record<string, any> = {};
+  if (status) updateData.status = status;
+  if (name) updateData.name = name;
+  if (phone) updateData.phone = phone;
+  if (address !== undefined) updateData.address = address;
+  if (monthlyRentalFee !== undefined) updateData.monthlyRentalFee = monthlyRentalFee.toString();
+  if (newPassword && newPassword.length >= 6) {
+    updateData.password = await bcrypt.hash(newPassword, 12);
+  }
+  if (validityDays !== undefined) {
+    if (validityDays) {
+      const exp = new Date();
+      exp.setDate(exp.getDate() + (parseInt(validityDays) - 1));
+      exp.setHours(23, 59, 59, 999);
+      updateData.expireDate = exp;
+    } else {
+      updateData.expireDate = null;
+    }
+  }
+
+  await db.update(users).set(updateData).where(eq(users.id, id));
+
+  if (subscriptionSettings) {
+    for (const [key, value] of Object.entries(subscriptionSettings)) {
+      const existing = await db.query.settings.findFirst({
+        where: and(eq(settings.key, key), eq(settings.adminId, id))
+      });
+      if (existing) {
+        await db.update(settings).set({ value: String(value) }).where(eq(settings.id, existing.id));
+      } else {
+        await db.insert(settings).values({ key, value: String(value), adminId: id });
+      }
+    }
+  }
+
+  return NextResponse.json({ success: true });
+}
+
+// DELETE: delete admin
+export async function DELETE(req: Request) {
+  const session = await checkSuperAdmin();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  const id = Number(searchParams.get("id"));
+  if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+
+  // Safety: can't delete self
+  if (id === session.userId) return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 });
+
+  await db.delete(users).where(eq(users.id, id));
+  return NextResponse.json({ success: true });
+}

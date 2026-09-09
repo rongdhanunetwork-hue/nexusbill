@@ -4,7 +4,7 @@ import { users, packages, dataUsage, payments, invoices, transactions, tickets }
 import { eq, asc, and, isNull, inArray, sql } from "drizzle-orm";
 import { getSession, getAdminIdForSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
-import { syncCustomerToMikrotik, syncDeleteCustomerFromMikrotik } from "@/lib/sync";
+import { syncCustomerToMikrotik, syncDeleteCustomerFromMikrotik, syncUserToMikrotik, syncDeleteUserFromMikrotik } from "@/lib/sync";
 import { insertAuditLog } from "@/lib/audit";
 
 // GET /api/admin/customers — list customers (filtered by role)
@@ -139,10 +139,8 @@ export async function POST(req: Request) {
       plainPassword: password,
     }).returning();
 
-    // Automatically sync customer PPPoE secret to MikroTik router (disabled by default)
-    if (pppoeUsername?.trim()) {
-      await syncCustomerToMikrotik(pppoeUsername.trim(), password, packageId, "expired", mikrotikId ? Number(mikrotikId) : null);
-    }
+    // Sync customer to MikroTik
+    await syncUserToMikrotik(customer.id, password);
 
     await insertAuditLog(session.userId, "CREATE_CUSTOMER", `Created customer ${customer.name} (Phone: ${customer.phone})`);
 

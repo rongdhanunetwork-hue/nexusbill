@@ -509,3 +509,19 @@ export const adminRentalRequests = pgTable("admin_rental_requests", {
   createdAt: timestamp("created_at").defaultNow(),
   approvedAt: timestamp("approved_at"),
 });
+
+export const hotspotVouchers = pgTable("hotspot_vouchers", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(), // The PIN or Username
+  password: varchar("password", { length: 50 }), // Optional, if PIN is used, username=password
+  packageId: integer("package_id").notNull(), // Link to packages
+  mikrotikId: integer("mikrotik_id").notNull(),
+  adminId: integer("admin_id"),
+  resellerId: integer("reseller_id"),
+  price: decimal("price", { precision: 10, scale: 2 }), // Snapshot of price when generated
+  status: varchar("status", { length: 20 }).default("unused"), // unused, active, expired
+  printed: boolean("printed").default(false),
+  activatedAt: timestamp("activated_at"),
+  expireAt: timestamp("expire_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});

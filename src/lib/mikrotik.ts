@@ -543,3 +543,71 @@ export async function suspendUsers(
     }
   }
 }
+
+// ───── Hotspot Management ────────────────────────────────────
+
+export async function createHotspotUser(data: { name: string; password?: string; profile?: string; server?: string; limitUptime?: string; limitBytesTotal?: string; comment?: string }, routerId?: number) {
+  return restCall(routerId, 'PUT', '/ip/hotspot/user', data);
+}
+
+export async function updateHotspotUser(id: string, data: Partial<{ name: string; password?: string; profile?: string; disabled: string; comment?: string }>, routerId?: number) {
+  return restCall(routerId, 'PATCH', `/ip/hotspot/user/${id.replace('*', '%2A')}`, data);
+}
+
+export async function deleteHotspotUser(id: string, routerId?: number) {
+  return restCall(routerId, 'DELETE', `/ip/hotspot/user/${id.replace('*', '%2A')}`);
+}
+
+export async function getHotspotActive(routerId?: number) {
+  return restCall(routerId, 'GET', '/ip/hotspot/active');
+}
+
+export async function getHotspotUsers(routerId?: number) {
+  return restCall(routerId, 'GET', '/ip/hotspot/user');
+}
+
+// ───── Static IP Management ────────────────────────────────────
+
+export async function createSimpleQueue(data: { name: string; target: string; maxLimit?: string; comment?: string; disabled?: string }, routerId?: number) {
+  return restCall(routerId, 'PUT', '/queue/simple', {
+    name: data.name,
+    target: data.target,
+    "max-limit": data.maxLimit || "unlimited/unlimited",
+    comment: data.comment,
+    disabled: data.disabled || "false"
+  });
+}
+
+export async function updateSimpleQueue(id: string, data: Partial<{ name: string; target: string; maxLimit?: string; disabled: string }>, routerId?: number) {
+  const updateData: any = { ...data };
+  if (data.maxLimit) {
+    updateData["max-limit"] = data.maxLimit;
+    delete updateData.maxLimit;
+  }
+  return restCall(routerId, 'PATCH', `/queue/simple/${id.replace('*', '%2A')}`, updateData);
+}
+
+export async function deleteSimpleQueue(id: string, routerId?: number) {
+  return restCall(routerId, 'DELETE', `/queue/simple/${id.replace('*', '%2A')}`);
+}
+
+export async function getSimpleQueues(routerId?: number) {
+  return restCall(routerId, 'GET', '/queue/simple');
+}
+
+export async function createArpBinding(data: { address: string; macAddress: string; interface?: string; comment?: string }, routerId?: number) {
+  return restCall(routerId, 'PUT', '/ip/arp', {
+    address: data.address,
+    "mac-address": data.macAddress,
+    interface: data.interface || "all", // "all" is standard if interface isn't explicitly known
+    comment: data.comment
+  });
+}
+
+export async function deleteArpBinding(id: string, routerId?: number) {
+  return restCall(routerId, 'DELETE', `/ip/arp/${id.replace('*', '%2A')}`);
+}
+
+export async function getArpBindings(routerId?: number) {
+  return restCall(routerId, 'GET', '/ip/arp');
+}

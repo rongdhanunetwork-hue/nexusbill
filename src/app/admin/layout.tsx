@@ -46,6 +46,7 @@ const navigation: NavItem[] = [
       { name: "IP Pools", href: "/admin/ip-pools" },
     ],
   },
+  { name: "Hotspot Manager", href: "/admin/hotspot", icon: Wifi },
   { name: "Notice", href: "/admin/notices", icon: Megaphone },
   { name: "Tickets", href: "/admin/tickets", icon: LifeBuoy },
   { name: "Notifications", href: "/admin/notifications", icon: Bell },
