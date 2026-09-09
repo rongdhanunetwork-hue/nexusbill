@@ -8,6 +8,13 @@
       "when": 1786125976301,
       "tag": "0000_lucky_forgotten_one",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788885641780,
+      "tag": "0001_sharp_sleeper",
+      "breakpoints": true
     }
   ]
 }

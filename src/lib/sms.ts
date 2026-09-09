@@ -196,6 +196,44 @@ async function sendViaRtcom(
 }
 
 /**
+ * Send an SMS via dynamic Custom Gateway URL
+ */
+async function sendViaCustomGateway(
+  phone: string,
+  message: string,
+  gatewayUrl: string,
+  apiKey?: string,
+  senderId?: string
+): Promise<SMSResult> {
+  let normalizedPhone = phone.replace(/\s+/g, "").replace(/^0/, "88");
+  if (!normalizedPhone.startsWith("88")) {
+    normalizedPhone = "88" + normalizedPhone;
+  }
+
+  let finalUrl = gatewayUrl
+    .replace(/\[TO\]/g, encodeURIComponent(normalizedPhone))
+    .replace(/\{to\}/gi, encodeURIComponent(normalizedPhone))
+    .replace(/\{phone\}/gi, encodeURIComponent(normalizedPhone))
+    .replace(/\[MESSAGE\]/g, encodeURIComponent(message))
+    .replace(/\{msg\}/gi, encodeURIComponent(message))
+    .replace(/\{message\}/gi, encodeURIComponent(message))
+    .replace(/\[API_KEY\]/g, encodeURIComponent(apiKey || ""))
+    .replace(/\{api_key\}/gi, encodeURIComponent(apiKey || ""))
+    .replace(/\[SENDER_ID\]/g, encodeURIComponent(senderId || ""))
+    .replace(/\{sender_id\}/gi, encodeURIComponent(senderId || ""));
+
+  console.log(`[SMS][CustomGateway] Fetching URL: ${finalUrl}`);
+  const response = await fetch(finalUrl, { method: "GET" });
+  const text = await response.text();
+
+  if (response.ok) {
+    return { success: true, message: "SMS sent via Custom Gateway API" };
+  } else {
+    return { success: false, error: `Custom Gateway HTTP ${response.status}: ${text}` };
+  }
+}
+
+/**
  * Main SMS send function — reads provider config from DB settings
  * Usage: await sendSMS("01700000000", "Your message here");
  */
@@ -232,9 +270,10 @@ export async function sendSMS(
     const apiKey = await getSetting("sms_api_key", targetAdminId);
     const senderId = await getSetting("sms_sender_id", targetAdminId);
     const acode = await getSetting("sms_acode", targetAdminId);
+    const gatewayUrl = await getSetting("sms_gateway_url", targetAdminId);
 
     // If not configured, log and return (non-blocking)
-    if (!apiKey || !senderId || !provider) {
+    if (!gatewayUrl && (!apiKey || (!senderId && !provider))) {
       console.log(`[SMS] Not configured. Would send to ${phone}: ${message}`);
       try {
         await db.insert(smsLogs).values({
@@ -250,12 +289,14 @@ export async function sendSMS(
     }
 
     let result: SMSResult;
-    if (provider === "ssl_wireless") {
-      result = await sendViaSslWireless(phone, message, apiKey, senderId);
+    if (gatewayUrl && gatewayUrl.trim() !== "") {
+      result = await sendViaCustomGateway(phone, message, gatewayUrl, apiKey || undefined, senderId || undefined);
+    } else if (provider === "ssl_wireless") {
+      result = await sendViaSslWireless(phone, message, apiKey!, senderId!);
     } else if (provider === "bdbulksms") {
-      result = await sendViaBdBulkSms(phone, message, apiKey, senderId);
+      result = await sendViaBdBulkSms(phone, message, apiKey!, senderId!);
     } else if (provider === "rtcom") {
-      result = await sendViaRtcom(phone, message, apiKey, senderId, acode);
+      result = await sendViaRtcom(phone, message, apiKey!, senderId!, acode);
     } else {
       result = { success: false, error: `Unknown provider: ${provider}` };
     }

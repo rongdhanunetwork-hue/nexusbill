@@ -22,14 +22,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Admin user not found" }, { status: 404 });
     }
 
-    const app_key = process.env.BKASH_APP_KEY;
-    const app_secret = process.env.BKASH_APP_SECRET;
-    const username = process.env.BKASH_USERNAME;
-    const password = process.env.BKASH_PASSWORD;
-    const base_url = process.env.BKASH_BASE_URL;
+    let app_key = process.env.BKASH_APP_KEY;
+    let app_secret = process.env.BKASH_APP_SECRET;
+    let username = process.env.BKASH_USERNAME;
+    let password = process.env.BKASH_PASSWORD;
+    let base_url = process.env.BKASH_BASE_URL;
 
     if (!app_key || !app_secret || !username || !password || !base_url) {
-      return NextResponse.json({ error: "bKash credentials not configured" }, { status: 500 });
+      const allSettings = await db.query.settings.findMany();
+      const map = new Map<string, string>();
+      allSettings.forEach(s => {
+        if (s.value) map.set(s.key, s.value);
+      });
+
+      app_key = app_key || map.get("bkash_app_key") || "";
+      app_secret = app_secret || map.get("bkash_app_secret") || "";
+      username = username || map.get("bkash_username") || "";
+      password = password || map.get("bkash_password") || "";
+      base_url = base_url || map.get("bkash_base_url") || "https://tokenized.sandbox.bka.sh/v1.2.0-beta";
+    }
+
+    if (!app_key || !app_secret || !username || !password || !base_url) {
+      return NextResponse.json({ error: "bKash credentials not configured in SuperAdmin settings" }, { status: 500 });
     }
 
     // Step 1: Grant Token

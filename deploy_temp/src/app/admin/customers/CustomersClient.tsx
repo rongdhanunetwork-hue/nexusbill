@@ -466,13 +466,28 @@ export default function CustomersClient({
       }
       setCustomBaseDate(defaultBase);
 
+      const isStartingToday = defaultBase === todayStr;
       const expDateObj = new Date(defaultBase);
-      expDateObj.setDate(expDateObj.getDate() + 30);
+      // ISP standard: 30 days fixed. If starting today, day 1 is today, so we add 29 to end on the 30th day.
+      if (isStartingToday) {
+        expDateObj.setDate(expDateObj.getDate() + 29);
+      } else {
+        expDateObj.setDate(expDateObj.getDate() + 30);
+      }
       
       const yyyy = expDateObj.getFullYear();
       const mm = String(expDateObj.getMonth() + 1).padStart(2, '0');
       const dd = String(expDateObj.getDate()).padStart(2, '0');
-      setCustomExpireDate(`${yyyy}-${mm}-${dd}T23:59`);
+      let hh = "23";
+      let min = "59";
+      if (rechargeCustomer.expireDate) {
+        const origExp = new Date(rechargeCustomer.expireDate);
+        if (!isNaN(origExp.getTime())) {
+          hh = String(origExp.getHours()).padStart(2, '0');
+          min = String(origExp.getMinutes()).padStart(2, '0');
+        }
+      }
+      setCustomExpireDate(`${yyyy}-${mm}-${dd}T${hh}:${min}`);
       setModalAutoRenew(false);
     } else {
       setCustomBaseDate("");
