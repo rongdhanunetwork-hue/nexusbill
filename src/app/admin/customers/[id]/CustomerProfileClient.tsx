@@ -1297,12 +1297,14 @@ useEffect(() => {
               </div>
               
               {(() => {
-                const detectedIp = customer.ipAddress || activeSession?.["framed-ip-address"] || onuData.ipAddress;
+                const detectedIp = customer.ipAddress || activeSession?.address || activeSession?.["framed-ip-address"] || activeSession?.ip || onuData.ipAddress;
+                const detectedModel = macVendor && macVendor !== "Unknown" ? `${macVendor} Wi-Fi Router` : "Auto-Detected Wi-Fi Router";
+                
                 const displayRouters = (customerRouters && customerRouters.length > 0) 
                   ? customerRouters 
                   : (detectedIp ? [{
                       id: 999999,
-                      model: "Auto-Detected Wi-Fi Router (MikroTik IP)",
+                      model: detectedModel,
                       ipAddress: detectedIp,
                       port: 80,
                       macAddress: customer.macAddress || activeSession?.["caller-id"] || "Auto-Bound",
