@@ -165,6 +165,12 @@ const [billType, setBillType] = useState<"bill" | "advance">("bill");
   const [newRouterPassword, setNewRouterPassword] = useState("");
   const [addingRouter, setAddingRouter] = useState(false);
 
+  const openAddRouterModal = () => {
+    const defaultIp = customer.ipAddress || activeSession?.["framed-ip-address"] || "";
+    setNewRouterIp(defaultIp);
+    setShowAddRouterModal(true);
+  };
+
   useEffect(() => {
     fetch("/api/admin/packages")
       .then(r => r.json())
@@ -1283,7 +1289,7 @@ useEffect(() => {
                   </p>
                 </div>
                 <button 
-                  onClick={() => setShowAddRouterModal(true)}
+                  onClick={openAddRouterModal}
                   className="bg-neon-blue/20 hover:bg-neon-blue text-neon-blue hover:text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border border-neon-blue/50 shadow-lg shadow-neon-blue/20"
                 >
                   <Plus size={15} /> Add New Router
