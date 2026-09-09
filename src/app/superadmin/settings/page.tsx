@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Save, Loader2, CheckCircle2, QrCode } from "lucide-react";
+import { Settings, Save, Loader2, CheckCircle2, QrCode, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function SuperAdminSettingsPage() {
@@ -34,7 +34,34 @@ export default function SuperAdminSettingsPage() {
   const [smsApiKey, setSmsApiKey] = useState("");
   const [smsSenderId, setSmsSenderId] = useState("");
 
+  // Test SMS state
+  const [testPhone, setTestPhone] = useState("");
+  const [testSmsLoading, setTestSmsLoading] = useState(false);
+  const [testSmsResult, setTestSmsResult] = useState<string | null>(null);
+
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  async function handleTestSMS() {
+    if (!testPhone) {
+      setTestSmsResult("❌ Test mobile number is required");
+      return;
+    }
+    setTestSmsLoading(true);
+    setTestSmsResult(null);
+    try {
+      const res = await fetch("/api/superadmin/settings/test-sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: testPhone }),
+      });
+      const data = await res.json();
+      setTestSmsLoading(false);
+      setTestSmsResult(data.success ? "✅ Test SMS sent successfully!" : `❌ Error: ${data.error}`);
+    } catch (e) {
+      setTestSmsLoading(false);
+      setTestSmsResult(`❌ Error: ${String(e)}`);
+    }
+  }
 
   async function fetchSettings() {
     setLoading(true);
@@ -315,6 +342,34 @@ export default function SuperAdminSettingsPage() {
                 <input value={smsSenderId} onChange={e => setSmsSenderId(e.target.value)} placeholder="8809648906893"
                   className="w-full px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }} />
+              </div>
+
+              {/* Test SMS Section */}
+              <div className="pt-4 border-t border-white/10 space-y-3">
+                <label className="block text-xs font-bold text-yellow-400 uppercase tracking-wider">Test SMS Gateway Connection</label>
+                <div className="flex gap-2">
+                  <input
+                    value={testPhone}
+                    onChange={e => setTestPhone(e.target.value)}
+                    placeholder="017XXXXXXXX (Test Mobile No)"
+                    className="flex-1 px-4 py-2.5 text-sm text-white rounded-xl focus:outline-none transition-all"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestSMS}
+                    disabled={testSmsLoading}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-2"
+                    style={{ background: "rgba(234,179,8,0.15)", color: "#facc15", border: "1px solid rgba(234,179,8,0.3)" }}
+                  >
+                    {testSmsLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Send Test SMS
+                  </button>
+                </div>
+                {testSmsResult && (
+                  <div className={`p-3 rounded-xl text-xs font-medium border ${testSmsResult.startsWith("✅") ? "bg-green-500/10 border-green-500/20 text-green-400" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
+                    {testSmsResult}
+                  </div>
+                )}
               </div>
             </div>
           </div>

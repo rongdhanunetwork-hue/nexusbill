@@ -1290,100 +1290,129 @@ useEffect(() => {
                 </button>
               </div>
               
-              {!customerRouters || customerRouters.length === 0 ? (
-                <div className="text-center py-12 bg-white/5 border border-white/10 rounded-2xl">
-                  <Router className="w-12 h-12 mx-auto text-gray-600 mb-3 animate-pulse" />
-                  <p className="text-gray-400 font-semibold text-sm">কোনো ক্লায়েন্ট রাউটার যুক্ত করা হয়নি।</p>
-                  <p className="text-gray-500 text-xs mt-1">নতুন রাউটার তথ্য যুক্ত করতে উপরে "Add New Router" এ ক্লিক করুন।</p>
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {customerRouters.map((router, index) => {
-                    const testResult = routerStatusMap[router.id];
-                    const isTesting = routerTestingId === router.id;
+              {(() => {
+                const detectedIp = customer.ipAddress || activeSession?.["framed-ip-address"] || onuData.ipAddress;
+                const displayRouters = (customerRouters && customerRouters.length > 0) 
+                  ? customerRouters 
+                  : (detectedIp ? [{
+                      id: 999999,
+                      model: "Auto-Detected Wi-Fi Router (MikroTik IP)",
+                      ipAddress: detectedIp,
+                      port: 80,
+                      macAddress: customer.macAddress || activeSession?.["caller-id"] || "Auto-Bound",
+                      username: "admin",
+                      password: "••••••••",
+                      isAutoDetected: true
+                    }] : []);
 
-                    return (
-                      <div key={router.id || index} className="bg-slate-900/80 border border-white/10 rounded-2xl p-5 space-y-4 relative overflow-hidden group shadow-xl">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                          <Router size={50} className="text-neon-blue" />
-                        </div>
-                        
-                        <div className="flex items-center justify-between z-10 relative">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-neon-blue/15 text-neon-blue flex items-center justify-center border border-neon-blue/30">
-                              <Router size={20} />
-                            </div>
-                            <div>
-                              <h5 className="font-bold text-white text-sm">{router.model || "Standard Wi-Fi Router"}</h5>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-xs text-gray-400 font-mono">{router.ipAddress || "No IP"}:{router.port || 80}</span>
-                                {testResult && (
-                                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
-                                    testResult.online
-                                      ? "bg-green-500/20 text-green-400 border-green-500/30"
-                                      : "bg-red-500/20 text-red-400 border-red-500/30"
-                                  }`}>
-                                    {testResult.online ? "● Online" : "○ Offline"}
-                                  </span>
-                                )}
+                if (displayRouters.length === 0) {
+                  return (
+                    <div className="text-center py-12 bg-white/5 border border-white/10 rounded-2xl">
+                      <Router className="w-12 h-12 mx-auto text-gray-600 mb-3 animate-pulse" />
+                      <p className="text-gray-400 font-semibold text-sm">কোনো ক্লায়েন্ট রাউটার বা IP যুক্ত করা হয়নি।</p>
+                      <p className="text-gray-500 text-xs mt-1">নতুন রাউটার তথ্য যুক্ত করতে উপরে "Add New Router" এ ক্লিক করুন।</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {displayRouters.map((router, index) => {
+                      const testResult = routerStatusMap[router.id];
+                      const isTesting = routerTestingId === router.id;
+
+                      return (
+                        <div key={router.id || index} className="bg-slate-900/80 border border-white/10 rounded-2xl p-5 space-y-4 relative overflow-hidden group shadow-xl">
+                          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <Router size={50} className="text-neon-blue" />
+                          </div>
+                          
+                          <div className="flex items-center justify-between z-10 relative">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-neon-blue/15 text-neon-blue flex items-center justify-center border border-neon-blue/30">
+                                <Router size={20} />
+                              </div>
+                              <div>
+                                <h5 className="font-bold text-white text-sm flex items-center gap-1.5">
+                                  {router.model || "Standard Wi-Fi Router"}
+                                  {router.isAutoDetected && (
+                                    <span className="text-[9px] bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-1.5 py-0.5 rounded font-bold">
+                                      ⚡ AUTO
+                                    </span>
+                                  )}
+                                </h5>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-xs text-gray-400 font-mono">{router.ipAddress || "No IP"}:{router.port || 80}</span>
+                                  {testResult && (
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                                      testResult.online
+                                        ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                        : "bg-red-500/20 text-red-400 border-red-500/30"
+                                    }`}>
+                                      {testResult.online ? "● Online" : "○ Offline"}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
+
+                            {!router.isAutoDetected && (
+                              <button 
+                                onClick={() => handleDeleteRouter(router.id)}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-colors"
+                                title="Delete Router"
+                              >
+                                <Trash size={14} />
+                              </button>
+                            )}
                           </div>
 
-                          <button 
-                            onClick={() => handleDeleteRouter(router.id)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-colors"
-                            title="Delete Router"
-                          >
-                            <Trash size={14} />
-                          </button>
-                        </div>
+                          <div className="text-xs space-y-2 bg-slate-950/60 p-3 rounded-xl border border-white/5 font-mono">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-400">Router Model:</span>
+                              <span className="text-white font-semibold">{router.model || "Wi-Fi Router"}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-400">MAC Address:</span>
+                              <span className="text-neon-green">{router.macAddress || "N/A"}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-400">Username:</span>
+                              <span className="text-white bg-black/40 px-2 py-0.5 rounded border border-white/10">{router.username || "admin"}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-400">Password:</span>
+                              <span className="text-yellow-300 bg-black/40 px-2 py-0.5 rounded border border-white/10">{router.password || "admin"}</span>
+                            </div>
+                          </div>
 
-                        <div className="text-xs space-y-2 bg-slate-950/60 p-3 rounded-xl border border-white/5 font-mono">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-400">Router Model:</span>
-                            <span className="text-white font-semibold">{router.model || "Wi-Fi Router"}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-400">MAC Address:</span>
-                            <span className="text-neon-green">{router.macAddress || "N/A"}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-400">Username:</span>
-                            <span className="text-white bg-black/40 px-2 py-0.5 rounded border border-white/10">{router.username || "admin"}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-400">Password:</span>
-                            <span className="text-yellow-300 bg-black/40 px-2 py-0.5 rounded border border-white/10">{router.password || "admin"}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-1">
-                          <button
-                            onClick={() => handleTestRouterConnection(router.id, router.ipAddress, router.port || 80)}
-                            disabled={isTesting}
-                            className="flex-1 py-2 px-3 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border border-white/10 disabled:opacity-50"
-                          >
-                            <RefreshCcw size={13} className={isTesting ? "animate-spin text-neon-blue" : ""} />
-                            {isTesting ? "Testing..." : "Test Connection"}
-                          </button>
-
-                          {router.ipAddress && (
-                            <a 
-                              href={`http://${router.ipAddress}:${router.port || 80}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-r from-neon-blue/20 to-blue-600/20 hover:from-neon-blue/40 hover:to-blue-600/40 text-neon-blue hover:text-white rounded-xl text-xs font-bold transition-all border border-neon-blue/40 shadow-lg shadow-neon-blue/10"
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              onClick={() => handleTestRouterConnection(router.id, router.ipAddress, router.port || 80)}
+                              disabled={isTesting}
+                              className="flex-1 py-2 px-3 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border border-white/10 disabled:opacity-50"
                             >
-                              <Eye size={14} /> 🌐 Connect Web GUI
-                            </a>
-                          )}
+                              <RefreshCcw size={13} className={isTesting ? "animate-spin text-neon-blue" : ""} />
+                              {isTesting ? "Testing..." : "Test Connection"}
+                            </button>
+
+                            {router.ipAddress && (
+                              <a 
+                                href={`http://${router.ipAddress}:${router.port || 80}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-r from-neon-blue/20 to-blue-600/20 hover:from-neon-blue/40 hover:to-blue-600/40 text-neon-blue hover:text-white rounded-xl text-xs font-bold transition-all border border-neon-blue/40 shadow-lg shadow-neon-blue/10"
+                              >
+                                <Eye size={14} /> 🌐 Connect Web GUI
+                              </a>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
